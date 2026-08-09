@@ -7,7 +7,6 @@ import com.mineportal.mc.ChatClient;
 import com.mineportal.pair.SingleInstance;
 import com.mineportal.util.AppPaths;
 
-import javax.swing.JOptionPane;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
@@ -31,11 +30,11 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 이 앱의 유일한 네트워크 진입점. 백엔드로 아웃바운드 WS(/app-ws)를 열어두고 그 안에서만
- * 동작한다 — 로컬 포트를 여는 것도, 사용자에게 GUI를 보여주는 것도 없다(최초 페어링에
- * 필요한 코드 입력 창 하나만 예외). 브라우저가 백엔드에 보내는 연결/해제/채팅 요청을
- * 백엔드가 이 커넥션으로 그대로 넘겨주면, 실제 마인크래프트 프로토콜 접속은 여기(사용자
- * PC, 사용자 실IP)에서 ChatClient가 수행하고, 결과(연결됨/끊김/채팅)를 다시 이 커넥션으로
- * 올려보낸다.
+ * 동작한다 — 로컬 포트를 여는 것도, 사용자에게 GUI를 보여주는 것도 전혀 없다. 페어링은
+ * 웹의 "데스크톱 앱 연동" 버튼이 여는 mineportal:// 링크로만 이뤄진다(ProtocolRegistrar/
+ * SingleInstance 참고). 브라우저가 백엔드에 보내는 연결/해제/채팅 요청을 백엔드가 이
+ * 커넥션으로 그대로 넘겨주면, 실제 마인크래프트 프로토콜 접속은 여기(사용자 PC, 사용자
+ * 실IP)에서 ChatClient가 수행하고, 결과(연결됨/끊김/채팅)를 다시 이 커넥션으로 올려보낸다.
  */
 public final class BackendClient {
 
@@ -54,7 +53,6 @@ public final class BackendClient {
     private final Map<String, ChatClient> activeClients = new ConcurrentHashMap<>();
     private volatile Account account;
     private volatile WebSocket webSocket;
-    private volatile boolean pairingPromptShowing = false;
     private volatile String pendingPairCode;
 
     public interface StatusListener {
@@ -121,27 +119,9 @@ public final class BackendClient {
         String deviceToken = readDeviceToken();
         if (deviceToken != null) {
             send(Map.of("type", "resume", "deviceToken", deviceToken));
-        } else {
-            promptForPairingCode();
         }
-    }
-
-    private void promptForPairingCode() {
-        if (pairingPromptShowing) return;
-        pairingPromptShowing = true;
-        new Thread(() -> {
-            try {
-                String code = JOptionPane.showInputDialog(null,
-                        "웹사이트(mineportal.kr)에 로그인한 뒤 \"데스크톱 앱 연동\"에서 발급받은 코드를 입력하세요:",
-                        "마인포탈 데스크톱 연동", JOptionPane.QUESTION_MESSAGE);
-                pairingPromptShowing = false;
-                if (code != null && !code.isBlank()) {
-                    send(Map.of("type", "pair", "code", code.trim().toUpperCase()));
-                }
-            } finally {
-                pairingPromptShowing = false;
-            }
-        }, "mineportal-pair-prompt").start();
+        // 페어링된 적이 없으면 그냥 대기한다 — 사용자는 웹의 "데스크톱 앱 연동" 버튼을 눌러
+        // mineportal:// 링크로 코드를 보내야 한다. 앱 쪽에서 뭘 물어보는 화면은 없다.
     }
 
     private String readDeviceToken() {
@@ -169,7 +149,7 @@ public final class BackendClient {
         String type = obj.has("type") ? obj.get("type").getAsString() : "";
         switch (type) {
             case "paired" -> saveDeviceToken(obj.get("deviceToken").getAsString());
-            case "pair-required", "pair-failed" -> promptForPairingCode();
+            case "pair-required", "pair-failed" -> { /* 대기 — 웹에서 새 링크를 다시 보내주길 기다린다 */ }
             case "token" -> account = new Account(
                     UUID.fromString(obj.get("uuid").getAsString()),
                     obj.get("name").getAsString(),
