@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mineportal.auth.Account;
 import com.mineportal.mc.ChatClient;
+import com.mineportal.pair.SingleInstance;
 import com.mineportal.util.AppPaths;
 
 import javax.swing.JOptionPane;
@@ -54,6 +55,7 @@ public final class BackendClient {
     private volatile Account account;
     private volatile WebSocket webSocket;
     private volatile boolean pairingPromptShowing = false;
+    private volatile String pendingPairCode;
 
     public interface StatusListener {
         void onConnectionStateChanged(boolean connectedToBackend);
@@ -67,6 +69,28 @@ public final class BackendClient {
 
     public void start() {
         openSocket();
+        // mineportal:// 링크를 다시 클릭했을 때 SingleInstance가 파일로 넘겨주는 코드를
+        // 주워온다 — 이 프로세스가 이미 떠있는 상태에서 페어링 링크가 또 눌린 경우.
+        scheduler.scheduleWithFixedDelay(this::checkPendingPairHandoff, 2, 2, TimeUnit.SECONDS);
+    }
+
+    /** mineportal:// 링크로 앱이 (재)실행됐을 때 호출된다 — 다이얼로그 없이 바로 페어링한다. */
+    public void pairImmediately(String code) {
+        if (code == null || code.isBlank()) return;
+        pendingPairCode = code.trim().toUpperCase();
+        trySendPendingPair();
+    }
+
+    private void checkPendingPairHandoff() {
+        String code = SingleInstance.consumePendingPairCode();
+        if (code != null) pairImmediately(code);
+    }
+
+    private void trySendPendingPair() {
+        String code = pendingPairCode;
+        if (code == null || webSocket == null) return;
+        send(Map.of("type", "pair", "code", code));
+        pendingPairCode = null;
     }
 
     private void openSocket() {
@@ -90,6 +114,10 @@ public final class BackendClient {
     }
 
     private void authenticate() {
+        if (pendingPairCode != null) {
+            trySendPendingPair();
+            return;
+        }
         String deviceToken = readDeviceToken();
         if (deviceToken != null) {
             send(Map.of("type", "resume", "deviceToken", deviceToken));

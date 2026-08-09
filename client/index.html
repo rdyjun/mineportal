@@ -738,7 +738,8 @@
     <div class="modal">
       <button type="button" class="modal-close" id="pairDesktopModalClose">✕</button>
       <h2 data-i18n="pairDesktopBtn">데스크톱 앱 연동</h2>
-      <p class="modal-subtext" data-i18n="pairDesktopDesc">데스크톱 앱을 실행하고, 뜨는 창에 아래 코드를 입력하세요. 5분간 유효해요.</p>
+      <p class="modal-subtext" data-i18n="pairDesktopDesc">데스크톱 앱이 자동으로 연동돼요. 잠시만 기다려주세요.</p>
+      <p class="modal-subtext" data-i18n="pairDesktopManualDesc">앱이 자동으로 안 열리면, 데스크톱 앱을 실행한 뒤 뜨는 창에 아래 코드를 직접 입력하세요. 5분간 유효해요.</p>
       <p class="pair-code" id="pairDesktopCode">--------</p>
     </div>
   </div>
@@ -1073,7 +1074,8 @@
         desktopNoteRunning: "데스크톱 클라이언트가 이 계정과 연동되어 있어요.",
         desktopRunningLabel: "✅ 데스크톱 클라이언트 연동됨",
         pairDesktopBtn: "데스크톱 앱 연동",
-        pairDesktopDesc: "데스크톱 앱을 실행하고, 뜨는 창에 아래 코드를 입력하세요. 5분간 유효해요.",
+        pairDesktopDesc: "데스크톱 앱이 자동으로 연동돼요. 잠시만 기다려주세요.",
+        pairDesktopManualDesc: "앱이 자동으로 안 열리면, 데스크톱 앱을 실행한 뒤 뜨는 창에 아래 코드를 직접 입력하세요. 5분간 유효해요.",
         pairDesktopFailed: "코드 발급에 실패했어요: {error}",
         howTitle: "어떻게 동작하나요",
         howStep1Title: "마인크래프트 계정으로 로그인",
@@ -1183,7 +1185,8 @@
         desktopNoteRunning: "The desktop client is linked to this account.",
         desktopRunningLabel: "✅ Desktop client linked",
         pairDesktopBtn: "Link desktop app",
-        pairDesktopDesc: "Launch the desktop app and enter the code below in the window it shows. Valid for 5 minutes.",
+        pairDesktopDesc: "Linking automatically with the desktop app. Please wait a moment.",
+        pairDesktopManualDesc: "If the app doesn't open automatically, launch it yourself and enter the code below in the window it shows. Valid for 5 minutes.",
         pairDesktopFailed: "Couldn't get a pairing code: {error}",
         howTitle: "How it works",
         howStep1Title: "Log in with your Minecraft account",
@@ -2372,6 +2375,10 @@
         return;
       }
       pairDesktopCode.textContent = body.code;
+      // 설치된 데스크톱 앱이 있으면 mineportal:// 스킴을 통해 OS가 그 앱을 실행/포커스하면서
+      // 코드를 그대로 넘겨준다 — 사용자가 코드를 직접 타이핑할 필요가 없다. 앱이 없으면
+      // 아무 일도 안 일어나고, 위에 남겨둔 수동 입력 코드가 fallback으로 쓰인다.
+      window.location.href = "mineportal://pair?code=" + encodeURIComponent(body.code);
     });
     pairDesktopModalClose.addEventListener("click", () => pairDesktopModalBackdrop.classList.remove("open"));
     pairDesktopModalBackdrop.addEventListener("click", (e) => {

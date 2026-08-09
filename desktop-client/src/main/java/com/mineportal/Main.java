@@ -1,6 +1,8 @@
 package com.mineportal;
 
 import com.mineportal.net.BackendClient;
+import com.mineportal.pair.ProtocolRegistrar;
+import com.mineportal.pair.SingleInstance;
 import com.mineportal.tray.TrayApp;
 import com.mineportal.update.Updater;
 
@@ -13,10 +15,23 @@ import com.mineportal.update.Updater;
 public final class Main {
 
     public static void main(String[] args) {
+        ProtocolRegistrar.registerIfNeeded();
+        String pairCode = ProtocolRegistrar.extractPairCode(args);
+
+        // 이미 떠있는 인스턴스가 있으면(mineportal:// 링크를 다시 클릭한 경우 등) 코드만
+        // 넘겨주고 이 프로세스는 바로 종료한다 — 창을 또 띄우거나 트레이 아이콘이 중복되면 안 됨.
+        if (!SingleInstance.acquire()) {
+            SingleInstance.handOffAndExit(pairCode);
+            return;
+        }
+
         TrayApp tray = new TrayApp();
         tray.start();
 
         BackendClient client = new BackendClient(tray::setBackendConnected);
+        if (pairCode != null) {
+            client.pairImmediately(pairCode);
+        }
         client.start();
 
         checkForUpdatesInBackground();
