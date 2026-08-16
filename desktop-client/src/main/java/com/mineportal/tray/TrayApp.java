@@ -20,7 +20,9 @@ import java.io.InputStream;
 public final class TrayApp {
 
     private TrayIcon trayIcon;
+    private MenuItem updateItem;
     private volatile boolean backendConnected = false;
+    private volatile String pendingUpdateTag;
 
     public void start() {
         if (!SystemTray.isSupported()) {
@@ -28,6 +30,9 @@ public final class TrayApp {
         }
 
         PopupMenu menu = new PopupMenu();
+        MenuItem update = new MenuItem("업데이트 설치...");
+        update.setEnabled(false);
+        menu.add(update);
         MenuItem exit = new MenuItem("종료");
         exit.addActionListener(e -> System.exit(0));
         menu.add(exit);
@@ -36,12 +41,14 @@ public final class TrayApp {
         icon.setImageAutoSize(true);
         icon.addActionListener(e -> icon.displayMessage(
                 "마인포탈 v" + BuildInfo.VERSION,
-                backendConnected ? "동작 중입니다." : "서버에 연결하는 중...",
+                pendingUpdateTag != null ? "새 버전 " + pendingUpdateTag + " 설치 가능 — 트레이 메뉴에서 설치"
+                        : (backendConnected ? "동작 중입니다." : "서버에 연결하는 중..."),
                 TrayIcon.MessageType.NONE));
 
         try {
             SystemTray.getSystemTray().add(icon);
             trayIcon = icon;
+            updateItem = update;
         } catch (AWTException ignored) {
         }
     }
@@ -49,9 +56,29 @@ public final class TrayApp {
     /** BackendClient가 백엔드 WS 연결 상태가 바뀔 때마다 호출한다 — 트레이 툴팁에 반영. */
     public void setBackendConnected(boolean connected) {
         backendConnected = connected;
-        if (trayIcon != null) {
+        if (trayIcon != null && pendingUpdateTag == null) {
             trayIcon.setToolTip(connected ? "마인포탈 — 동작 중" : "마인포탈 — 서버 연결 중...");
         }
+    }
+
+    /**
+     * 새 버전이 감지됐을 때 호출한다. 트레이 메뉴의 "업데이트 설치" 항목을 활성화하고
+     * 사용자가 그걸 클릭하면 onInstall이 실행된다 — 조용히 자동 설치하지 않고 사용자가
+     * 원하는 시점에 누를 수 있게 한다(접속 중일 수도 있으므로).
+     */
+    public void showUpdateAvailable(String tag, Runnable onInstall) {
+        pendingUpdateTag = tag;
+        if (trayIcon == null || updateItem == null) {
+            return;
+        }
+        updateItem.setLabel("업데이트 설치 (" + tag + ")");
+        updateItem.setEnabled(true);
+        updateItem.addActionListener(e -> onInstall.run());
+        trayIcon.setToolTip("마인포탈 — 업데이트 " + tag + " 설치 가능");
+        trayIcon.displayMessage(
+                "마인포탈 업데이트 사용 가능",
+                "새 버전 " + tag + " — 트레이 아이콘 메뉴에서 \"업데이트 설치\"를 눌러 적용하세요.",
+                TrayIcon.MessageType.INFO);
     }
 
     private static Image loadLogo() {

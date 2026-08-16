@@ -34,7 +34,7 @@ public final class Main {
         }
         client.start();
 
-        checkForUpdatesInBackground();
+        checkForUpdatesInBackground(tray);
 
         // 트레이 아이콘이 있으면 AWT 이벤트 스레드가 JVM을 계속 살려두지만, 트레이가 없는
         // 환경(SystemTray.isSupported()==false)에서는 non-daemon 스레드가 하나도 없어
@@ -47,15 +47,19 @@ public final class Main {
         }
     }
 
-    /** GUI가 없으니 물어보지 않고, 새 버전이 있으면 그냥 받아서 재시작한다 — 지금은 실행
-     * 중인 접속이 없을 이 시점(기동 직후)에만 하는 것으로 위험을 줄인다. */
-    private static void checkForUpdatesInBackground() {
+    /** 새 버전이 있으면 트레이 메뉴의 "업데이트 설치" 항목을 활성화만 해두고, 실제 설치는
+     * 사용자가 그 메뉴를 눌렀을 때(접속 중일 수도 있으니 원하는 시점에) 진행한다. */
+    private static void checkForUpdatesInBackground(TrayApp tray) {
         new Thread(() -> {
             try {
                 Updater updater = new Updater();
                 Updater.ReleaseInfo release = updater.checkForUpdate();
-                if (release != null && updater.applyUpdate(release)) {
-                    System.exit(0);
+                if (release != null && release.jarDownloadUrl != null) {
+                    tray.showUpdateAvailable(release.tag, () -> new Thread(() -> {
+                        if (updater.applyUpdate(release)) {
+                            System.exit(0);
+                        }
+                    }, "mineportal-update-install").start());
                 }
             } catch (Exception ignored) {
             }
