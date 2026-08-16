@@ -5,6 +5,14 @@ chat from a browser — no client install required for a quick look, with a desk
 available for servers that need a direct, IP-stable connection. Live at
 [mineportal.kr](https://mineportal.kr).
 
+<p align="center">
+  <img src="docs/screenshots/home-hero.png" alt="MinePortal home page hero" width="820" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/how-it-works.png" alt="How it works section" width="410" />
+  <img src="docs/screenshots/trust-faq.png" alt="Trust points and FAQ" width="410" />
+</p>
+
 ## Architecture
 
 | Path | What it is |
