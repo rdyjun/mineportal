@@ -86,6 +86,14 @@
   }
   .lang-menu .lang-item:hover { background: rgba(255,255,255,0.08); }
   .lang-menu .lang-item .lang-flag img { width: 1.1rem; }
+  .app-manage-btn {
+    background: none; border: 1px solid var(--glass-border); box-shadow: none;
+    color: #ccc; font-weight: 600; font-size: 0.78rem; padding: 0.35rem 0.75rem; border-radius: 20px;
+    display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; white-space: nowrap;
+  }
+  .app-manage-btn:hover { background: rgba(255,255,255,0.08); filter: none; }
+  .app-manage-btn .status-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: #666; flex-shrink: 0; }
+  .app-manage-btn.connected .status-dot { background: #4ade80; box-shadow: 0 0 6px rgba(74,222,128,0.7); }
   #accountStatus { font-size: 0.82rem; color: #ccc; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.4rem; }
   .account-face { width: 1.35rem; height: 1.35rem; border-radius: 4px; image-rendering: pixelated; display: block; }
   .account-picker { position: relative; }
@@ -717,6 +725,10 @@
       <div class="lang-menu" id="langMenu"></div>
     </div>
     <div class="accountArea">
+      <button type="button" class="app-manage-btn" id="appManageBtn" style="display:none">
+        <span class="status-dot" id="appManageDot"></span>
+        <span data-i18n="appManageBtn">앱 관리</span>
+      </button>
       <div class="account-picker" id="accountPicker" style="display:none">
         <button type="button" class="account-btn" id="accountBtn"><span id="accountStatus"></span></button>
         <div class="account-menu" id="accountMenu">
@@ -741,8 +753,11 @@
     <div class="modal">
       <button type="button" class="modal-close" id="pairDesktopModalClose">✕</button>
       <h2 data-i18n="pairDesktopBtn">데스크톱 앱 연동</h2>
-      <p class="modal-subtext" id="pairDesktopStatus" data-i18n="pairDesktopDesc">데스크톱 앱이 자동으로 연동돼요. 잠시만 기다려주세요.</p>
-      <p class="modal-subtext" data-i18n="pairDesktopManualDesc">앱이 자동으로 안 열리면, 데스크톱 앱이 실행 중인지 확인한 뒤 아래 버튼을 눌러주세요.</p>
+      <p class="modal-subtext" id="pairDesktopStatus" data-i18n="pairDesktopDesc">데스크톱 앱이 자동으로 연동돼요.
+잠시만 기다려주세요.</p>
+      <p class="modal-subtext" id="pairDesktopManualDesc" data-i18n="pairDesktopManualDesc">앱이 자동으로 안 열리면,
+데스크톱 앱이 실행 중인지 확인한 뒤
+아래 버튼을 눌러주세요.</p>
       <button type="button" class="ms-login-btn" id="pairDesktopRetryBtn" style="display:none" data-i18n="pairDesktopRetryBtn">다시 시도</button>
     </div>
   </div>
@@ -1081,6 +1096,12 @@
         pairDesktopManualDesc: "앱이 자동으로 안 열리면,\n데스크톱 앱이 실행 중인지 확인한 뒤\n아래 버튼을 눌러주세요.",
         pairDesktopRetryBtn: "다시 시도",
         pairDesktopFailed: "코드 발급에 실패했어요: {error}",
+        appManageBtn: "앱 관리",
+        appManageChecking: "확인 중...",
+        appManageConnected: "✅ 데스크톱 앱이 연결되어 있어요.",
+        appManageDisconnected: "🔴 데스크톱 앱이 연결되어 있지 않아요.",
+        appManageReconnectHint: "혹시 이상하게 연결됐다면,\n아래 버튼으로 다시 연결해보세요.",
+        appManageReconnectBtn: "재연결",
         howTitle: "어떻게 동작하나요",
         howStep1Title: "마인크래프트 계정으로 로그인",
         howStep1Desc: "Microsoft 계정으로 안전하게 로그인해요. 로그인 정보는 기기 밖으로 나가지 않아요.",
@@ -1193,6 +1214,12 @@
         pairDesktopManualDesc: "If the app doesn't open automatically,\nmake sure the desktop app is running\nand click the button below.",
         pairDesktopRetryBtn: "Try again",
         pairDesktopFailed: "Couldn't get a pairing code: {error}",
+        appManageBtn: "App",
+        appManageChecking: "Checking...",
+        appManageConnected: "✅ The desktop app is connected.",
+        appManageDisconnected: "🔴 The desktop app isn't connected.",
+        appManageReconnectHint: "If something seems off,\nreconnect using the button below.",
+        appManageReconnectBtn: "Reconnect",
         howTitle: "How it works",
         howStep1Title: "Log in with your Minecraft account",
         howStep1Desc: "Sign in securely with your Microsoft account. Your credentials never leave your device.",
@@ -1475,7 +1502,11 @@
     const gateCloseBtn = document.getElementById("gateCloseBtn");
 
     function renderDesktopStatus() {
-      if (!account.desktopConnected) return;
+      const connected = !!account.desktopConnected;
+      // 계정 메뉴의 연동 항목과 헤더의 "앱 관리" 버튼 둘 다 이 상태를 그대로 보여준다.
+      appManageBtn.classList.toggle("connected", connected);
+      pairDesktopBtn.textContent = connected ? t("desktopRunningLabel") : t("pairDesktopBtn");
+      if (!connected) return;
       downloadBtn.textContent = t("desktopRunningLabel");
       downloadBtn.href = "#";
       desktopStatusNote.textContent = t("desktopNoteRunning");
@@ -2357,15 +2388,18 @@
           '<img class="account-face" src="https://mc-heads.net/avatar/' + encodeURIComponent(name) + '/24" alt="" />' +
           '<span>' + escapeHtml(name) + '</span>';
         accountPicker.style.display = "";
+        appManageBtn.style.display = "";
         loginTriggerBtn.style.display = "none";
         closeLoginModal();
       } else if (account.status === "logging-in") {
         accountStatusEl.textContent = "";
         accountPicker.style.display = "none";
+        appManageBtn.style.display = "none";
         loginTriggerBtn.style.display = "none";
       } else {
         accountStatusEl.textContent = "";
         accountPicker.style.display = "none";
+        appManageBtn.style.display = "none";
         accountMenu.classList.remove("open");
         loginTriggerBtn.style.display = "";
       }
@@ -2389,7 +2423,9 @@
     const pairDesktopModalBackdrop = document.getElementById("pairDesktopModalBackdrop");
     const pairDesktopModalClose = document.getElementById("pairDesktopModalClose");
     const pairDesktopStatus = document.getElementById("pairDesktopStatus");
+    const pairDesktopManualDesc = document.getElementById("pairDesktopManualDesc");
     const pairDesktopRetryBtn = document.getElementById("pairDesktopRetryBtn");
+    const appManageBtn = document.getElementById("appManageBtn");
 
     // 코드 발급 + mineportal:// 링크 트리거를 한 번에 묶은 것 — 최초 클릭과, 자동으로
     // 안 됐을 때 누르는 "다시 시도" 버튼이 이 함수 하나를 그대로 재사용한다.
@@ -2412,9 +2448,9 @@
 
     pairDesktopBtn.addEventListener("click", () => {
       accountMenu.classList.remove("open");
-      pairDesktopModalBackdrop.classList.add("open");
-      startDesktopPairing();
+      openAppManage();
     });
+    appManageBtn.addEventListener("click", () => openAppManage());
     pairDesktopRetryBtn.addEventListener("click", startDesktopPairing);
     pairDesktopModalClose.addEventListener("click", () => { stopAutoPair(); pairDesktopModalBackdrop.classList.remove("open"); });
     pairDesktopModalBackdrop.addEventListener("click", (e) => {
@@ -2440,6 +2476,10 @@
     async function attemptAutoPair() {
       autoPairArmed = true;
       pairDesktopModalBackdrop.classList.add("open");
+      // openAppManage()의 "이미 연결됨" 화면에서 넘어온 경우를 대비해 문구/버튼을 기본값으로 되돌린다.
+      pairDesktopManualDesc.textContent = t("pairDesktopManualDesc");
+      pairDesktopManualDesc.style.display = "";
+      pairDesktopRetryBtn.textContent = t("pairDesktopRetryBtn");
       ensureWs(); // 페어링 완료 푸시(account WS 메시지)를 받으려면 소켓이 열려있어야 한다
       await startDesktopPairing();
       autoPairTimer = setTimeout(() => {
@@ -2448,6 +2488,28 @@
         pairDesktopModalBackdrop.classList.remove("open");
         openPlayGate();
       }, 8000);
+    }
+
+    // 헤더의 "앱 관리" 버튼과 계정 메뉴의 연동 항목이 공유하는 진입점. 이미 연결돼 있으면
+    // (예: 잘못 붙어서 재연결이 필요한 경우) 상태와 "재연결" 버튼만 보여주고, 연결 전이면
+    // attemptAutoPair()로 넘겨서 정식 모드 진입 때와 동일한 자동 페어링을 시도한다.
+    async function openAppManage() {
+      stopAutoPair();
+      pairDesktopModalBackdrop.classList.add("open");
+      pairDesktopRetryBtn.style.display = "none";
+      pairDesktopManualDesc.style.display = "none";
+      pairDesktopStatus.textContent = t("appManageChecking");
+      ensureWs();
+      const connected = await refreshDesktopAvailable();
+      if (connected) {
+        pairDesktopStatus.textContent = t("appManageConnected");
+        pairDesktopManualDesc.textContent = t("appManageReconnectHint");
+        pairDesktopManualDesc.style.display = "";
+        pairDesktopRetryBtn.textContent = t("appManageReconnectBtn");
+        pairDesktopRetryBtn.style.display = "";
+      } else {
+        attemptAutoPair();
+      }
     }
 
     function renderServers() {
