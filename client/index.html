@@ -113,8 +113,11 @@
   .modal h2 { font-size: 1.6rem; font-weight: 700; color: #fff; margin: 0 0 0.5rem; }
   .modal-icon { font-size: 2rem; margin-bottom: 0.5rem; }
   .modal-subtext {
-    font-size: 0.82rem; color: #c6c6d0; margin: 0 0 1.4rem; line-height: 1.5;
+    font-size: 0.82rem; color: #c6c6d0; margin: 0 0 1.4rem; line-height: 1.5; white-space: pre-line;
   }
+  /* 이 모달만 고정폭(22rem) 대신 안에 넣은 \n 줄바꿈에 맞춰 내용만큼만 넓어진다.
+     min-width는 닫기 버튼이 짧은 제목과 겹치지 않을 최소한의 여유만 준다. */
+  #pairDesktopModalBackdrop .modal { width: auto; min-width: 16rem; }
   .pair-code {
     font-size: 1.8rem; font-weight: 700; letter-spacing: 0.15em; text-align: center;
     padding: 0.9rem; border-radius: 10px; background: rgba(155,93,229,0.14); border: 1px solid var(--accent);
@@ -1074,8 +1077,8 @@
         desktopNoteRunning: "데스크톱 클라이언트가 이 계정과 연동되어 있어요.",
         desktopRunningLabel: "✅ 데스크톱 클라이언트 연동됨",
         pairDesktopBtn: "데스크톱 앱 연동",
-        pairDesktopDesc: "데스크톱 앱이 자동으로 연동돼요. 잠시만 기다려주세요.",
-        pairDesktopManualDesc: "앱이 자동으로 안 열리면, 데스크톱 앱이 실행 중인지 확인한 뒤 아래 버튼을 눌러주세요.",
+        pairDesktopDesc: "데스크톱 앱이 자동으로 연동돼요.\n잠시만 기다려주세요.",
+        pairDesktopManualDesc: "앱이 자동으로 안 열리면,\n데스크톱 앱이 실행 중인지 확인한 뒤\n아래 버튼을 눌러주세요.",
         pairDesktopRetryBtn: "다시 시도",
         pairDesktopFailed: "코드 발급에 실패했어요: {error}",
         howTitle: "어떻게 동작하나요",
@@ -1186,8 +1189,8 @@
         desktopNoteRunning: "The desktop client is linked to this account.",
         desktopRunningLabel: "✅ Desktop client linked",
         pairDesktopBtn: "Link desktop app",
-        pairDesktopDesc: "Linking automatically with the desktop app. Please wait a moment.",
-        pairDesktopManualDesc: "If the app doesn't open automatically, make sure the desktop app is running and click the button below.",
+        pairDesktopDesc: "Linking automatically with the desktop app.\nPlease wait a moment.",
+        pairDesktopManualDesc: "If the app doesn't open automatically,\nmake sure the desktop app is running\nand click the button below.",
         pairDesktopRetryBtn: "Try again",
         pairDesktopFailed: "Couldn't get a pairing code: {error}",
         howTitle: "How it works",
