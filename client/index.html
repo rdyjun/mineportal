@@ -1590,11 +1590,28 @@
       tabServersBtn.classList.toggle("active", tab === "servers");
     }
 
+    // account.desktopConnected는 페이지 로드 시점(또는 마지막 WS 메시지) 기준 스냅샷이라,
+    // "연동" 모달을 거치지 않고 이미 페어링된 데스크톱 앱을 나중에 그냥 켠 경우엔 낡은 값일
+    // 수 있다. 그래서 Play 탭에 들어가거나 정식 모드를 고를 때마다 백엔드에 다시 물어본다.
+    async function refreshDesktopAvailable() {
+      try {
+        const res = await fetch("/api/account");
+        account = await res.json();
+        renderAccount();
+      } catch (e) {
+        // 네트워크 오류면 마지막으로 알려진 값을 그대로 쓴다.
+      }
+      desktopAvailable = !!account.desktopConnected;
+      return desktopAvailable;
+    }
+
     // Switches the Play tab between "정식 모드" (via the desktop client) and
     // "체험모드" (web relay, with the ban-risk warning). Picking 정식 모드 without
     // the desktop client running opens the download gate instead of switching.
-    function setPlayMode(mode) {
-      if (mode === "real" && !desktopAvailable) {
+    // `recheck`는 false로 넘기면 이미 최신인 desktopAvailable을 그대로 믿고 재조회를 건너뛴다
+    // (enterPlayTab이 직전에 이미 refreshDesktopAvailable을 호출해둔 경우 등, 중복 호출 방지용).
+    async function setPlayMode(mode, recheck = true) {
+      if (mode === "real" && !(recheck ? await refreshDesktopAvailable() : desktopAvailable)) {
         openPlayGate();
         return;
       }
@@ -1609,10 +1626,10 @@
       modeToggle.style.display = "none";
       trialWarning.classList.remove("show");
       modeToggleSkeleton.style.display = "";
-      desktopAvailable = !!account.desktopConnected;
+      await refreshDesktopAvailable();
       modeToggleSkeleton.style.display = "none";
       modeToggle.style.display = "";
-      setPlayMode(forcedMode || (desktopAvailable ? "real" : "trial"));
+      await setPlayMode(forcedMode || (desktopAvailable ? "real" : "trial"), false);
     }
 
     tabHomeBtn.addEventListener("click", () => { showTab("home"); loadRecentServers(); });
