@@ -1607,12 +1607,13 @@
 
     // Switches the Play tab between "정식 모드" (via the desktop client) and
     // "체험모드" (web relay, with the ban-risk warning). Picking 정식 모드 without
-    // the desktop client running opens the download gate instead of switching.
+    // the desktop client connected tries to auto-pair it first (attemptAutoPair, defined
+    // below near the pairing modal) — only falls back to the download gate if that fails.
     // `recheck`는 false로 넘기면 이미 최신인 desktopAvailable을 그대로 믿고 재조회를 건너뛴다
     // (enterPlayTab이 직전에 이미 refreshDesktopAvailable을 호출해둔 경우 등, 중복 호출 방지용).
     async function setPlayMode(mode, recheck = true) {
       if (mode === "real" && !(recheck ? await refreshDesktopAvailable() : desktopAvailable)) {
-        openPlayGate();
+        attemptAutoPair();
         return;
       }
       currentPlayMode = mode;
@@ -2412,10 +2413,39 @@
       startDesktopPairing();
     });
     pairDesktopRetryBtn.addEventListener("click", startDesktopPairing);
-    pairDesktopModalClose.addEventListener("click", () => pairDesktopModalBackdrop.classList.remove("open"));
+    pairDesktopModalClose.addEventListener("click", () => { stopAutoPair(); pairDesktopModalBackdrop.classList.remove("open"); });
     pairDesktopModalBackdrop.addEventListener("click", (e) => {
-      if (e.target === pairDesktopModalBackdrop) pairDesktopModalBackdrop.classList.remove("open");
+      if (e.target === pairDesktopModalBackdrop) { stopAutoPair(); pairDesktopModalBackdrop.classList.remove("open"); }
     });
+
+    // 정식 모드를 골랐는데 아직 연동 전이면, 계정 메뉴까지 가서 "연동" 버튼을 따로 누르게
+    // 하는 대신 이 페어링 모달을 그대로 띄워 자동으로 시도한다. 트레이 앱이 이미 켜져
+    // 있으면 mineportal:// 링크 하나로 몇 초 안에 연동이 끝나고(WS로 desktopConnected
+    // 푸시가 오면 자동으로 정식 모드 진입), 앱이 아예 없으면 일정 시간 뒤 다운로드 안내로
+    // 넘어간다.
+    let autoPairArmed = false;
+    let autoPairTimer = null;
+
+    function stopAutoPair() {
+      autoPairArmed = false;
+      if (autoPairTimer) {
+        clearTimeout(autoPairTimer);
+        autoPairTimer = null;
+      }
+    }
+
+    async function attemptAutoPair() {
+      autoPairArmed = true;
+      pairDesktopModalBackdrop.classList.add("open");
+      ensureWs(); // 페어링 완료 푸시(account WS 메시지)를 받으려면 소켓이 열려있어야 한다
+      await startDesktopPairing();
+      autoPairTimer = setTimeout(() => {
+        if (!autoPairArmed) return;
+        stopAutoPair();
+        pairDesktopModalBackdrop.classList.remove("open");
+        openPlayGate();
+      }, 8000);
+    }
 
     function renderServers() {
       serverListEl.innerHTML = "";
@@ -2885,6 +2915,11 @@
           }
           account = data.account;
           renderAccount();
+          if (autoPairArmed && account.desktopConnected) {
+            stopAutoPair();
+            desktopAvailable = true;
+            setPlayMode("real", false);
+          }
         } else if (data.type === "servers") {
           servers = data.servers;
           serversLoaded = true;
