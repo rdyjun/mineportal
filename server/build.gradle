@@ -40,6 +40,8 @@ dependencies {
     implementation 'com.viaversion:viaversion-common:5.12.0'
     implementation 'com.viaversion:viabackwards-common:5.12.0'
     implementation 'com.google.guava:guava:33.4.8-jre' // ViaVersion 런타임 의존성
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 tasks.named('test') {

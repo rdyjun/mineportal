@@ -33,6 +33,8 @@ public class DesktopConnectionManager {
   private final Map<String, PendingCode> pendingCodes = new ConcurrentHashMap<>();
   private final Map<String, String> deviceTokens =
       new ConcurrentHashMap<>(); // deviceToken -> ownerId
+  private final Map<String, String> ownerDeviceTokens =
+      new ConcurrentHashMap<>(); // ownerId -> current deviceToken
   private final Map<String, WebSocketSession> appSessions =
       new ConcurrentHashMap<>(); // ownerId -> session
   private final Set<String> appRoutedServers =
@@ -54,6 +56,8 @@ public class DesktopConnectionManager {
 
   public String issueDeviceToken(String ownerId) {
     String token = randomToken();
+    String previous = ownerDeviceTokens.put(ownerId, token);
+    if (previous != null) deviceTokens.remove(previous, ownerId);
     deviceTokens.put(token, ownerId);
     return token;
   }
@@ -63,6 +67,12 @@ public class DesktopConnectionManager {
   }
 
   public void register(String ownerId, WebSocketSession session) {
+    // A running app can be paired again without opening a new socket. Remove any stale
+    // owner mapping for that same socket before assigning its new identity; otherwise a
+    // later token push for the old account would be delivered to the re-paired app.
+    appSessions
+        .entrySet()
+        .removeIf(entry -> entry.getValue() == session && !entry.getKey().equals(ownerId));
     WebSocketSession previous = appSessions.put(ownerId, session);
     if (previous != null && previous != session && previous.isOpen()) {
       try {
@@ -99,6 +109,11 @@ public class DesktopConnectionManager {
 
   public boolean isRouted(String serverId) {
     return appRoutedServers.contains(serverId);
+  }
+
+  /** Remove credentials from a paired app without unlinking the device itself. */
+  public void clearAccount(String ownerId) {
+    send(ownerId, Map.of("type", "clear-account"));
   }
 
   /**
