@@ -759,6 +759,7 @@
 데스크톱 앱이 실행 중인지 확인한 뒤
 아래 버튼을 눌러주세요.</p>
       <button type="button" class="ms-login-btn" id="pairDesktopRetryBtn" style="display:none" data-i18n="pairDesktopRetryBtn">다시 시도</button>
+      <button type="button" class="btn-danger" id="unpairDesktopBtn" style="display:none" data-i18n="unpairDesktopBtn">이 PC 연동 해제</button>
     </div>
   </div>
 
@@ -1102,6 +1103,9 @@
         appManageDisconnected: "🔴 데스크톱 앱이 연결되어 있지 않아요.",
         appManageReconnectHint: "혹시 이상하게 연결됐다면,\n아래 버튼으로 다시 연결해보세요.",
         appManageReconnectBtn: "재연결",
+        unpairDesktopBtn: "이 PC 연동 해제",
+        unpairDesktopConfirm: "이 PC의 연동을 해제할까요? 진행 중인 서버 연결도 종료돼요.",
+        unpairDesktopFailed: "연동 해제에 실패했어요: {error}",
         howTitle: "어떻게 동작하나요",
         howStep1Title: "마인크래프트 계정으로 로그인",
         howStep1Desc: "Microsoft 계정으로 안전하게 로그인해요. 로그인 정보는 기기 밖으로 나가지 않아요.",
@@ -1220,6 +1224,9 @@
         appManageDisconnected: "🔴 The desktop app isn't connected.",
         appManageReconnectHint: "If something seems off,\nreconnect using the button below.",
         appManageReconnectBtn: "Reconnect",
+        unpairDesktopBtn: "Unlink this PC",
+        unpairDesktopConfirm: "Unlink this PC? Active server connections will also close.",
+        unpairDesktopFailed: "Couldn't unlink the app: {error}",
         howTitle: "How it works",
         howStep1Title: "Log in with your Minecraft account",
         howStep1Desc: "Sign in securely with your Microsoft account. Your credentials never leave your device.",
@@ -2425,6 +2432,7 @@
     const pairDesktopStatus = document.getElementById("pairDesktopStatus");
     const pairDesktopManualDesc = document.getElementById("pairDesktopManualDesc");
     const pairDesktopRetryBtn = document.getElementById("pairDesktopRetryBtn");
+    const unpairDesktopBtn = document.getElementById("unpairDesktopBtn");
     const appManageBtn = document.getElementById("appManageBtn");
 
     // 코드 발급 + mineportal:// 링크 트리거를 한 번에 묶은 것 — 최초 클릭과, 자동으로
@@ -2452,13 +2460,26 @@
     });
     appManageBtn.addEventListener("click", () => openAppManage());
     pairDesktopRetryBtn.addEventListener("click", startDesktopPairing);
+    unpairDesktopBtn.addEventListener("click", async () => {
+      if (!confirm(t("unpairDesktopConfirm"))) return;
+      const res = await fetch("/api/desktop/unpair", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: res.statusText }));
+        alert(t("unpairDesktopFailed", { error: body.error }));
+        return;
+      }
+      account.desktopConnected = false;
+      unpairDesktopBtn.style.display = "none";
+      pairDesktopModalBackdrop.classList.remove("open");
+      renderAccount();
+    });
     pairDesktopModalClose.addEventListener("click", () => { stopAutoPair(); pairDesktopModalBackdrop.classList.remove("open"); });
     pairDesktopModalBackdrop.addEventListener("click", (e) => {
       if (e.target === pairDesktopModalBackdrop) { stopAutoPair(); pairDesktopModalBackdrop.classList.remove("open"); }
     });
 
     // 정식 모드를 골랐는데 아직 연동 전이면, 계정 메뉴까지 가서 "연동" 버튼을 따로 누르게
-    // 하는 대신 이 페어링 모달을 그대로 띄워 자동으로 시도한다. 트레이 앱이 이미 켜져
+    // 하는 대신 이 페어링 모달을 그대로 띄워 자동으로 시도한다. 백그라운드 앱이 이미 켜져
     // 있으면 mineportal:// 링크 하나로 몇 초 안에 연동이 끝나고(WS로 desktopConnected
     // 푸시가 오면 자동으로 정식 모드 진입), 앱이 아예 없으면 일정 시간 뒤 다운로드 안내로
     // 넘어간다.
@@ -2498,6 +2519,7 @@
       pairDesktopModalBackdrop.classList.add("open");
       pairDesktopRetryBtn.style.display = "none";
       pairDesktopManualDesc.style.display = "none";
+      unpairDesktopBtn.style.display = "none";
       pairDesktopStatus.textContent = t("appManageChecking");
       ensureWs();
       const connected = await refreshDesktopAvailable();
@@ -2507,6 +2529,7 @@
         pairDesktopManualDesc.style.display = "";
         pairDesktopRetryBtn.textContent = t("appManageReconnectBtn");
         pairDesktopRetryBtn.style.display = "";
+        unpairDesktopBtn.style.display = "";
       } else {
         attemptAutoPair();
       }
