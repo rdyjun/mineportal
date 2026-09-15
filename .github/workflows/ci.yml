@@ -29,7 +29,9 @@ jobs:
           cache: gradle
 
       - name: Test and build server JAR
-        run: ./server/gradlew -p server clean test bootJar --no-daemon
+        run: |
+          chmod +x server/gradlew
+          ./server/gradlew -p server clean test bootJar --no-daemon
 
   windows-agent:
     name: Windows background agent package
