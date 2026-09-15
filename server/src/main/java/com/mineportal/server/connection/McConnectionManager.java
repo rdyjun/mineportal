@@ -36,6 +36,7 @@ import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundC
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundCustomQueryAnswerPacket;
 import org.springframework.stereotype.Service;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -75,11 +76,11 @@ public class McConnectionManager {
     }
 
     /** ping은 접속 직전 서버 상태 — 서버 버전(번역 필요 여부)과 Forge 여부를 여기서 판단한다. */
-    public void connect(ServerConfig server, AccountState account, PingResult ping) {
-        new Thread(() -> doConnect(server, account, ping), "mc-connect-" + server.id).start();
+    public void connect(ServerConfig server, AccountState account, PingResult ping, InetAddress address) {
+        new Thread(() -> doConnect(server, account, ping, address), "mc-connect-" + server.id).start();
     }
 
-    private void doConnect(ServerConfig server, AccountState account, PingResult ping) {
+    private void doConnect(ServerConfig server, AccountState account, PingResult ping, InetAddress address) {
         var mcProfile = account.fullSession.getMcProfile();
         GameProfile profile = new GameProfile(mcProfile.getId(), mcProfile.getName());
         MinecraftProtocol protocol = new MinecraftProtocol(profile, mcProfile.getMcToken().getAccessToken());
@@ -87,7 +88,7 @@ public class McConnectionManager {
         // ping 실패 등으로 버전을 모르면 0 — 번역 없이 우리 버전으로 시도한다.
         int serverProtocol = ping.protocol() != null ? ping.protocol() : 0;
         ClientSession client = ViaTranslation.createSession(
-                new InetSocketAddress(server.host, server.port), protocol, serverProtocol);
+                new InetSocketAddress(address, server.port), protocol, serverProtocol);
         client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
         if (ping.forgeNetVersion() != null) {
             // 모드 서버는 Forge 표식이 없는 클라이언트를 바로 거절한다 — ForgeHandshake 참고.
