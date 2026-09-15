@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Map;
 
 @RestController
@@ -53,26 +55,34 @@ public class ConnectionController {
         if (server == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "server not found"));
         }
-        if (pingService.isPrivateHost(server.host)) {
-            return ResponseEntity.badRequest().body(Map.of("error", "cannot connect to private/internal hosts"));
-        }
         if ("active".equals(server.phase)) {
             return ResponseEntity.ok(Map.of("ok", true));
         }
         AccountState account = accountSessions.get(sid);
+        boolean viaDesktop = desktopConnections.isConnected(ownerId);
+        InetAddress address;
+        if (!viaDesktop) {
+            try {
+                address = pingService.resolvePublicAddress(server.host);
+            } catch (UnknownHostException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "cannot connect to private/internal or unresolved hosts"));
+            }
+        } else {
+            address = null;
+        }
         server.phase = "active";
         broadcaster.setStatus(server, "connecting", true);
 
         // 이 계정에 페어링된 데스크톱 앱이 붙어있으면 실제 접속은 그 앱이 사용자 PC에서
         // 직접 수행한다(사용자 실IP 유지) — 백엔드는 명령만 전달한다. 앱이 없으면 지금까지의
         // 체험 모드처럼 백엔드가 직접 릴레이 접속한다.
-        if (desktopConnections.isConnected(ownerId)) {
+        if (viaDesktop) {
             desktopConnections.markRouted(server.id);
             desktopConnections.send(ownerId, Map.of(
                     "type", "connect", "serverId", server.id, "host", server.host, "port", server.port
             ));
         } else {
-            mcConnections.connect(server, account);
+            mcConnections.connect(server, account, address);
         }
         return ResponseEntity.ok(Map.of("ok", true));
     }
@@ -105,8 +115,8 @@ public class ConnectionController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "server not found"));
         }
         String message = body.get("message");
-        if (message == null || message.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "message is required"));
+        if (message == null || message.isEmpty() || message.length() > 256) {
+            return ResponseEntity.badRequest().body(Map.of("error", "message must contain 1 to 256 characters"));
         }
         if (desktopConnections.isRouted(id)) {
             desktopConnections.send(ownerId, Map.of("type", "send-chat", "serverId", id, "message", message));

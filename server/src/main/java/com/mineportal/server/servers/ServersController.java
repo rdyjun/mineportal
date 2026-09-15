@@ -42,7 +42,8 @@ public class ServersController {
         if (ownerId == null) {
             return ResponseEntity.status(409).body(Map.of("error", "Log in before adding a server", "code", "not-logged-in"));
         }
-        if (body.host() == null || body.host().isBlank() || body.version() == null || body.version().isBlank()) {
+        if (body.host() == null || body.host().isBlank() || body.host().length() > 253
+                || body.version() == null || body.version().isBlank() || body.version().length() > 64) {
             return ResponseEntity.badRequest().body(Map.of("error", "host and version are required"));
         }
         ParsedAddress parsed = parseServerAddress(body.host().trim());

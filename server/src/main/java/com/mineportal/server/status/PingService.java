@@ -9,11 +9,11 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
 
 /**
  * Server List Ping —실제 런처들이 멀티플레이 목록에서 서버의 접속자 수/MOTD를 보여줄 때
@@ -25,63 +25,54 @@ import java.util.regex.Pattern;
 public class PingService {
 
     private static final int PING_TIMEOUT_MS = 3000;
+    private static final int MAX_STATUS_FRAME_BYTES = 1024 * 1024;
     // status 핸드셰이크는 이 값을 JSON 응답 안에(클라이언트가 요청한 버전으로) 그대로
     // 돌려줄 뿐이다 — Server List Ping은 상태 조회에 있어 버전별 프로토콜 협상이
     // 도입되기 이전 방식이라, 서버의 실제 버전과 무관하게 최근 프로토콜 번호면 아무거나
     // 통한다.
     private static final int HANDSHAKE_PROTOCOL_VERSION = 767;
 
-    private static final Pattern IPV4_127 = Pattern.compile("^127\\.");
-    private static final Pattern IPV4_10 = Pattern.compile("^10\\.");
-    private static final Pattern IPV4_192_168 = Pattern.compile("^192\\.168\\.");
-    private static final Pattern IPV4_169_254 = Pattern.compile("^169\\.254\\.");
-    private static final Pattern IPV4_172 = Pattern.compile("^172\\.(1[6-9]|2\\d|3[01])\\.");
-
     // 여러 사용자가 같은 서버를 짧은 시간 안에 반복 조회해도 실제 TCP ping은 한 번만
     // 나가도록 host:port 단위로 결과를 잠깐 캐싱한다. ConcurrentHashMap#compute는 같은
     // 키에 대해서는 호출을 직렬화하므로, TTL이 지나기 전 동시에 들어온 요청들도 중복으로
     // 소켓을 열지 않고 진행 중인 ping의 결과를 함께 기다렸다가 공유해서 받는다.
     private static final long CACHE_TTL_MS = 15_000;
+    private static final int MAX_CACHE_ENTRIES = 4096;
     private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
 
     private record CacheEntry(PingResult result, long expiresAt) {
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final PublicAddressResolver addressResolver;
 
-    /** 우리 자신의 사설망 안에서만 의미가 있는 호스트명/IP인 경우 true를 반환한다 — 이를
-     * 차단함으로써, 인증 없이 공개된 이 엔드포인트(그리고 실제 connect 경로)가 내부
-     * 인프라를 대상으로 한 SSRF 탐지 도구로 악용되지 못하게 한다. */
-    public boolean isPrivateHost(String host) {
-        String h = host.toLowerCase();
-        if (h.equals("localhost") || h.endsWith(".local")) return true;
-        if (!isIpAddress(h)) return false;
-        return IPV4_127.matcher(h).find()
-                || IPV4_10.matcher(h).find()
-                || IPV4_192_168.matcher(h).find()
-                || IPV4_169_254.matcher(h).find()
-                || IPV4_172.matcher(h).find()
-                || h.equals("::1");
+    public PingService(PublicAddressResolver addressResolver) {
+        this.addressResolver = addressResolver;
     }
 
-    private boolean isIpAddress(String host) {
-        return host.matches("^\\d{1,3}(\\.\\d{1,3}){3}$") || host.contains(":");
+    public InetAddress resolvePublicAddress(String host) throws java.net.UnknownHostException {
+        return addressResolver.resolve(host);
     }
 
-    public PingResult ping(String host, int port) {
-        String key = host.toLowerCase() + ":" + port;
+    public PingResult ping(String host, int port) throws java.net.UnknownHostException {
+        InetAddress address = addressResolver.resolve(host);
+        String key = host.toLowerCase() + "/" + address.getHostAddress() + ":" + port;
         long now = System.currentTimeMillis();
+        if (cache.size() >= MAX_CACHE_ENTRIES && !cache.containsKey(key)) {
+            cache.entrySet().removeIf(entry -> entry.getValue().expiresAt() <= now);
+            if (cache.size() >= MAX_CACHE_ENTRIES) return PingResult.offline("ping capacity reached");
+        }
         return cache.compute(key, (k, existing) -> {
             if (existing != null && existing.expiresAt() > now) {
                 return existing;
             }
-            return new CacheEntry(doPing(host, port), now + CACHE_TTL_MS);
+            return new CacheEntry(doPing(host, port, address), now + CACHE_TTL_MS);
         }).result();
     }
 
-    private PingResult doPing(String host, int port) {
+    private PingResult doPing(String host, int port, InetAddress address) {
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(host, port), PING_TIMEOUT_MS);
+            socket.connect(new InetSocketAddress(address, port), PING_TIMEOUT_MS);
             socket.setSoTimeout(PING_TIMEOUT_MS);
 
             OutputStream out = socket.getOutputStream();
@@ -90,6 +81,9 @@ public class PingService {
 
             InputStream in = socket.getInputStream();
             int frameLength = readVarInt(in);
+            if (frameLength <= 0 || frameLength > MAX_STATUS_FRAME_BYTES) {
+                return PingResult.offline("invalid status response size");
+            }
             byte[] body = in.readNBytes(frameLength);
             if (body.length < frameLength) {
                 return PingResult.offline("connection closed before full response");
@@ -204,7 +198,7 @@ public class PingService {
 
         String readString() throws IOException {
             int length = readVarInt();
-            if (pos + length > data.length) throw new EOFException("string length exceeds remaining bytes");
+            if (length < 0 || length > data.length - pos) throw new EOFException("string length exceeds remaining bytes");
             String s = new String(data, pos, length, StandardCharsets.UTF_8);
             pos += length;
             return s;
