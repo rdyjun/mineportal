@@ -51,7 +51,10 @@ public class AuthController {
     // OAuth CSRF nonce -> 이를 시작한 sid로 매핑해서, 콜백이 어느 세션의 로그인 요청인지
     // 알 수 있게 한다 (예전 Node 백엔드는 전역 계정이 하나뿐이라 단순 Set만 있으면 됐지만,
     // 지금은 세션마다 각자의 AccountState를 가진다).
-    private final Map<String, String> pendingLoginStates = new ConcurrentHashMap<>();
+    private static final long LOGIN_STATE_TTL_MS = 10 * 60 * 1000;
+    private static final int MAX_PENDING_LOGIN_STATES = 10_000;
+    private record PendingLogin(String sid, long expiresAt) {}
+    private final Map<String, PendingLogin> pendingLoginStates = new ConcurrentHashMap<>();
 
     private final AccountSessionManager accountSessions;
     private final EventBroadcaster broadcaster;
@@ -107,7 +110,12 @@ public class AuthController {
             return ResponseEntity.status(500).body("Microsoft login isn't configured: MS_CLIENT_ID, MS_CLIENT_SECRET, and MS_REDIRECT_URI must be set");
         }
         String state = UUID.randomUUID().toString();
-        pendingLoginStates.put(state, sid);
+        long now = System.currentTimeMillis();
+        pendingLoginStates.entrySet().removeIf(entry -> entry.getValue().expiresAt() <= now);
+        if (pendingLoginStates.size() >= MAX_PENDING_LOGIN_STATES) {
+            return ResponseEntity.status(429).body("Too many pending login attempts. Please try again shortly.");
+        }
+        pendingLoginStates.put(state, new PendingLogin(sid, now + LOGIN_STATE_TTL_MS));
 
         Map<String, String> params = new java.util.HashMap<>(APPLICATION_DETAILS.getOAuthParameters());
         params.put("state", state);
@@ -132,10 +140,11 @@ public class AuthController {
         if (error != null) {
             return redirectTo("/?loginError=" + encode(errorDescription != null ? errorDescription : error));
         }
-        String pendingSid = state != null ? pendingLoginStates.remove(state) : null;
-        if (pendingSid == null || code == null) {
+        PendingLogin pending = state != null ? pendingLoginStates.remove(state) : null;
+        if (pending == null || pending.expiresAt() <= System.currentTimeMillis() || code == null) {
             return ResponseEntity.status(400).body("Invalid or expired login attempt. Please try signing in again.");
         }
+        String pendingSid = pending.sid();
 
         // 로그인 시도가 실제로 확인되는 시점에 새로 생성한 sid로 교체한다. 이렇게 하면
         // 공격자가 미리 피해자 브라우저에 심어둔 sid가 인증된 세션까지 이어지지 못한다
