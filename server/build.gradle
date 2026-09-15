@@ -33,6 +33,8 @@ dependencies {
     implementation 'org.geysermc.mcprotocollib:protocol:26.1-SNAPSHOT'
     implementation 'net.raphimc:MinecraftAuth:4.1.1'
     implementation 'net.kyori:adventure-text-serializer-plain:4.17.0'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 tasks.named('test') {
