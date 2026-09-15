@@ -3,6 +3,6 @@ server/.gradle/
 .env
 .omc/
 .idea/
-# MinecraftAuth caches Microsoft login tokens here after login
+# Legacy authentication cache; never mount this into the current server.
 nmp-cache/
 *.log
