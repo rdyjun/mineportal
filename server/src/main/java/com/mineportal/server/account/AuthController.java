@@ -85,9 +85,15 @@ public class AuthController {
             // 계정 세션이 사라져도 연결이 좀비로 남지 않도록.
             for (var server : registry.listServers(profile.id())) {
                 if ("active".equals(server.phase)) {
-                    mcConnections.disconnect(server.id);
+                    if (desktopConnections.isRouted(server.id)) {
+                        desktopConnections.send(profile.id(), Map.of("type", "disconnect", "serverId", server.id));
+                        desktopConnections.unmarkRouted(server.id);
+                    } else {
+                        mcConnections.disconnect(server.id);
+                    }
                 }
             }
+            desktopConnections.clearAccount(profile.id());
         }
         accountSessions.remove(sid);
         broadcaster.refreshAccountFor(sid);

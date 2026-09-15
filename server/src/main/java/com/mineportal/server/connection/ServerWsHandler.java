@@ -1,12 +1,15 @@
 package com.mineportal.server.connection;
 
 import com.mineportal.server.account.AccountSessionManager;
+import com.mineportal.server.desktop.DesktopConnectionManager;
 import com.mineportal.server.servers.ServerRegistry;
 import com.mineportal.server.ws.EventBroadcaster;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.util.Map;
 
 @Component
 public class ServerWsHandler extends TextWebSocketHandler {
@@ -15,13 +18,16 @@ public class ServerWsHandler extends TextWebSocketHandler {
     private final AccountSessionManager accountSessions;
     private final ServerRegistry registry;
     private final McConnectionManager mcConnections;
+    private final DesktopConnectionManager desktopConnections;
 
     public ServerWsHandler(EventBroadcaster broadcaster, AccountSessionManager accountSessions,
-                            ServerRegistry registry, McConnectionManager mcConnections) {
+                            ServerRegistry registry, McConnectionManager mcConnections,
+                            DesktopConnectionManager desktopConnections) {
         this.broadcaster = broadcaster;
         this.accountSessions = accountSessions;
         this.registry = registry;
         this.mcConnections = mcConnections;
+        this.desktopConnections = desktopConnections;
     }
 
     @Override
@@ -42,7 +48,12 @@ public class ServerWsHandler extends TextWebSocketHandler {
         String ownerId = profile.id();
         for (var server : registry.listServers(ownerId)) {
             if ("active".equals(server.phase)) {
-                mcConnections.disconnect(server.id);
+                if (desktopConnections.isRouted(server.id)) {
+                    desktopConnections.send(ownerId, Map.of("type", "disconnect", "serverId", server.id));
+                    desktopConnections.unmarkRouted(server.id);
+                } else {
+                    mcConnections.disconnect(server.id);
+                }
             }
         }
     }

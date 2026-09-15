@@ -149,12 +149,14 @@ public final class BackendClient {
         String type = obj.has("type") ? obj.get("type").getAsString() : "";
         switch (type) {
             case "paired" -> saveDeviceToken(obj.get("deviceToken").getAsString());
-            case "pair-required", "pair-failed" -> { /* 대기 — 웹에서 새 링크를 다시 보내주길 기다린다 */ }
+            case "pair-required" -> clearAccount();
+            case "pair-failed" -> { /* 대기 — 웹에서 새 링크를 다시 보내주길 기다린다 */ }
             case "token" -> account = new Account(
                     UUID.fromString(obj.get("uuid").getAsString()),
                     obj.get("name").getAsString(),
                     obj.get("accessToken").getAsString(),
                     parseSigningCert(obj));
+            case "clear-account" -> clearAccount();
             case "connect" -> handleConnect(obj.get("serverId").getAsString(),
                     obj.get("host").getAsString(), obj.get("port").getAsInt(),
                     obj.has("protocol") ? obj.get("protocol").getAsInt() : 0,
@@ -220,6 +222,12 @@ public final class BackendClient {
         if (client != null) client.disconnect();
     }
 
+    private void clearAccount() {
+        activeClients.values().forEach(ChatClient::disconnect);
+        activeClients.clear();
+        account = null;
+    }
+
     private void handleSendChat(String serverId, String message) {
         ChatClient client = activeClients.get(serverId);
         if (client != null) client.sendChat(message);
@@ -251,6 +259,7 @@ public final class BackendClient {
         @Override
         public CompletionStage<?> onClose(WebSocket ws, int statusCode, String reason) {
             webSocket = null;
+            clearAccount();
             scheduleReconnect();
             return CompletableFuture.completedFuture(null);
         }
@@ -258,6 +267,7 @@ public final class BackendClient {
         @Override
         public void onError(WebSocket ws, Throwable error) {
             webSocket = null;
+            clearAccount();
             scheduleReconnect();
         }
     }
