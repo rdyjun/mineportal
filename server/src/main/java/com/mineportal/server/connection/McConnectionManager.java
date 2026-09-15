@@ -32,6 +32,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatSessionUpdatePacket;
 import org.springframework.stereotype.Service;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -66,17 +67,17 @@ public class McConnectionManager {
         this.broadcaster = broadcaster;
     }
 
-    public void connect(ServerConfig server, AccountState account) {
-        new Thread(() -> doConnect(server, account), "mc-connect-" + server.id).start();
+    public void connect(ServerConfig server, AccountState account, InetAddress address) {
+        new Thread(() -> doConnect(server, account, address), "mc-connect-" + server.id).start();
     }
 
-    private void doConnect(ServerConfig server, AccountState account) {
+    private void doConnect(ServerConfig server, AccountState account, InetAddress address) {
         var mcProfile = account.fullSession.getMcProfile();
         GameProfile profile = new GameProfile(mcProfile.getId(), mcProfile.getName());
         MinecraftProtocol protocol = new MinecraftProtocol(profile, mcProfile.getMcToken().getAccessToken());
 
         ClientSession client = ClientNetworkSessionFactory.factory()
-                .setRemoteSocketAddress(new InetSocketAddress(server.host, server.port))
+                .setRemoteSocketAddress(new InetSocketAddress(address, server.port))
                 .setProtocol(protocol)
                 .create();
         client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
