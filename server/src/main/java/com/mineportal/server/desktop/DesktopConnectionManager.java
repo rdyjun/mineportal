@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DesktopConnectionManager {
 
     private static final long PAIR_CODE_TTL_MS = 5 * 60 * 1000;
+    private static final long DEFAULT_DEVICE_TOKEN_TTL_MS = 30L * 24 * 60 * 60 * 1000;
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 헷갈리는 0/O/1/I 제외
 
@@ -34,10 +35,21 @@ public class DesktopConnectionManager {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, PendingCode> pendingCodes = new ConcurrentHashMap<>();
-    private final Map<String, String> deviceTokens = new ConcurrentHashMap<>(); // deviceToken -> ownerId
+    private record DeviceGrant(String ownerId, long expiresAt) {}
+    private final Map<String, DeviceGrant> deviceTokens = new ConcurrentHashMap<>();
     private final Map<String, String> ownerDeviceTokens = new ConcurrentHashMap<>(); // ownerId -> current deviceToken
     private final Map<String, WebSocketSession> appSessions = new ConcurrentHashMap<>(); // ownerId -> session
     private final Set<String> appRoutedServers = ConcurrentHashMap.newKeySet(); // serverId currently handled by an app
+    private final long deviceTokenTtlMs;
+
+    public DesktopConnectionManager() {
+        this(Long.parseLong(System.getenv().getOrDefault("DESKTOP_DEVICE_TOKEN_TTL_DAYS", "30"))
+                * 24 * 60 * 60 * 1000);
+    }
+
+    DesktopConnectionManager(long deviceTokenTtlMs) {
+        this.deviceTokenTtlMs = deviceTokenTtlMs > 0 ? deviceTokenTtlMs : DEFAULT_DEVICE_TOKEN_TTL_MS;
+    }
 
     /** 브라우저가 로그인된 상태에서 "데스크톱 앱 연동" 버튼을 누르면 발급되는 1회용 코드. */
     public String createPairingCode(String ownerId) {
@@ -56,13 +68,21 @@ public class DesktopConnectionManager {
     public String issueDeviceToken(String ownerId) {
         String token = randomToken();
         String previous = ownerDeviceTokens.put(ownerId, token);
-        if (previous != null) deviceTokens.remove(previous, ownerId);
-        deviceTokens.put(token, ownerId);
+        if (previous != null) deviceTokens.remove(previous);
+        deviceTokens.put(token, new DeviceGrant(ownerId, System.currentTimeMillis() + deviceTokenTtlMs));
         return token;
     }
 
     public String ownerForDeviceToken(String token) {
-        return token == null ? null : deviceTokens.get(token);
+        if (token == null) return null;
+        DeviceGrant grant = deviceTokens.get(token);
+        if (grant == null) return null;
+        if (grant.expiresAt() <= System.currentTimeMillis()) {
+            deviceTokens.remove(token, grant);
+            ownerDeviceTokens.remove(grant.ownerId(), token);
+            return null;
+        }
+        return grant.ownerId();
     }
 
     public void register(String ownerId, WebSocketSession session) {
@@ -113,6 +133,19 @@ public class DesktopConnectionManager {
         send(ownerId, Map.of("type", "clear-account"));
     }
 
+    /** Revoke the persistent device grant and return the connected app to pairing-only state. */
+    public void unpair(String ownerId) {
+        String token = ownerDeviceTokens.remove(ownerId);
+        if (token != null) deviceTokens.remove(token);
+        WebSocketSession session = appSessions.remove(ownerId);
+        if (session == null) return;
+        try {
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "unpaired"))));
+        } catch (Exception ignored) {
+        }
+        session.getAttributes().remove("ownerId");
+    }
+
     /** 이 계정으로 앱이 붙어있으면 마인크래프트 액세스 토큰을 그 자리에서 밀어준다 — 로그인
      * 완료 직후, 그리고 앱이 로그인 완료 이후에 새로 페어링/재접속했을 때 둘 다 호출된다.
      * 브라우저는 이 토큰을 절대 보지 않는다(AccountState.fullSession의 서버 전용 필드).
@@ -152,8 +185,8 @@ public class DesktopConnectionManager {
     }
 
     private static String randomCode() {
-        StringBuilder sb = new StringBuilder(8);
-        for (int i = 0; i < 8; i++) {
+        StringBuilder sb = new StringBuilder(16);
+        for (int i = 0; i < 16; i++) {
             sb.append(CODE_ALPHABET.charAt(RANDOM.nextInt(CODE_ALPHABET.length())));
         }
         return sb.toString();

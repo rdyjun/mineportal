@@ -35,4 +35,30 @@ class DesktopConnectionManagerTest {
         assertNull(manager.ownerForDeviceToken(first));
         assertEquals("owner-a", manager.ownerForDeviceToken(second));
     }
+
+    @Test
+    void expiredDeviceTokenCannotResume() throws Exception {
+        DesktopConnectionManager manager = new DesktopConnectionManager(1);
+        String token = manager.issueDeviceToken("owner-a");
+        Thread.sleep(5);
+
+        assertNull(manager.ownerForDeviceToken(token));
+    }
+
+    @Test
+    void unpairRevokesGrantAndRemovesConnectedOwner() throws Exception {
+        DesktopConnectionManager manager = new DesktopConnectionManager();
+        WebSocketSession session = mock(WebSocketSession.class);
+        when(session.getAttributes()).thenReturn(new HashMap<>());
+        when(session.isOpen()).thenReturn(true);
+        String token = manager.issueDeviceToken("owner-a");
+        manager.register("owner-a", session);
+
+        manager.unpair("owner-a");
+
+        assertNull(manager.ownerForDeviceToken(token));
+        assertFalse(manager.isConnected("owner-a"));
+        assertNull(manager.ownerIdOf(session));
+        verify(session).sendMessage(any());
+    }
 }
