@@ -11,7 +11,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -133,9 +136,24 @@ public final class BackendClient {
     }
 
     private void saveDeviceToken(String token) {
+        Path temporary = null;
         try {
-            Files.writeString(AppPaths.deviceFile(), token, StandardCharsets.UTF_8);
+            temporary = Files.createTempFile(AppPaths.dir(), "device", ".tmp");
+            Files.writeString(temporary, token, StandardCharsets.UTF_8);
+            try {
+                Files.move(temporary, AppPaths.deviceFile(), StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporary, AppPaths.deviceFile(), StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (Exception ignored) {
+        } finally {
+            if (temporary != null) {
+                try {
+                    Files.deleteIfExists(temporary);
+                } catch (Exception ignored) {
+                }
+            }
         }
     }
 
@@ -149,7 +167,7 @@ public final class BackendClient {
         String type = obj.has("type") ? obj.get("type").getAsString() : "";
         switch (type) {
             case "paired" -> saveDeviceToken(obj.get("deviceToken").getAsString());
-            case "pair-required" -> clearAccount();
+            case "pair-required" -> clearPairing();
             case "pair-failed" -> { /* 대기 — 웹에서 새 링크를 다시 보내주길 기다린다 */ }
             case "token" -> account = new Account(
                     UUID.fromString(obj.get("uuid").getAsString()),
@@ -157,6 +175,7 @@ public final class BackendClient {
                     obj.get("accessToken").getAsString(),
                     parseSigningCert(obj));
             case "clear-account" -> clearAccount();
+            case "unpaired" -> clearPairing();
             case "connect" -> handleConnect(obj.get("serverId").getAsString(),
                     obj.get("host").getAsString(), obj.get("port").getAsInt());
             case "disconnect" -> handleDisconnect(obj.get("serverId").getAsString());
@@ -224,6 +243,14 @@ public final class BackendClient {
         activeClients.values().forEach(ChatClient::disconnect);
         activeClients.clear();
         account = null;
+    }
+
+    private void clearPairing() {
+        clearAccount();
+        try {
+            Files.deleteIfExists(AppPaths.deviceFile());
+        } catch (Exception ignored) {
+        }
     }
 
     private void handleSendChat(String serverId, String message) {
