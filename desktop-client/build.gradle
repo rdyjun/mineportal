@@ -40,10 +40,6 @@ tasks.named('processResources') {
     filesMatching('version.properties') {
         expand(appVersion: project.version)
     }
-    // 트레이 아이콘용 로고 — 웹 프론트(../client)와 동일한 파일을 그대로 가져다 쓴다.
-    from('../client') {
-        include 'logo.png'
-    }
     // 채팅 번역 렌더링용 언어 파일 — 백엔드(../server)와 동일한 것을 그대로 가져다 쓴다
     // (McConnectionManager와 동일한 시스템 메시지 번역 결과를 내기 위함).
     from('../server/src/main/resources/lang') {
