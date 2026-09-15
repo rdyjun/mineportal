@@ -135,6 +135,7 @@ public class DesktopConnectionManager {
 
     /** Revoke the persistent device grant and return the connected app to pairing-only state. */
     public void unpair(String ownerId) {
+        pendingCodes.entrySet().removeIf(entry -> entry.getValue().ownerId().equals(ownerId));
         String token = ownerDeviceTokens.remove(ownerId);
         if (token != null) deviceTokens.remove(token);
         WebSocketSession session = appSessions.remove(ownerId);

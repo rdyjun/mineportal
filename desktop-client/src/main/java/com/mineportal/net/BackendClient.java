@@ -167,7 +167,7 @@ public final class BackendClient {
         String type = obj.has("type") ? obj.get("type").getAsString() : "";
         switch (type) {
             case "paired" -> saveDeviceToken(obj.get("deviceToken").getAsString());
-            case "pair-required" -> clearAccount();
+            case "pair-required" -> clearPairing();
             case "pair-failed" -> { /* 대기 — 웹에서 새 링크를 다시 보내주길 기다린다 */ }
             case "token" -> account = new Account(
                     UUID.fromString(obj.get("uuid").getAsString()),

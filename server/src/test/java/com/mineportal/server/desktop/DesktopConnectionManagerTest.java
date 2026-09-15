@@ -61,4 +61,14 @@ class DesktopConnectionManagerTest {
         assertNull(manager.ownerIdOf(session));
         verify(session).sendMessage(any());
     }
+
+    @Test
+    void unpairInvalidatesOutstandingPairingCodes() {
+        DesktopConnectionManager manager = new DesktopConnectionManager();
+        String code = manager.createPairingCode("owner-a");
+
+        manager.unpair("owner-a");
+
+        assertNull(manager.consumePairingCode(code));
+    }
 }
