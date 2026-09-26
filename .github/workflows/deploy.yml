@@ -20,7 +20,7 @@ jobs:
           envs: FORCE_REBUILD
           script: |
             set -e
-            cd ~/mc-chat-viewer
+            cd /opt/mc-chat-viewer
             OLD_SHA=$(git rev-parse HEAD)
             git fetch origin main
             git reset --hard origin/main
