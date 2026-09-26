@@ -156,7 +156,9 @@ public final class BackendClient {
                     obj.get("accessToken").getAsString(),
                     parseSigningCert(obj));
             case "connect" -> handleConnect(obj.get("serverId").getAsString(),
-                    obj.get("host").getAsString(), obj.get("port").getAsInt());
+                    obj.get("host").getAsString(), obj.get("port").getAsInt(),
+                    obj.has("protocol") ? obj.get("protocol").getAsInt() : 0,
+                    obj.has("forgeNetVersion") ? obj.get("forgeNetVersion").getAsInt() : -1);
             case "disconnect" -> handleDisconnect(obj.get("serverId").getAsString());
             case "send-chat" -> handleSendChat(obj.get("serverId").getAsString(), obj.get("message").getAsString());
             default -> { /* 알 수 없는 메시지 타입은 무시 */ }
@@ -182,7 +184,7 @@ public final class BackendClient {
         }
     }
 
-    private void handleConnect(String serverId, String host, int port) {
+    private void handleConnect(String serverId, String host, int port, int serverProtocol, int forgeNetVersion) {
         Account acc = account;
         if (acc == null) return; // 토큰이 아직 안 왔으면(로그인 전) 할 수 있는 게 없다
         if (activeClients.containsKey(serverId)) return;
@@ -206,7 +208,7 @@ public final class BackendClient {
         });
         activeClients.put(serverId, client);
         try {
-            client.connect(host, port);
+            client.connect(host, port, serverProtocol, forgeNetVersion);
         } catch (Exception e) {
             activeClients.remove(serverId);
             send(Map.of("type", "disconnected", "serverId", serverId, "reason", String.valueOf(e.getMessage())));

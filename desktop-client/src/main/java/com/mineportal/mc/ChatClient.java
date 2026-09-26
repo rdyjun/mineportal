@@ -10,11 +10,12 @@ import org.geysermc.mcprotocollib.network.ClientSession;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.event.session.DisconnectedEvent;
 import org.geysermc.mcprotocollib.network.event.session.SessionAdapter;
-import org.geysermc.mcprotocollib.network.factory.ClientNetworkSessionFactory;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
 import org.geysermc.mcprotocollib.protocol.data.game.ArgumentSignature;
+import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
+import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundCustomPayloadPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.Holder;
 import org.geysermc.mcprotocollib.protocol.data.game.chat.ChatType;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
@@ -28,6 +29,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandSignedPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatSessionUpdatePacket;
+import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundCustomQueryPacket;
+import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundCustomQueryAnswerPacket;
 
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
@@ -63,6 +66,10 @@ public final class ChatClient {
 
     private static final Map<String, String> LANG = loadLang();
 
+    static {
+        ForgeHandshake.install();
+    }
+
     private final Account account;
     private final Listener listener;
     private volatile ClientSession session;
@@ -74,15 +81,20 @@ public final class ChatClient {
         this.listener = listener;
     }
 
-    public void connect(String host, int port) {
+    /**
+     * serverProtocol: the server's protocol number from the backend's ping (0 = unknown, connect
+     * without translation). forgeNetVersion: forgeData.fmlNetworkVersion (-1 = not Forge).
+     */
+    public void connect(String host, int port, int serverProtocol, int forgeNetVersion) {
         GameProfile profile = new GameProfile(account.uuid, account.name);
         MinecraftProtocol protocol = new MinecraftProtocol(profile, account.accessToken);
 
-        ClientSession client = ClientNetworkSessionFactory.factory()
-                .setRemoteSocketAddress(new InetSocketAddress(host, port))
-                .setProtocol(protocol)
-                .create();
+        ClientSession client = ViaTranslation.createSession(new InetSocketAddress(host, port), protocol, serverProtocol);
         client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
+        if (forgeNetVersion >= 0) {
+            // Modded servers reject clients without the Forge marker; see ForgeHandshake.
+            client.setFlag(MinecraftConstants.CLIENT_HOST, ForgeHandshake.markHost(host, forgeNetVersion, serverProtocol));
+        }
 
         Account.SigningCert cert = account.signingCert;
         chatSigner = (cert != null && !cert.isExpired()) ? new ChatSigner(account.uuid, cert) : null;
@@ -91,6 +103,16 @@ public final class ChatClient {
         client.addListener(new SessionAdapter() {
             @Override
             public void packetReceived(Session s, Packet packet) {
+                if (packet instanceof ClientboundCustomQueryPacket p) {
+                    ServerboundCustomQueryAnswerPacket reply = ForgeHandshake.reply(p);
+                    if (reply != null) s.send(reply);
+                    return;
+                }
+                if (packet instanceof ClientboundCustomPayloadPacket p) {
+                    ServerboundCustomPayloadPacket reply = ForgeHandshake.reply(p);
+                    if (reply != null) s.send(reply);
+                    return;
+                }
                 if (packet instanceof ClientboundLoginPacket) {
                     // Register our signing key with the server before any chat is sent, same as
                     // McConnectionManager does for the trial-mode relay.
