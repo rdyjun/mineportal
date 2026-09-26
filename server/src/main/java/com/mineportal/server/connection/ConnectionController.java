@@ -5,6 +5,7 @@ import com.mineportal.server.account.AccountState;
 import com.mineportal.server.desktop.DesktopConnectionManager;
 import com.mineportal.server.servers.ServerConfig;
 import com.mineportal.server.servers.ServerRegistry;
+import com.mineportal.server.status.PingResult;
 import com.mineportal.server.status.PingService;
 import com.mineportal.server.ws.EventBroadcaster;
 import org.springframework.http.HttpStatus;
@@ -60,6 +61,8 @@ public class ConnectionController {
             return ResponseEntity.ok(Map.of("ok", true));
         }
         AccountState account = accountSessions.get(sid);
+        // 서버 버전(번역 필요 여부)과 Forge 여부는 ping으로 판단한다 — ping은 캐싱돼 있어 보통 즉시 반환된다.
+        PingResult ping = pingService.ping(server.host, server.port);
         server.phase = "active";
         broadcaster.setStatus(server, "connecting", true);
 
@@ -69,10 +72,13 @@ public class ConnectionController {
         if (desktopConnections.isConnected(ownerId)) {
             desktopConnections.markRouted(server.id);
             desktopConnections.send(ownerId, Map.of(
-                    "type", "connect", "serverId", server.id, "host", server.host, "port", server.port
+                    "type", "connect", "serverId", server.id, "host", server.host, "port", server.port,
+                    // 모르면 0 / -1 — 데스크톱 앱은 번역 없이, Forge 표식 없이 접속한다.
+                    "protocol", ping.protocol() != null ? ping.protocol() : 0,
+                    "forgeNetVersion", ping.forgeNetVersion() != null ? ping.forgeNetVersion() : -1
             ));
         } else {
-            mcConnections.connect(server, account);
+            mcConnections.connect(server, account, ping);
         }
         return ResponseEntity.ok(Map.of("ok", true));
     }

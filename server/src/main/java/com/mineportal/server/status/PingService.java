@@ -1,5 +1,6 @@
 package com.mineportal.server.status;
 
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -25,11 +26,10 @@ import java.util.regex.Pattern;
 public class PingService {
 
     private static final int PING_TIMEOUT_MS = 3000;
-    // status 핸드셰이크는 이 값을 JSON 응답 안에(클라이언트가 요청한 버전으로) 그대로
-    // 돌려줄 뿐이다 — Server List Ping은 상태 조회에 있어 버전별 프로토콜 협상이
-    // 도입되기 이전 방식이라, 서버의 실제 버전과 무관하게 최근 프로토콜 번호면 아무거나
-    // 통한다.
-    private static final int HANDSHAKE_PROTOCOL_VERSION = 767;
+    // 상태 조회 자체는 어떤 프로토콜 번호로도 통하지만, ViaVersion 플러그인을 쓰는 서버는
+    // 자기가 받아줄 수 있는 요청 번호를 version.protocol로 그대로 돌려준다 — 우리가 실제로
+    // 접속할 때 쓰는 번호(MCProtocolLib 코덱)를 보내야 그 응답으로 번역 필요 여부를 판단할 수 있다.
+    private static final int HANDSHAKE_PROTOCOL_VERSION = MinecraftCodec.CODEC.getProtocolVersion();
 
     private static final Pattern IPV4_127 = Pattern.compile("^127\\.");
     private static final Pattern IPV4_10 = Pattern.compile("^10\\.");
@@ -108,8 +108,11 @@ public class PingService {
             Integer playersMax = players.has("max") ? players.get("max").asInt() : null;
             String motd = extractMotd(root.path("description"));
             String version = root.path("version").path("name").asText(null);
+            Integer protocol = root.path("version").has("protocol") ? root.path("version").get("protocol").asInt() : null;
+            JsonNode forgeData = root.path("forgeData");
+            Integer forgeNetVersion = forgeData.isObject() ? forgeData.path("fmlNetworkVersion").asInt(0) : null;
 
-            return PingResult.online(playersOnline, playersMax, motd, version);
+            return PingResult.online(playersOnline, playersMax, motd, version, protocol, forgeNetVersion);
         } catch (java.net.SocketTimeoutException e) {
             return PingResult.offline("timed out");
         } catch (IOException e) {

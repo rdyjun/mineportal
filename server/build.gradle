@@ -18,6 +18,8 @@ repositories {
     maven { url 'https://repo.opencollab.dev/main/' }
     // MinecraftAuth and its net.lenni0451 dependencies
     maven { url 'https://maven.lenni0451.net/releases' }
+    // ViaVersion / ViaBackwards
+    maven { url 'https://repo.viaversion.com' }
 }
 
 dependencies {
@@ -33,6 +35,10 @@ dependencies {
     implementation 'org.geysermc.mcprotocollib:protocol:26.1-SNAPSHOT'
     implementation 'net.raphimc:MinecraftAuth:4.1.1'
     implementation 'net.kyori:adventure-text-serializer-plain:4.17.0'
+    // 26.1이 아닌 서버(예: 1.20.1 모드팩)와 통신하기 위한 버전 번역 — ViaTranslation 참고.
+    implementation 'com.viaversion:viaversion-common:5.12.0'
+    implementation 'com.viaversion:viabackwards-common:5.12.0'
+    implementation 'com.google.guava:guava:33.4.8-jre' // ViaVersion 런타임 의존성
 }
 
 tasks.named('test') {

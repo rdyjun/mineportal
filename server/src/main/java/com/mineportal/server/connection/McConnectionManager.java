@@ -2,6 +2,7 @@ package com.mineportal.server.connection;
 
 import com.mineportal.server.account.AccountState;
 import com.mineportal.server.servers.ServerConfig;
+import com.mineportal.server.status.PingResult;
 import com.mineportal.server.ws.EventBroadcaster;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -12,11 +13,12 @@ import org.geysermc.mcprotocollib.network.ClientSession;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.event.session.DisconnectedEvent;
 import org.geysermc.mcprotocollib.network.event.session.SessionAdapter;
-import org.geysermc.mcprotocollib.network.factory.ClientNetworkSessionFactory;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
 import org.geysermc.mcprotocollib.protocol.data.game.ArgumentSignature;
+import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
+import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundCustomPayloadPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.Holder;
 import org.geysermc.mcprotocollib.protocol.data.game.chat.ChatType;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
@@ -30,6 +32,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandSignedPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatSessionUpdatePacket;
+import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundCustomQueryPacket;
+import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundCustomQueryAnswerPacket;
 import org.springframework.stereotype.Service;
 
 import java.net.InetSocketAddress;
@@ -62,24 +66,34 @@ public class McConnectionManager {
     private final Map<String, ChatSigner> chatSigners = new ConcurrentHashMap<>();
     private final Map<String, CommandTree> commandTrees = new ConcurrentHashMap<>();
 
+    static {
+        ForgeHandshake.install();
+    }
+
     public McConnectionManager(EventBroadcaster broadcaster) {
         this.broadcaster = broadcaster;
     }
 
-    public void connect(ServerConfig server, AccountState account) {
-        new Thread(() -> doConnect(server, account), "mc-connect-" + server.id).start();
+    /** ping은 접속 직전 서버 상태 — 서버 버전(번역 필요 여부)과 Forge 여부를 여기서 판단한다. */
+    public void connect(ServerConfig server, AccountState account, PingResult ping) {
+        new Thread(() -> doConnect(server, account, ping), "mc-connect-" + server.id).start();
     }
 
-    private void doConnect(ServerConfig server, AccountState account) {
+    private void doConnect(ServerConfig server, AccountState account, PingResult ping) {
         var mcProfile = account.fullSession.getMcProfile();
         GameProfile profile = new GameProfile(mcProfile.getId(), mcProfile.getName());
         MinecraftProtocol protocol = new MinecraftProtocol(profile, mcProfile.getMcToken().getAccessToken());
 
-        ClientSession client = ClientNetworkSessionFactory.factory()
-                .setRemoteSocketAddress(new InetSocketAddress(server.host, server.port))
-                .setProtocol(protocol)
-                .create();
+        // ping 실패 등으로 버전을 모르면 0 — 번역 없이 우리 버전으로 시도한다.
+        int serverProtocol = ping.protocol() != null ? ping.protocol() : 0;
+        ClientSession client = ViaTranslation.createSession(
+                new InetSocketAddress(server.host, server.port), protocol, serverProtocol);
         client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
+        if (ping.forgeNetVersion() != null) {
+            // 모드 서버는 Forge 표식이 없는 클라이언트를 바로 거절한다 — ForgeHandshake 참고.
+            client.setFlag(MinecraftConstants.CLIENT_HOST,
+                    ForgeHandshake.markHost(server.host, ping.forgeNetVersion(), serverProtocol));
+        }
 
         // 서명 인증서가 있고 만료되지 않았으면 채팅 서명을 활성화한다 — 없으면 서명 없이
         // 보내고, secure-chat을 강제하는 서버는 chat.disabled.missingProfileKey로 조용히
@@ -97,6 +111,16 @@ public class McConnectionManager {
 
             @Override
             public void packetReceived(Session s, Packet packet) {
+                if (packet instanceof ClientboundCustomQueryPacket p) {
+                    ServerboundCustomQueryAnswerPacket reply = ForgeHandshake.reply(p);
+                    if (reply != null) s.send(reply);
+                    return;
+                }
+                if (packet instanceof ClientboundCustomPayloadPacket p) {
+                    ServerboundCustomPayloadPacket reply = ForgeHandshake.reply(p);
+                    if (reply != null) s.send(reply);
+                    return;
+                }
                 if (packet instanceof ClientboundLoginPacket) {
                     // 서버에 우리 서명 키를 등록한다 — 이게 있어야 서버가 이후 서명된 채팅을
                     // 받아준다. play 상태 진입 직후, 실제 채팅 이전에 보내야 한다.
