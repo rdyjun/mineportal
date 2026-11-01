@@ -6,8 +6,19 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 class AccountSessionManagerTest {
+
+  @Test
+  void springSelectsTheProductionConstructorWhenTestConstructorAlsoExists() {
+    try (var context = new AnnotationConfigApplicationContext()) {
+      context.register(AccountSessionManager.class);
+      context.refresh();
+
+      assertNotNull(context.getBean(AccountSessionManager.class));
+    }
+  }
 
   @Test
   void expiredSessionIsRemovedAndPublishedForCleanup() {
