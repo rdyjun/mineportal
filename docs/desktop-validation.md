@@ -62,12 +62,13 @@ intermittent failures are preserved in the JSON records.
 
 ## Outstanding
 
-- The Mac remains locked, so native GUI layout/interactions, native OAuth and the
-  WebEngine pairing event are still unverified. Do not work around the lock.
+- The Mac is unlocked, but native computer control is awaiting Accessibility and
+  Screen Recording permission approval. Native GUI layout/interactions, native OAuth
+  and the WebEngine pairing event remain unverified. Do not bypass permissions.
 - The app loads the live website; local frontend changes have not been deployed.
-- Windows package/runtime checks and CI are pending. No GitHub push or PR exists:
-  automatic approval review rejected the external source upload and user approval
-  has not arrived. Do not retry through another tool.
+- The user explicitly approved GitHub push and draft PR creation. Draft PR
+  https://github.com/rdyjun/mineportal/pull/31 is open; Windows/Mac package CI is
+  in progress. The retired macOS 14 runner was replaced with macOS 15 arm64.
 - Developer ID signing/notarization and production release assets are pending.
 - Some gateways advertise a broad or missing status protocol but then demand a
   specific version at login. Recorded version failures are not evidence that the
