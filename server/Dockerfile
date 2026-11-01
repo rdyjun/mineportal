@@ -5,6 +5,7 @@ COPY server/gradle gradle
 COPY server/build.gradle server/settings.gradle ./
 RUN chmod +x gradlew
 COPY server/src src
+COPY shared/src/main/java /shared/src/main/java
 COPY client /client
 RUN ./gradlew bootJar --no-daemon
 
