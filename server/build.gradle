@@ -34,7 +34,7 @@ dependencies {
     // Keep the Java 17-compatible native codec. ViaVersion/ViaBackwards 5.12.2 translates
     // between this 26.1 codec and both older servers and the observed 26.2/26.3 servers.
     implementation 'org.geysermc.mcprotocollib:protocol:26.1-SNAPSHOT'
-    implementation 'net.raphimc:MinecraftAuth:4.1.1'
+    implementation 'net.raphimc:MinecraftAuth:5.0.2'
     implementation 'net.kyori:adventure-text-serializer-plain:4.17.0'
     // 26.1이 아닌 서버(예: 1.20.1 모드팩)와 통신하기 위한 버전 번역 — ViaTranslation 참고.
     implementation 'com.viaversion:viaversion-common:5.12.2'
