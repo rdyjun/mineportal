@@ -13,6 +13,11 @@
 - Java 21 runtime is bundled; the jpackage launcher is Mach-O arm64.
 - Bundled `jdk.naming.dns` was verified with jimage; Minecraft SRV discovery must
   also work in the installer runtime, not just with a full development JDK.
+- GitHub Actions on commit `88357cb` built the Windows ZIP and Mac arm64 DMG,
+  verified their bundled DNS module, and kept both native launchers running for
+  eight seconds in headless mode with the bundled runtime. Both package jobs passed:
+  https://github.com/rdyjun/mineportal/actions/runs/41362502186
+  This checks launcher/runtime startup, not GUI rendering or interactive login.
 
 ## Actual server checks
 
@@ -67,8 +72,8 @@ intermittent failures are preserved in the JSON records.
   and the WebEngine pairing event remain unverified. Do not bypass permissions.
 - The app loads the live website; local frontend changes have not been deployed.
 - The user explicitly approved GitHub push and draft PR creation. Draft PR
-  https://github.com/rdyjun/mineportal/pull/31 is open; Windows/Mac package CI is
-  in progress. The retired macOS 14 runner was replaced with macOS 15 arm64.
+  https://github.com/rdyjun/mineportal/pull/31 is open. Windows/Mac package CI passed;
+  the retired macOS 14 runner was replaced with macOS 15 arm64.
 - Developer ID signing/notarization and production release assets are pending.
 - Some gateways advertise a broad or missing status protocol but then demand a
   specific version at login. Recorded version failures are not evidence that the
