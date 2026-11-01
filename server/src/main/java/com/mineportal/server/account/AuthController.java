@@ -99,7 +99,11 @@ public class AuthController {
       // 로그아웃하면서 이 계정으로 활성 연결된 마인크래프트 서버들도 정리한다 —
       // 계정 세션이 사라져도 연결이 좀비로 남지 않도록.
       for (var server : registry.listServers(profile.id())) {
-        if ("active".equals(server.phase)) {
+        if (server.isActive()) {
+          long attemptId = server.currentAttemptId();
+          if (server.markClosed(attemptId)) {
+            broadcaster.setStatus(server, "account logged out", true);
+          }
           if (desktopConnections.isRouted(server.id)) {
             desktopConnections.send(
                 profile.id(), Map.of("type", "disconnect", "serverId", server.id));

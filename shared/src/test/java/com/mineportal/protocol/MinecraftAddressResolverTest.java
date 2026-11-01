@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -58,6 +59,26 @@ class MinecraftAddressResolverTest {
                         "play.example.net", new String[]{"127.0.0.1"}));
         assertThrows(UnknownHostException.class,
                 () -> new MinecraftAddressResolver(dns).resolve("play.example.net", 25565, true));
+    }
+
+    @Test
+    void srvSelectionKeepsPriorityStrictAndUsesRelativeWeight() {
+        var lowPriority = new MinecraftAddressResolver.SrvRecord(0, 1, 25565, "slow.example.net");
+        var highWeight = new MinecraftAddressResolver.SrvRecord(0, 3, 25565, "fast.example.net");
+        var fallbackPriority = new MinecraftAddressResolver.SrvRecord(1, 100, 25565, "fallback.example.net");
+        Random random = new Random(42);
+        int highWeightSelections = 0;
+
+        for (int i = 0; i < 10_000; i++) {
+            List<MinecraftAddressResolver.SrvRecord> ordered =
+                    SrvRecordSelector.order(List.of(fallbackPriority, lowPriority, highWeight), random);
+            assertEquals(0, ordered.get(0).priority());
+            assertEquals(1, ordered.get(2).priority());
+            if (ordered.get(0).equals(highWeight)) highWeightSelections++;
+        }
+
+        assertTrue(highWeightSelections > 7_000 && highWeightSelections < 8_000,
+                "3:1 SRV weight should be selected proportionally, got " + highWeightSelections);
     }
 
     private static final class FakeDns implements MinecraftAddressResolver.DnsLookup {

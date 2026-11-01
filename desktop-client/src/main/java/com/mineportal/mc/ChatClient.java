@@ -131,13 +131,23 @@ public final class ChatClient {
           @Override
           public void packetReceived(Session s, Packet packet) {
             if (packet instanceof ClientboundCustomQueryPacket p) {
-              ServerboundCustomQueryAnswerPacket reply = ForgeHandshake.reply(p);
-              if (reply != null) s.send(reply);
+              ForgeHandshake.Result<ServerboundCustomQueryAnswerPacket> result =
+                  ForgeHandshake.handle(p);
+              if (result.rejected()) {
+                s.disconnect(result.rejectionReason());
+              } else if (result.reply() != null) {
+                s.send(result.reply());
+              }
               return;
             }
             if (packet instanceof ClientboundCustomPayloadPacket p) {
-              ServerboundCustomPayloadPacket reply = ForgeHandshake.reply(p);
-              if (reply != null) s.send(reply);
+              ForgeHandshake.Result<ServerboundCustomPayloadPacket> result =
+                  ForgeHandshake.handle(p);
+              if (result.rejected()) {
+                s.disconnect(result.rejectionReason());
+              } else if (result.reply() != null) {
+                s.send(result.reply());
+              }
               return;
             }
             if (packet instanceof ClientboundLoginPacket) {

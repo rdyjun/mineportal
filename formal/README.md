@@ -6,8 +6,8 @@ chat sending, and cleanup.
 
 The model deliberately does not claim that an arbitrary client-required mod can be emulated.
 It proves the safer property: a connection cannot become active while a required handshake is
-still unsatisfied, and an unknown protocol is rejected instead of being sent through a random
-codec.
+still unsatisfied, an insufficient client capability closes instead of satisfying that handshake,
+and an unknown protocol is rejected instead of being sent through a random codec.
 
 Implementation mapping:
 

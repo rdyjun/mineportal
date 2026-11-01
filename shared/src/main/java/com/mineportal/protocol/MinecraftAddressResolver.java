@@ -10,10 +10,10 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
+import java.util.random.RandomGenerator;
 
 /** Resolves Minecraft's optional DNS SRV endpoint once and pins the selected address bytes. */
 public final class MinecraftAddressResolver {
@@ -58,10 +58,13 @@ public final class MinecraftAddressResolver {
                 while (all.hasMore()) {
                     String[] parts = String.valueOf(all.next()).trim().split("\\s+");
                     if (parts.length != 4) continue;
+                    int priority = Integer.parseInt(parts[0]);
+                    int weight = Integer.parseInt(parts[1]);
                     int port = Integer.parseInt(parts[2]);
                     String target = stripTrailingDot(parts[3]);
-                    if (validPort(port) && !target.isBlank() && !".".equals(target)) {
-                        records.add(new SrvRecord(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), port, target));
+                    if (validSrvField(priority) && validSrvField(weight) && validPort(port)
+                            && !target.isBlank() && !".".equals(target)) {
+                        records.add(new SrvRecord(priority, weight, port, target));
                     }
                 }
             } catch (Exception ignored) {
@@ -74,9 +77,6 @@ public final class MinecraftAddressResolver {
                     }
                 }
             }
-            records.sort(Comparator.comparingInt(SrvRecord::priority)
-                    .thenComparing(Comparator.comparingInt(SrvRecord::weight).reversed())
-                    .thenComparing(SrvRecord::target));
             return List.copyOf(records);
         }
 
@@ -87,13 +87,19 @@ public final class MinecraftAddressResolver {
     }
 
     private final DnsLookup dns;
+    private final RandomGenerator random;
 
     public MinecraftAddressResolver() {
-        this(new SystemDnsLookup());
+        this(new SystemDnsLookup(), RandomGenerator.getDefault());
     }
 
     MinecraftAddressResolver(DnsLookup dns) {
+        this(dns, RandomGenerator.getDefault());
+    }
+
+    MinecraftAddressResolver(DnsLookup dns, RandomGenerator random) {
         this.dns = dns;
+        this.random = random;
     }
 
     public ResolvedEndpoint resolve(String rawHost, int port, boolean requirePublic) throws UnknownHostException {
@@ -101,7 +107,7 @@ public final class MinecraftAddressResolver {
         if (!validPort(port)) throw new UnknownHostException("invalid port");
 
         List<SrvRecord> candidates = port == DEFAULT_PORT && !isIpLiteral(logicalHost)
-                ? dns.srv(logicalHost) : List.of();
+                ? SrvRecordSelector.order(dns.srv(logicalHost), random) : List.of();
         UnknownHostException lastFailure = null;
         for (SrvRecord candidate : candidates) {
             try {
@@ -176,6 +182,10 @@ public final class MinecraftAddressResolver {
 
     private static boolean validPort(int port) {
         return port >= 1 && port <= 65535;
+    }
+
+    private static boolean validSrvField(int value) {
+        return value >= 0 && value <= 65535;
     }
 
     private static boolean isIpLiteral(String host) {

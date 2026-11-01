@@ -23,11 +23,10 @@ public class ServerConfig {
   /** 자유 형식의 표시용 상태 문자열 (클라이언트로부터 오거나, 아무 시도도 없었으면 "idle"). */
   public volatile String status = "idle";
 
-  /** 새 연결 시도를 허용할지를 결정하는 대략적인 상태 — status는 그냥 표시용 텍스트일 뿐이다. */
-  public volatile String phase = "idle"; // "idle" | "active" | "closed"
+  /** 연결 가능 여부와 실제 접속 여부의 단일 진실 원천. status는 표시용 텍스트일 뿐이다. */
+  private volatile ConnectionState connectionState = ConnectionState.IDLE;
 
-  /** 연결이 실제로 play 상태에 도달했으면 true. */
-  public volatile boolean connected = false;
+  private long lastAttemptId;
 
   private final List<StatusEntry> statusHistory = Collections.synchronizedList(new LinkedList<>());
   private final List<ChatMessage> messages = Collections.synchronizedList(new LinkedList<>());
@@ -37,6 +36,62 @@ public class ServerConfig {
     this.host = host;
     this.port = port;
     this.version = version;
+  }
+
+  /** 동시에 들어온 요청 중 하나만 새 연결 시도를 시작하게 한다. */
+  public synchronized long beginConnection() {
+    if (connectionState.active()) return 0;
+    connectionState = ConnectionState.CONNECTING;
+    return ++lastAttemptId;
+  }
+
+  /** 늦게 도착한 connected 이벤트가 이미 닫힌 연결을 되살리지 못하게 한다. */
+  public synchronized boolean markConnected(long attemptId) {
+    if (attemptId != lastAttemptId || connectionState != ConnectionState.CONNECTING) return false;
+    connectionState = ConnectionState.CONNECTED;
+    return true;
+  }
+
+  public synchronized boolean markFailed(long attemptId) {
+    if (attemptId != lastAttemptId || !connectionState.active()) return false;
+    connectionState = ConnectionState.FAILED;
+    return true;
+  }
+
+  public synchronized boolean markClosed(long attemptId) {
+    if (attemptId != lastAttemptId || connectionState == ConnectionState.CLOSED) return false;
+    connectionState = ConnectionState.CLOSED;
+    return true;
+  }
+
+  public synchronized boolean markClosed() {
+    if (connectionState == ConnectionState.CLOSED) return false;
+    connectionState = ConnectionState.CLOSED;
+    return true;
+  }
+
+  public ConnectionState connectionState() {
+    return connectionState;
+  }
+
+  public synchronized long currentAttemptId() {
+    return lastAttemptId;
+  }
+
+  public synchronized boolean isCurrentAttempt(long attemptId) {
+    return attemptId == lastAttemptId && connectionState.active();
+  }
+
+  public boolean isActive() {
+    return connectionState.active();
+  }
+
+  public String phase() {
+    return connectionState.phase();
+  }
+
+  public boolean connected() {
+    return connectionState.connected();
   }
 
   public void pushStatusHistory(StatusEntry entry) {

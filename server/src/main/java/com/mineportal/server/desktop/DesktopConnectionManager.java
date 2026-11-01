@@ -5,7 +5,6 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import net.raphimc.minecraftauth.step.java.StepMCProfile;
 import net.raphimc.minecraftauth.step.java.StepMCToken;
@@ -40,8 +39,8 @@ public class DesktopConnectionManager {
       new ConcurrentHashMap<>(); // ownerId -> current deviceToken
   private final Map<String, WebSocketSession> appSessions =
       new ConcurrentHashMap<>(); // ownerId -> session
-  private final Set<String> appRoutedServers =
-      ConcurrentHashMap.newKeySet(); // serverId currently handled by an app
+  private final Map<String, Long> appRoutedServers =
+      new ConcurrentHashMap<>(); // serverId -> current connection attempt handled by an app
   private final long deviceTokenTtlMs;
 
   public DesktopConnectionManager() {
@@ -109,11 +108,9 @@ public class DesktopConnectionManager {
     session.getAttributes().put("ownerId", ownerId);
   }
 
-  public void unregister(WebSocketSession session) {
+  public boolean unregister(WebSocketSession session) {
     String ownerId = (String) session.getAttributes().get("ownerId");
-    if (ownerId != null) {
-      appSessions.remove(ownerId, session);
-    }
+    return ownerId != null && appSessions.remove(ownerId, session);
   }
 
   public String ownerIdOf(WebSocketSession session) {
@@ -125,16 +122,24 @@ public class DesktopConnectionManager {
     return session != null && session.isOpen();
   }
 
-  public void markRouted(String serverId) {
-    appRoutedServers.add(serverId);
+  public void markRouted(String serverId, long attemptId) {
+    appRoutedServers.put(serverId, attemptId);
   }
 
   public void unmarkRouted(String serverId) {
     appRoutedServers.remove(serverId);
   }
 
+  public void unmarkRouted(String serverId, long attemptId) {
+    appRoutedServers.remove(serverId, attemptId);
+  }
+
   public boolean isRouted(String serverId) {
-    return appRoutedServers.contains(serverId);
+    return appRoutedServers.containsKey(serverId);
+  }
+
+  public long routedAttempt(String serverId) {
+    return appRoutedServers.getOrDefault(serverId, 0L);
   }
 
   /** Remove credentials from a paired app without unlinking the device itself. */
@@ -189,13 +194,15 @@ public class DesktopConnectionManager {
     send(ownerId, payload);
   }
 
-  public void send(String ownerId, Map<String, Object> payload) {
+  public boolean send(String ownerId, Map<String, Object> payload) {
     WebSocketSession session = appSessions.get(ownerId);
-    if (session == null || !session.isOpen()) return;
+    if (session == null || !session.isOpen()) return false;
     try {
       session.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
+      return true;
     } catch (Exception e) {
       System.err.println("Failed to send desktop-app WS message: " + e.getMessage());
+      return false;
     }
   }
 

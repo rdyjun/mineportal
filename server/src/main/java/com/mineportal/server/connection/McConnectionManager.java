@@ -63,9 +63,9 @@ public class McConnectionManager {
       PlainTextComponentSerializer.plainText();
 
   private final EventBroadcaster broadcaster;
-  private final Map<String, ClientSession> sessions = new ConcurrentHashMap<>();
-  private final Map<String, ChatSigner> chatSigners = new ConcurrentHashMap<>();
-  private final Map<String, CommandTree> commandTrees = new ConcurrentHashMap<>();
+  private final Map<String, ActiveSession> sessions = new ConcurrentHashMap<>();
+  private final Map<String, AttemptValue<ChatSigner>> chatSigners = new ConcurrentHashMap<>();
+  private final Map<String, AttemptValue<CommandTree>> commandTrees = new ConcurrentHashMap<>();
 
   static {
     ForgeHandshake.install();
@@ -77,12 +77,39 @@ public class McConnectionManager {
 
   /** ping은 접속 직전 서버 상태 — 서버 버전(번역 필요 여부)과 Forge 여부를 여기서 판단한다. */
   public void connect(
-      ServerConfig server, AccountState account, PingResult ping, ResolvedEndpoint endpoint) {
-    new Thread(() -> doConnect(server, account, ping, endpoint), "mc-connect-" + server.id).start();
+      ServerConfig server,
+      AccountState account,
+      PingResult ping,
+      ResolvedEndpoint endpoint,
+      long attemptId) {
+    new Thread(
+            () -> {
+              try {
+                doConnect(server, account, ping, endpoint, attemptId);
+              } catch (RuntimeException e) {
+                failConnection(server, attemptId, e);
+              }
+            },
+            "mc-connect-" + server.id)
+        .start();
+  }
+
+  private void failConnection(ServerConfig server, long attemptId, RuntimeException failure) {
+    removeAttempt(server.id, attemptId);
+    removeAuxiliary(server.id, attemptId);
+    if (server.markFailed(attemptId)) {
+      String reason = failure.getMessage();
+      if (reason == null || reason.isBlank()) reason = failure.getClass().getSimpleName();
+      broadcaster.setStatus(server, "connection failed: " + reason, true);
+    }
   }
 
   private void doConnect(
-      ServerConfig server, AccountState account, PingResult ping, ResolvedEndpoint endpoint) {
+      ServerConfig server,
+      AccountState account,
+      PingResult ping,
+      ResolvedEndpoint endpoint,
+      long attemptId) {
     var mcProfile = account.fullSession.getMcProfile();
     GameProfile profile = new GameProfile(mcProfile.getId(), mcProfile.getName());
     MinecraftProtocol protocol =
@@ -92,6 +119,7 @@ public class McConnectionManager {
     int serverProtocol = ping.protocol() != null ? ping.protocol() : 0;
     ClientSession client =
         ViaTranslation.createSession(endpoint.socketAddress(), protocol, serverProtocol);
+    if (!server.isCurrentAttempt(attemptId)) return;
     client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
     if (ping.forgeNetVersion() != null) {
       // 모드 서버는 Forge 표식이 없는 클라이언트를 바로 거절한다 — ForgeHandshake 참고.
@@ -105,10 +133,10 @@ public class McConnectionManager {
     // 거부한다(크래시나 킥 없이).
     StepPlayerCertificates.PlayerCertificates certificates =
         account.fullSession.getPlayerCertificates();
+    clearValuesBeforeAttempt(server.id, attemptId);
     if (certificates != null && !certificates.isExpired()) {
-      chatSigners.put(server.id, new ChatSigner(profile.getId(), certificates));
-    } else {
-      chatSigners.remove(server.id);
+      chatSigners.put(
+          server.id, new AttemptValue<>(attemptId, new ChatSigner(profile.getId(), certificates)));
     }
 
     String accountName = mcProfile.getName();
@@ -119,19 +147,29 @@ public class McConnectionManager {
           @Override
           public void packetReceived(Session s, Packet packet) {
             if (packet instanceof ClientboundCustomQueryPacket p) {
-              ServerboundCustomQueryAnswerPacket reply = ForgeHandshake.reply(p);
-              if (reply != null) s.send(reply);
+              ForgeHandshake.Result<ServerboundCustomQueryAnswerPacket> result =
+                  ForgeHandshake.handle(p);
+              if (result.rejected()) {
+                s.disconnect(result.rejectionReason());
+              } else if (result.reply() != null) {
+                s.send(result.reply());
+              }
               return;
             }
             if (packet instanceof ClientboundCustomPayloadPacket p) {
-              ServerboundCustomPayloadPacket reply = ForgeHandshake.reply(p);
-              if (reply != null) s.send(reply);
+              ForgeHandshake.Result<ServerboundCustomPayloadPacket> result =
+                  ForgeHandshake.handle(p);
+              if (result.rejected()) {
+                s.disconnect(result.rejectionReason());
+              } else if (result.reply() != null) {
+                s.send(result.reply());
+              }
               return;
             }
             if (packet instanceof ClientboundLoginPacket) {
               // 서버에 우리 서명 키를 등록한다 — 이게 있어야 서버가 이후 서명된 채팅을
               // 받아준다. play 상태 진입 직후, 실제 채팅 이전에 보내야 한다.
-              ChatSigner signer = chatSigners.get(server.id);
+              ChatSigner signer = valueForAttempt(chatSigners, server.id, attemptId);
               if (signer != null) {
                 s.send(signer.sessionUpdatePacket());
               }
@@ -140,7 +178,10 @@ public class McConnectionManager {
             if (packet instanceof ClientboundCommandsPacket p) {
               // 이 서버의 명령어 트리를 저장해둔다 — sendChat()이 명령어를 보낼 때
               // 어떤 인자가 서명이 필요한지 조회하는 데 쓴다.
-              commandTrees.put(server.id, new CommandTree(p.getNodes(), p.getFirstNodeIndex()));
+              commandTrees.put(
+                  server.id,
+                  new AttemptValue<>(
+                      attemptId, new CommandTree(p.getNodes(), p.getFirstNodeIndex())));
               // 진단 로그 — 어떤 명령어의 어떤 인자가 서명이 필요한지(parser=MESSAGE)
               // 눈으로 확인하기 위함.
               logSignableCommands(p.getNodes());
@@ -161,8 +202,9 @@ public class McConnectionManager {
             }
             if (!joinAnnounced) {
               joinAnnounced = true;
-              server.connected = true;
-              broadcaster.setStatus(server, "connected", true);
+              if (server.markConnected(attemptId)) {
+                broadcaster.setStatus(server, "connected", true);
+              }
             }
             broadcaster.chatReceived(
                 server, new ChatMessage(accountName, text, System.currentTimeMillis()));
@@ -170,16 +212,19 @@ public class McConnectionManager {
 
           @Override
           public void disconnected(DisconnectedEvent event) {
-            sessions.remove(server.id);
-            chatSigners.remove(server.id);
-            commandTrees.remove(server.id);
-            server.phase = "closed";
-            server.connected = false;
-            broadcaster.setStatus(server, "disconnected: " + plain(event.getReason()), true);
+            removeAttempt(server.id, attemptId);
+            removeAuxiliary(server.id, attemptId);
+            if (server.markClosed(attemptId)) {
+              broadcaster.setStatus(server, "disconnected: " + plain(event.getReason()), true);
+            }
           }
         });
 
-    sessions.put(server.id, client);
+    if (!server.isCurrentAttempt(attemptId)) return;
+    ActiveSession previous = sessions.get(server.id);
+    if (previous != null && previous.attemptId() > attemptId) return;
+    sessions.put(server.id, new ActiveSession(attemptId, client));
+    if (previous != null) previous.session().disconnect("superseded by a newer connection attempt");
     client.connect();
   }
 
@@ -188,14 +233,15 @@ public class McConnectionManager {
    * 정리(맵에서 제거, phase/connected 갱신, 브로드캐스트)는 위 disconnected() 콜백이 처리한다.
    */
   public void disconnect(String serverId) {
-    ClientSession session = sessions.get(serverId);
-    if (session != null) {
-      session.disconnect("사용자 세션이 종료되어 연결을 닫았어요");
+    ActiveSession active = sessions.get(serverId);
+    if (active != null) {
+      active.session().disconnect("사용자 세션이 종료되어 연결을 닫았어요");
     }
   }
 
   public void sendChat(String serverId, String message) {
-    ClientSession session = sessions.get(serverId);
+    ActiveSession active = sessions.get(serverId);
+    ClientSession session = active != null ? active.session() : null;
     if (session == null || !session.isConnected()) throw new NotConnectedException();
 
     // "/"로 시작하면 일반 채팅이 아니라 명령어다 — ServerboundChatPacket으로 보내면
@@ -205,7 +251,8 @@ public class McConnectionManager {
       return;
     }
 
-    ChatSigner signer = chatSigners.get(serverId);
+    ChatSigner signer =
+        active != null ? valueForAttempt(chatSigners, serverId, active.attemptId()) : null;
     long timestampMs = Instant.now().toEpochMilli();
     if (signer != null) {
       session.send(signer.signedChatPacket(message, timestampMs));
@@ -220,8 +267,10 @@ public class McConnectionManager {
    * ServerboundChatCommandPacket으로 보낸다.
    */
   private void sendCommand(String serverId, ClientSession session, String command) {
-    CommandTree tree = commandTrees.get(serverId);
-    ChatSigner signer = chatSigners.get(serverId);
+    ActiveSession active = sessions.get(serverId);
+    long attemptId = active != null ? active.attemptId() : 0;
+    CommandTree tree = valueForAttempt(commandTrees, serverId, attemptId);
+    ChatSigner signer = valueForAttempt(chatSigners, serverId, attemptId);
     SignableArgument match =
         (tree != null && signer != null) ? findSignableArgument(tree, command) : null;
     if (match == null) {
@@ -244,6 +293,35 @@ public class McConnectionManager {
   private record SignableArgument(String name, String text) {}
 
   private record CommandTree(CommandNode[] nodes, int rootIndex) {}
+
+  private record ActiveSession(long attemptId, ClientSession session) {}
+
+  private record AttemptValue<T>(long attemptId, T value) {}
+
+  private void removeAttempt(String serverId, long attemptId) {
+    sessions.computeIfPresent(
+        serverId, (ignored, active) -> active.attemptId() == attemptId ? null : active);
+  }
+
+  private void removeAuxiliary(String serverId, long attemptId) {
+    chatSigners.computeIfPresent(
+        serverId, (ignored, value) -> value.attemptId() == attemptId ? null : value);
+    commandTrees.computeIfPresent(
+        serverId, (ignored, value) -> value.attemptId() == attemptId ? null : value);
+  }
+
+  private void clearValuesBeforeAttempt(String serverId, long attemptId) {
+    chatSigners.computeIfPresent(
+        serverId, (ignored, value) -> value.attemptId() > attemptId ? value : null);
+    commandTrees.computeIfPresent(
+        serverId, (ignored, value) -> value.attemptId() > attemptId ? value : null);
+  }
+
+  private static <T> T valueForAttempt(
+      Map<String, AttemptValue<T>> values, String serverId, long attemptId) {
+    AttemptValue<T> value = values.get(serverId);
+    return value != null && value.attemptId() == attemptId ? value.value() : null;
+  }
 
   /**
    * command(공백으로 나뉜 토큰들)를 명령어 트리를 따라 내려가며 매칭한다. 리터럴 자식이 토큰과 일치하면 그 토큰을 소비하고 계속 내려가고, 인자 자식을 만나면 그
