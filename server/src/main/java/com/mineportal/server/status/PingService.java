@@ -1,15 +1,16 @@
 package com.mineportal.server.status;
 
+import com.mineportal.protocol.MinecraftAddressResolver;
+import com.mineportal.protocol.MinecraftAddressResolver.ResolvedEndpoint;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
@@ -24,51 +25,51 @@ import tools.jackson.databind.ObjectMapper;
 public class PingService {
 
   private static final int PING_TIMEOUT_MS = 3000;
+  private static final int MAX_STATUS_FRAME_BYTES = 1024 * 1024;
   // 상태 조회 자체는 어떤 프로토콜 번호로도 통하지만, ViaVersion 플러그인을 쓰는 서버는
   // 자기가 받아줄 수 있는 요청 번호를 version.protocol로 그대로 돌려준다 — 우리가 실제로
   // 접속할 때 쓰는 번호(MCProtocolLib 코덱)를 보내야 그 응답으로 번역 필요 여부를 판단할 수 있다.
   private static final int HANDSHAKE_PROTOCOL_VERSION = MinecraftCodec.CODEC.getProtocolVersion();
-
-  private static final Pattern IPV4_127 = Pattern.compile("^127\\.");
-  private static final Pattern IPV4_10 = Pattern.compile("^10\\.");
-  private static final Pattern IPV4_192_168 = Pattern.compile("^192\\.168\\.");
-  private static final Pattern IPV4_169_254 = Pattern.compile("^169\\.254\\.");
-  private static final Pattern IPV4_172 = Pattern.compile("^172\\.(1[6-9]|2\\d|3[01])\\.");
 
   // 여러 사용자가 같은 서버를 짧은 시간 안에 반복 조회해도 실제 TCP ping은 한 번만
   // 나가도록 host:port 단위로 결과를 잠깐 캐싱한다. ConcurrentHashMap#compute는 같은
   // 키에 대해서는 호출을 직렬화하므로, TTL이 지나기 전 동시에 들어온 요청들도 중복으로
   // 소켓을 열지 않고 진행 중인 ping의 결과를 함께 기다렸다가 공유해서 받는다.
   private static final long CACHE_TTL_MS = 15_000;
+  private static final int MAX_CACHE_ENTRIES = 4096;
   private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
 
-  private record CacheEntry(PingResult result, long expiresAt) {}
+  public record PingObservation(PingResult result, ResolvedEndpoint endpoint) {}
+
+  private record CacheEntry(PingObservation observation, long expiresAt) {}
 
   private final ObjectMapper objectMapper = new ObjectMapper();
-
-  /**
-   * 우리 자신의 사설망 안에서만 의미가 있는 호스트명/IP인 경우 true를 반환한다 — 이를 차단함으로써, 인증 없이 공개된 이 엔드포인트(그리고 실제 connect
-   * 경로)가 내부 인프라를 대상으로 한 SSRF 탐지 도구로 악용되지 못하게 한다.
-   */
-  public boolean isPrivateHost(String host) {
-    String h = host.toLowerCase();
-    if (h.equals("localhost") || h.endsWith(".local")) return true;
-    if (!isIpAddress(h)) return false;
-    return IPV4_127.matcher(h).find()
-        || IPV4_10.matcher(h).find()
-        || IPV4_192_168.matcher(h).find()
-        || IPV4_169_254.matcher(h).find()
-        || IPV4_172.matcher(h).find()
-        || h.equals("::1");
-  }
-
-  private boolean isIpAddress(String host) {
-    return host.matches("^\\d{1,3}(\\.\\d{1,3}){3}$") || host.contains(":");
-  }
+  private final MinecraftAddressResolver addressResolver = new MinecraftAddressResolver();
 
   public PingResult ping(String host, int port) {
-    String key = host.toLowerCase() + ":" + port;
+    try {
+      return observePublic(host, port).result();
+    } catch (UnknownHostException e) {
+      return PingResult.offline(e.getMessage());
+    }
+  }
+
+  /** Resolve SRV/A once, validate the final bytes, and keep that exact endpoint with the ping. */
+  public PingObservation observePublic(String host, int port) throws UnknownHostException {
+    ResolvedEndpoint endpoint = addressResolver.resolve(host, port, true);
+    String key =
+        endpoint.logicalHost()
+            + "/"
+            + endpoint.address().getHostAddress()
+            + ":"
+            + endpoint.targetPort();
     long now = System.currentTimeMillis();
+    if (cache.size() >= MAX_CACHE_ENTRIES && !cache.containsKey(key)) {
+      cache.entrySet().removeIf(entry -> entry.getValue().expiresAt() <= now);
+      if (cache.size() >= MAX_CACHE_ENTRIES) {
+        return new PingObservation(PingResult.offline("ping capacity reached"), endpoint);
+      }
+    }
     return cache
         .compute(
             key,
@@ -76,22 +77,26 @@ public class PingService {
               if (existing != null && existing.expiresAt() > now) {
                 return existing;
               }
-              return new CacheEntry(doPing(host, port), now + CACHE_TTL_MS);
+              return new CacheEntry(
+                  new PingObservation(doPing(endpoint), endpoint), now + CACHE_TTL_MS);
             })
-        .result();
+        .observation();
   }
 
-  private PingResult doPing(String host, int port) {
+  private PingResult doPing(ResolvedEndpoint endpoint) {
     try (Socket socket = new Socket()) {
-      socket.connect(new InetSocketAddress(host, port), PING_TIMEOUT_MS);
+      socket.connect(endpoint.socketAddress(), PING_TIMEOUT_MS);
       socket.setSoTimeout(PING_TIMEOUT_MS);
 
       OutputStream out = socket.getOutputStream();
-      writeFrame(out, buildHandshakePacket(host, port));
+      writeFrame(out, buildHandshakePacket(endpoint.logicalHost(), endpoint.targetPort()));
       writeFrame(out, buildStatusRequestPacket());
 
       InputStream in = socket.getInputStream();
       int frameLength = readVarInt(in);
+      if (frameLength <= 0 || frameLength > MAX_STATUS_FRAME_BYTES) {
+        return PingResult.offline("invalid status response size");
+      }
       byte[] body = in.readNBytes(frameLength);
       if (body.length < frameLength) {
         return PingResult.offline("connection closed before full response");
@@ -213,7 +218,7 @@ public class PingService {
 
     String readString() throws IOException {
       int length = readVarInt();
-      if (pos + length > data.length)
+      if (length < 0 || length > data.length - pos)
         throw new EOFException("string length exceeds remaining bytes");
       String s = new String(data, pos, length, StandardCharsets.UTF_8);
       pos += length;

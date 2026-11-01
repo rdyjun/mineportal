@@ -46,8 +46,10 @@ public class ServersController {
     }
     if (body.host() == null
         || body.host().isBlank()
+        || body.host().length() > 253
         || body.version() == null
-        || body.version().isBlank()) {
+        || body.version().isBlank()
+        || body.version().length() > 64) {
       return ResponseEntity.badRequest().body(Map.of("error", "host and version are required"));
     }
     ParsedAddress parsed = parseServerAddress(body.host().trim());

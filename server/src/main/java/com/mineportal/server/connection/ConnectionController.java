@@ -7,6 +7,7 @@ import com.mineportal.server.servers.ServerConfig;
 import com.mineportal.server.servers.ServerRegistry;
 import com.mineportal.server.status.PingResult;
 import com.mineportal.server.status.PingService;
+import com.mineportal.server.status.PingService.PingObservation;
 import com.mineportal.server.ws.EventBroadcaster;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -64,42 +65,65 @@ public class ConnectionController {
     if (server == null) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "server not found"));
     }
-    if (pingService.isPrivateHost(server.host)) {
-      return ResponseEntity.badRequest()
-          .body(Map.of("error", "cannot connect to private/internal hosts"));
-    }
-    if ("active".equals(server.phase)) {
+    if (server.isActive()) {
       return ResponseEntity.ok(Map.of("ok", true));
     }
     AccountState account = accountSessions.get(sid);
-    // 서버 버전(번역 필요 여부)과 Forge 여부는 ping으로 판단한다 — ping은 캐싱돼 있어 보통 즉시 반환된다.
-    PingResult ping = pingService.ping(server.host, server.port);
-    server.phase = "active";
+    boolean viaDesktop = desktopConnections.isConnected(ownerId);
+    PingObservation observation = null;
+    PingResult ping;
+    if (viaDesktop) {
+      // The user's own agent may intentionally reach a LAN address. The public backend
+      // status probe can fail there; the desktop resolves and connects locally.
+      ping = pingService.ping(server.host, server.port);
+    } else {
+      try {
+        observation = pingService.observePublic(server.host, server.port);
+        ping = observation.result();
+      } catch (java.net.UnknownHostException e) {
+        return ResponseEntity.badRequest()
+            .body(Map.of("error", "cannot connect to private/internal or unresolved hosts"));
+      }
+    }
+    long attemptId = server.beginConnection();
+    if (attemptId == 0) {
+      return ResponseEntity.ok(Map.of("ok", true));
+    }
     broadcaster.setStatus(server, "connecting", true);
 
     // 이 계정에 페어링된 데스크톱 앱이 붙어있으면 실제 접속은 그 앱이 사용자 PC에서
     // 직접 수행한다(사용자 실IP 유지) — 백엔드는 명령만 전달한다. 앱이 없으면 지금까지의
     // 체험 모드처럼 백엔드가 직접 릴레이 접속한다.
-    if (desktopConnections.isConnected(ownerId)) {
-      desktopConnections.markRouted(server.id);
-      desktopConnections.send(
-          ownerId,
-          Map.of(
-              "type",
-              "connect",
-              "serverId",
-              server.id,
-              "host",
-              server.host,
-              "port",
-              server.port,
-              // 모르면 0 / -1 — 데스크톱 앱은 번역 없이, Forge 표식 없이 접속한다.
-              "protocol",
-              ping.protocol() != null ? ping.protocol() : 0,
-              "forgeNetVersion",
-              ping.forgeNetVersion() != null ? ping.forgeNetVersion() : -1));
+    if (viaDesktop) {
+      desktopConnections.markRouted(server.id, attemptId);
+      boolean dispatched =
+          desktopConnections.send(
+              ownerId,
+              Map.of(
+                  "type",
+                  "connect",
+                  "serverId",
+                  server.id,
+                  "attemptId",
+                  attemptId,
+                  "host",
+                  server.host,
+                  "port",
+                  server.port,
+                  // 모르면 0 / -1 — 데스크톱 앱은 번역 없이, Forge 표식 없이 접속한다.
+                  "protocol",
+                  ping.protocol() != null ? ping.protocol() : 0,
+                  "forgeNetVersion",
+                  ping.forgeNetVersion() != null ? ping.forgeNetVersion() : -1));
+      if (!dispatched) {
+        desktopConnections.unmarkRouted(server.id, attemptId);
+        server.markFailed(attemptId);
+        broadcaster.setStatus(server, "desktop app disconnected before connection started", true);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(Map.of("error", "desktop app is no longer connected", "code", "desktop-offline"));
+      }
     } else {
-      mcConnections.connect(server, account, ping);
+      mcConnections.connect(server, account, ping, observation.endpoint(), attemptId);
     }
     return ResponseEntity.ok(Map.of("ok", true));
   }
@@ -121,7 +145,11 @@ public class ConnectionController {
     if (server == null) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "server not found"));
     }
-    if ("active".equals(server.phase)) {
+    if (server.isActive()) {
+      long attemptId = server.currentAttemptId();
+      if (server.markClosed(attemptId)) {
+        broadcaster.setStatus(server, "disconnected", true);
+      }
       if (desktopConnections.isRouted(server.id)) {
         desktopConnections.send(ownerId, Map.of("type", "disconnect", "serverId", server.id));
         desktopConnections.unmarkRouted(server.id);
@@ -142,8 +170,9 @@ public class ConnectionController {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "server not found"));
     }
     String message = body.get("message");
-    if (message == null || message.isEmpty()) {
-      return ResponseEntity.badRequest().body(Map.of("error", "message is required"));
+    if (message == null || message.isEmpty() || message.length() > 256) {
+      return ResponseEntity.badRequest()
+          .body(Map.of("error", "message must contain 1 to 256 characters"));
     }
     if (desktopConnections.isRouted(id)) {
       desktopConnections.send(

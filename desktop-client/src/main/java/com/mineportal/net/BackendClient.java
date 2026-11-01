@@ -10,7 +10,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -49,7 +52,7 @@ public final class BackendClient {
             return t;
           });
 
-  private final Map<String, ChatClient> activeClients = new ConcurrentHashMap<>();
+  private final Map<String, ActiveClient> activeClients = new ConcurrentHashMap<>();
   private volatile Account account;
   private volatile WebSocket webSocket;
   private volatile String pendingPairCode;
@@ -135,9 +138,27 @@ public final class BackendClient {
   }
 
   private void saveDeviceToken(String token) {
+    Path temporary = null;
     try {
-      Files.writeString(AppPaths.deviceFile(), token, StandardCharsets.UTF_8);
+      temporary = Files.createTempFile(AppPaths.dir(), "device", ".tmp");
+      Files.writeString(temporary, token, StandardCharsets.UTF_8);
+      try {
+        Files.move(
+            temporary,
+            AppPaths.deviceFile(),
+            StandardCopyOption.REPLACE_EXISTING,
+            StandardCopyOption.ATOMIC_MOVE);
+      } catch (AtomicMoveNotSupportedException e) {
+        Files.move(temporary, AppPaths.deviceFile(), StandardCopyOption.REPLACE_EXISTING);
+      }
     } catch (Exception ignored) {
+    } finally {
+      if (temporary != null) {
+        try {
+          Files.deleteIfExists(temporary);
+        } catch (Exception ignored) {
+        }
+      }
     }
   }
 
@@ -151,7 +172,8 @@ public final class BackendClient {
     String type = obj.has("type") ? obj.get("type").getAsString() : "";
     switch (type) {
       case "paired" -> saveDeviceToken(obj.get("deviceToken").getAsString());
-      case "pair-required", "pair-failed" -> {
+      case "pair-required" -> clearPairing();
+      case "pair-failed" -> {
         /* 대기 — 웹에서 새 링크를 다시 보내주길 기다린다 */
       }
       case "token" ->
@@ -161,9 +183,12 @@ public final class BackendClient {
                   obj.get("name").getAsString(),
                   obj.get("accessToken").getAsString(),
                   parseSigningCert(obj));
+      case "clear-account" -> clearAccount();
+      case "unpaired" -> clearPairing();
       case "connect" ->
           handleConnect(
               obj.get("serverId").getAsString(),
+              obj.get("attemptId").getAsLong(),
               obj.get("host").getAsString(),
               obj.get("port").getAsInt(),
               obj.has("protocol") ? obj.get("protocol").getAsInt() : 0,
@@ -203,10 +228,19 @@ public final class BackendClient {
   }
 
   private void handleConnect(
-      String serverId, String host, int port, int serverProtocol, int forgeNetVersion) {
+      String serverId,
+      long attemptId,
+      String host,
+      int port,
+      int serverProtocol,
+      int forgeNetVersion) {
     Account acc = account;
     if (acc == null) return; // 토큰이 아직 안 왔으면(로그인 전) 할 수 있는 게 없다
-    if (activeClients.containsKey(serverId)) return;
+    ActiveClient previous = activeClients.get(serverId);
+    if (previous != null) {
+      if (previous.attemptId() == attemptId) return;
+      previous.client().disconnect();
+    }
 
     ChatClient client =
         new ChatClient(
@@ -214,7 +248,7 @@ public final class BackendClient {
             new ChatClient.Listener() {
               @Override
               public void onConnected() {
-                send(Map.of("type", "connected", "serverId", serverId));
+                send(Map.of("type", "connected", "serverId", serverId, "attemptId", attemptId));
               }
 
               @Override
@@ -233,42 +267,67 @@ public final class BackendClient {
 
               @Override
               public void onDisconnected(String reason) {
-                activeClients.remove(serverId);
+                removeAttempt(serverId, attemptId);
                 send(
                     Map.of(
                         "type",
                         "disconnected",
                         "serverId",
                         serverId,
+                        "attemptId",
+                        attemptId,
                         "reason",
                         reason == null ? "" : reason));
               }
             });
-    activeClients.put(serverId, client);
+    activeClients.put(serverId, new ActiveClient(attemptId, client));
     try {
       client.connect(host, port, serverProtocol, forgeNetVersion);
     } catch (Exception e) {
-      activeClients.remove(serverId);
+      removeAttempt(serverId, attemptId);
       send(
           Map.of(
               "type",
               "disconnected",
               "serverId",
               serverId,
+              "attemptId",
+              attemptId,
               "reason",
               String.valueOf(e.getMessage())));
     }
   }
 
   private void handleDisconnect(String serverId) {
-    ChatClient client = activeClients.remove(serverId);
-    if (client != null) client.disconnect();
+    ActiveClient active = activeClients.remove(serverId);
+    if (active != null) active.client().disconnect();
+  }
+
+  private void clearAccount() {
+    activeClients.values().forEach(active -> active.client().disconnect());
+    activeClients.clear();
+    account = null;
+  }
+
+  private void clearPairing() {
+    clearAccount();
+    try {
+      Files.deleteIfExists(AppPaths.deviceFile());
+    } catch (Exception ignored) {
+    }
   }
 
   private void handleSendChat(String serverId, String message) {
-    ChatClient client = activeClients.get(serverId);
-    if (client != null) client.sendChat(message);
+    ActiveClient active = activeClients.get(serverId);
+    if (active != null) active.client().sendChat(message);
   }
+
+  private void removeAttempt(String serverId, long attemptId) {
+    activeClients.computeIfPresent(
+        serverId, (ignored, active) -> active.attemptId() == attemptId ? null : active);
+  }
+
+  private record ActiveClient(long attemptId, ChatClient client) {}
 
   private final class Listener implements WebSocket.Listener {
     private final StringBuilder buffer = new StringBuilder();
@@ -296,6 +355,7 @@ public final class BackendClient {
     @Override
     public CompletionStage<?> onClose(WebSocket ws, int statusCode, String reason) {
       webSocket = null;
+      clearAccount();
       scheduleReconnect();
       return CompletableFuture.completedFuture(null);
     }
@@ -303,6 +363,7 @@ public final class BackendClient {
     @Override
     public void onError(WebSocket ws, Throwable error) {
       webSocket = null;
+      clearAccount();
       scheduleReconnect();
     }
   }

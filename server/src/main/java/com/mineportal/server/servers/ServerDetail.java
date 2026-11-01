@@ -22,8 +22,8 @@ public record ServerDetail(
         s.port,
         s.version,
         s.status,
-        s.phase,
-        s.connected,
+        s.phase(),
+        s.connected(),
         s.getMessages(),
         s.getStatusHistory());
   }

@@ -2,9 +2,12 @@ package com.mineportal.mc;
 
 import com.google.gson.Gson;
 import com.mineportal.auth.Account;
+import com.mineportal.protocol.ForgeHandshake;
+import com.mineportal.protocol.MinecraftAddressResolver;
+import com.mineportal.protocol.MinecraftStatusProbe;
+import com.mineportal.protocol.ViaTranslation;
 import com.mineportal.util.Text;
 import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -26,6 +29,7 @@ import org.geysermc.mcprotocollib.network.event.session.SessionAdapter;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.geysermc.mcprotocollib.protocol.data.game.ArgumentSignature;
 import org.geysermc.mcprotocollib.protocol.data.game.Holder;
 import org.geysermc.mcprotocollib.protocol.data.game.chat.ChatType;
@@ -88,14 +92,34 @@ public final class ChatClient {
     GameProfile profile = new GameProfile(account.uuid, account.name);
     MinecraftProtocol protocol = new MinecraftProtocol(profile, account.accessToken);
 
+    MinecraftAddressResolver.ResolvedEndpoint endpoint;
+    try {
+      endpoint = new MinecraftAddressResolver().resolve(host, port, false);
+    } catch (java.net.UnknownHostException e) {
+      throw new IllegalArgumentException("Cannot resolve Minecraft server address", e);
+    }
+    int selectedProtocol = serverProtocol;
+    int selectedForgeNetVersion = forgeNetVersion;
+    if (selectedProtocol <= 0) {
+      try {
+        MinecraftStatusProbe.Status status =
+            MinecraftStatusProbe.probe(endpoint, MinecraftCodec.CODEC.getProtocolVersion());
+        if (status.protocol() != null) selectedProtocol = status.protocol();
+        if (status.forgeNetworkVersion() != null)
+          selectedForgeNetVersion = status.forgeNetworkVersion();
+      } catch (java.io.IOException ignored) {
+        // Some servers disable status ping. ProtocolCompatibility will make one native-codec
+        // attempt.
+      }
+    }
     ClientSession client =
-        ViaTranslation.createSession(new InetSocketAddress(host, port), protocol, serverProtocol);
+        ViaTranslation.createSession(endpoint.socketAddress(), protocol, selectedProtocol);
     client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
-    if (forgeNetVersion >= 0) {
+    if (selectedForgeNetVersion >= 0) {
       // Modded servers reject clients without the Forge marker; see ForgeHandshake.
       client.setFlag(
           MinecraftConstants.CLIENT_HOST,
-          ForgeHandshake.markHost(host, forgeNetVersion, serverProtocol));
+          ForgeHandshake.markHost(host, selectedForgeNetVersion, selectedProtocol));
     }
 
     Account.SigningCert cert = account.signingCert;
@@ -107,13 +131,23 @@ public final class ChatClient {
           @Override
           public void packetReceived(Session s, Packet packet) {
             if (packet instanceof ClientboundCustomQueryPacket p) {
-              ServerboundCustomQueryAnswerPacket reply = ForgeHandshake.reply(p);
-              if (reply != null) s.send(reply);
+              ForgeHandshake.Result<ServerboundCustomQueryAnswerPacket> result =
+                  ForgeHandshake.handle(p);
+              if (result.rejected()) {
+                s.disconnect(result.rejectionReason());
+              } else if (result.reply() != null) {
+                s.send(result.reply());
+              }
               return;
             }
             if (packet instanceof ClientboundCustomPayloadPacket p) {
-              ServerboundCustomPayloadPacket reply = ForgeHandshake.reply(p);
-              if (reply != null) s.send(reply);
+              ForgeHandshake.Result<ServerboundCustomPayloadPacket> result =
+                  ForgeHandshake.handle(p);
+              if (result.rejected()) {
+                s.disconnect(result.rejectionReason());
+              } else if (result.reply() != null) {
+                s.send(result.reply());
+              }
               return;
             }
             if (packet instanceof ClientboundLoginPacket) {
