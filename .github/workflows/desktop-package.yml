@@ -35,7 +35,7 @@ jobs:
           jpackage --type app-image --name MinePortal --app-version 1.1.0 \
             --input desktop-client/build/libs --main-jar mineportal-client.jar \
             --main-class com.mineportal.Main --dest desktop-client/build/package \
-            --add-modules java.se,jdk.crypto.ec,jdk.jsobject,jdk.unsupported \
+            --add-modules java.se,jdk.crypto.ec,jdk.jsobject,jdk.unsupported,jdk.naming.dns \
             --mac-package-identifier kr.mineportal.desktop
           mkdir -p desktop-client/build/dmg-root desktop-client/build/installers
           cp -R desktop-client/build/package/MinePortal.app desktop-client/build/dmg-root/
@@ -49,10 +49,20 @@ jobs:
           jpackage --type app-image --name MinePortal --app-version 1.1.0 `
             --input desktop-client/build/libs --main-jar mineportal-client.jar `
             --main-class com.mineportal.Main --dest desktop-client/build/package `
-            --add-modules java.se,jdk.crypto.ec,jdk.jsobject,jdk.unsupported
+            --add-modules java.se,jdk.crypto.ec,jdk.jsobject,jdk.unsupported,jdk.naming.dns
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           New-Item -ItemType Directory -Force desktop-client/build/installers
           Compress-Archive desktop-client/build/package/MinePortal desktop-client/build/installers/MinePortal-win.zip
+      - name: Verify bundled DNS SRV provider
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            MODULES=desktop-client/build/package/MinePortal.app/Contents/runtime/Contents/Home/lib/modules
+          else
+            MODULES=desktop-client/build/package/MinePortal/runtime/lib/modules
+          fi
+          jimage list "$MODULES" > "$RUNNER_TEMP/mineportal-runtime-modules.txt"
+          grep -q '^Module: jdk.naming.dns$' "$RUNNER_TEMP/mineportal-runtime-modules.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: MinePortal-${{ runner.os }}

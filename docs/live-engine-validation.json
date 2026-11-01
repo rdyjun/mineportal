@@ -1,0 +1,349 @@
+{
+  "date": "2026-11-02",
+  "method": "Real local Java desktop engine in headless mode, controlled by production web UI; native GUI not validated",
+  "engine": "local transfer and login-state fixes",
+  "results": [
+    {
+      "host": "play.hypernetwork.kr",
+      "startedAt": "2026-11-01T15:52:54.701Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": true,
+      "receivedChatCount": 1,
+      "statuses": [
+        "connecting",
+        "connected"
+      ],
+      "finalStatus": "connected",
+      "finalPhase": "active",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:53:09.077Z"
+    },
+    {
+      "host": "pikmon.kr",
+      "startedAt": "2026-11-01T15:53:09.986Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: multiplayer.disconnect.incompatible"
+      ],
+      "finalStatus": "disconnected: multiplayer.disconnect.incompatible",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:53:12.639Z"
+    },
+    {
+      "host": "ddingtycoon.kr",
+      "startedAt": "2026-11-01T15:53:33.365Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: Server transfer failed: Cannot resolve Minecraft server address"
+      ],
+      "finalStatus": "disconnected: Server transfer failed: Cannot resolve Minecraft server address",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:53:40.210Z"
+    },
+    {
+      "host": "playfarm.kr",
+      "startedAt": "2026-11-01T15:53:41.117Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": true,
+      "receivedChatCount": 3,
+      "statuses": [
+        "connecting",
+        "connected"
+      ],
+      "finalStatus": "connected",
+      "finalPhase": "active",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:53:51.759Z"
+    },
+    {
+      "host": "leunesiseu.kr",
+      "startedAt": "2026-11-01T15:53:52.968Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: ditod_2에 연결할 수 없습니다: Outdated server! I'm still on 1.21.1"
+      ],
+      "finalStatus": "disconnected: ditod_2에 연결할 수 없습니다: Outdated server! I'm still on 1.21.1",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:53:55.601Z"
+    },
+    {
+      "host": "mcng.kr",
+      "startedAt": "2026-11-01T15:54:37.716Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: disconnect.genericReason"
+      ],
+      "finalStatus": "disconnected: disconnect.genericReason",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:54:43.849Z"
+    },
+    {
+      "host": "dongleland.com",
+      "startedAt": "2026-11-01T15:54:45.375Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": true,
+      "receivedChatCount": 1,
+      "statuses": [
+        "connecting",
+        "connected"
+      ],
+      "finalStatus": "connected",
+      "finalPhase": "active",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:54:56.981Z"
+    },
+    {
+      "host": "seresonline.mcv.kr",
+      "startedAt": "2026-11-01T15:54:58.417Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": true,
+      "receivedChatCount": 8,
+      "statuses": [
+        "connecting",
+        "connected"
+      ],
+      "finalStatus": "connected",
+      "finalPhase": "active",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:55:11.099Z"
+    },
+    {
+      "host": "dose.kr",
+      "startedAt": "2026-11-01T15:55:46.187Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: Server transfer failed: Cannot resolve Minecraft server address"
+      ],
+      "finalStatus": "disconnected: Server transfer failed: Cannot resolve Minecraft server address",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:55:52.491Z"
+    },
+    {
+      "host": "play.planetearth.kr",
+      "startedAt": "2026-11-01T15:55:53.609Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: PlanetEarth\n\n플레이하려면 디스코드 계정을 연결해야 합니다.\n\n인증봇#4196에게 인증 코드 [redacted] 를 개인 메시지로 전송하세요.\n\n디스코드 초대 코드 » https://discord.gg/PlanetEarth"
+      ],
+      "finalStatus": "disconnected: PlanetEarth\n\n플레이하려면 디스코드 계정을 연결해야 합니다.\n\n인증봇#4196에게 인증 코드 [redacted] 를 개인 메시지로 전송하세요.\n\n디스코드 초대 코드 » https://discord.gg/PlanetEarth",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:55:56.829Z"
+    },
+    {
+      "host": "online.eevee.kr",
+      "startedAt": "2026-11-01T15:55:58.286Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: disconnect.genericReason"
+      ],
+      "finalStatus": "disconnected: disconnect.genericReason",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:56:33.530Z"
+    },
+    {
+      "host": "last-traveler.com",
+      "startedAt": "2026-11-01T15:57:25.549Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: 라스트 트레블러는 Minecraft 26.2만 지원합니다.\n현재 접속 버전: 26.1"
+      ],
+      "finalStatus": "disconnected: 라스트 트레블러는 Minecraft 26.2만 지원합니다.\n현재 접속 버전: 26.1",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:57:28.630Z"
+    },
+    {
+      "host": "craftm.kr",
+      "startedAt": "2026-11-01T15:57:30.078Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": true,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "connected",
+        "disconnected: disconnect.genericReason"
+      ],
+      "finalStatus": "disconnected: disconnect.genericReason",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:57:34.419Z"
+    },
+    {
+      "host": "beartown.kr",
+      "startedAt": "2026-11-01T15:57:35.858Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: disconnect.genericReason"
+      ],
+      "finalStatus": "disconnected: disconnect.genericReason",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:58:14.628Z"
+    },
+    {
+      "host": "picosv.kr",
+      "startedAt": "2026-11-01T15:58:38.036Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: 이 게이트웨이는 Minecraft Java 1.21.4만 지원합니다."
+      ],
+      "finalStatus": "disconnected: 이 게이트웨이는 Minecraft Java 1.21.4만 지원합니다.",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:58:40.928Z"
+    },
+    {
+      "host": "playmc.kr",
+      "startedAt": "2026-11-01T15:58:42.580Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: queue에 연결할 수 없습니다: Outdated server! I'm still on 1.20.1"
+      ],
+      "finalStatus": "disconnected: queue에 연결할 수 없습니다: Outdated server! I'm still on 1.20.1",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:58:45.379Z"
+    },
+    {
+      "host": "nspring.kr",
+      "startedAt": "2026-11-01T15:58:47.100Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": true,
+      "receivedChatCount": 3,
+      "statuses": [
+        "connecting",
+        "connected"
+      ],
+      "finalStatus": "connected",
+      "finalPhase": "active",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:58:58.273Z"
+    },
+    {
+      "host": "rendog.kr",
+      "startedAt": "2026-11-01T15:59:26.188Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": true,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "connected",
+        "disconnected: disconnect.genericReason"
+      ],
+      "finalStatus": "disconnected: disconnect.genericReason",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T15:59:35.269Z"
+    },
+    {
+      "host": "mineplanet.kr",
+      "startedAt": "2026-11-01T15:59:36.615Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: disconnect.genericReason"
+      ],
+      "finalStatus": "disconnected: disconnect.genericReason",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T16:00:16.221Z"
+    },
+    {
+      "host": "kkulbi.kr",
+      "startedAt": "2026-11-01T16:00:17.662Z",
+      "existing": false,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: Server transfer failed: Cannot resolve Minecraft server address"
+      ],
+      "finalStatus": "disconnected: Server transfer failed: Cannot resolve Minecraft server address",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T16:00:23.479Z"
+    }
+  ]
+}

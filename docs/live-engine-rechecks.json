@@ -1,0 +1,109 @@
+{
+  "date": "2026-11-02",
+  "method": "Real local Java desktop engine in headless mode, controlled by production web UI; native GUI not validated",
+  "engine": "transfer, login-state, explicit handshake host and translated disconnect errors",
+  "results": [
+    {
+      "host": "mcng.kr",
+      "startedAt": "2026-11-01T16:02:17.460Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": true,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "connected"
+      ],
+      "finalStatus": "connected",
+      "finalPhase": "active",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T16:02:31.682Z"
+    },
+    {
+      "host": "online.eevee.kr",
+      "startedAt": "2026-11-01T16:02:32.622Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "observationTimeout": true,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting"
+      ],
+      "finalStatus": "connecting",
+      "finalPhase": "active",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T16:03:16.992Z"
+    },
+    {
+      "host": "craftm.kr",
+      "startedAt": "2026-11-01T16:03:17.914Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": true,
+      "receivedChatCount": 200,
+      "statuses": [
+        "connecting",
+        "connected"
+      ],
+      "finalStatus": "connected",
+      "finalPhase": "active",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T16:03:30.652Z"
+    },
+    {
+      "host": "beartown.kr",
+      "startedAt": "2026-11-01T16:04:30.262Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: Internal Exception: io.netty.channel.ConnectTimeoutException: connection timed out after 30000 ms: beartown.kr/[IP]:1754"
+      ],
+      "finalStatus": "disconnected: Internal Exception: io.netty.channel.ConnectTimeoutException: connection timed out after 30000 ms: beartown.kr/[IP]:1754",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T16:05:05.236Z"
+    },
+    {
+      "host": "rendog.kr",
+      "startedAt": "2026-11-01T16:05:06.093Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": true,
+      "receivedChatCount": 46,
+      "statuses": [
+        "connecting",
+        "connected"
+      ],
+      "finalStatus": "connected",
+      "finalPhase": "active",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T16:05:18.356Z"
+    },
+    {
+      "host": "mineplanet.kr",
+      "startedAt": "2026-11-01T16:05:19.179Z",
+      "existing": true,
+      "enginePaired": true,
+      "httpStatus": 200,
+      "enteredPlay": false,
+      "receivedChatCount": 0,
+      "statuses": [
+        "connecting",
+        "disconnected: 26.3 버전으로 접속해주세요."
+      ],
+      "finalStatus": "disconnected: 26.3 버전으로 접속해주세요.",
+      "finalPhase": "closed",
+      "closedAfterTest": true,
+      "finishedAt": "2026-11-01T16:05:24.626Z"
+    }
+  ]
+}

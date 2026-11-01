@@ -2741,7 +2741,7 @@
         return;
       }
       await ensureWs();
-      const res = await fetch("/api/servers/" + serverId + "/connect", { method: "POST" });
+      const res = await fetch(connectionUrl(serverId), { method: "POST" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }));
         if (body.code === "not-logged-in") {
@@ -2910,10 +2910,15 @@
       });
     }
 
+    function connectionUrl(id) {
+      return "/api/servers/" + encodeURIComponent(id) + "/connect" +
+        ((IS_DESKTOP || currentPlayMode === "real") ? "?desktopOnly=true" : "");
+    }
+
     async function connectServer(id) {
       if (!(await confirmTrialConnect())) return;
       await ensureWs();
-      const res = await fetch("/api/servers/" + id + "/connect", { method: "POST" });
+      const res = await fetch(connectionUrl(id), { method: "POST" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }));
         if (body.code === "not-logged-in") {
@@ -2957,6 +2962,12 @@
         alert(t("alertAddServerFailed", { error: body.error }));
         return;
       }
+      // Adding a server need not have a WebSocket open yet. Reflect the HTTP result
+      // immediately instead of waiting for a snapshot that may never arrive.
+      const added = await res.json();
+      servers = servers.filter((server) => server.id !== added.id).concat(added);
+      serversLoaded = true;
+      renderServers();
       addServerForm.reset();
       closeAddServerModal();
     });

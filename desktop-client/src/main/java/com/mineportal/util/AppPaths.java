@@ -8,7 +8,11 @@ import java.nio.file.Paths;
 public final class AppPaths {
 
   public static Path dir() {
-    Path dir = Paths.get(System.getProperty("user.home"), ".mineportal");
+    Path dir =
+        Paths.get(
+            System.getProperty(
+                "mineportal.dataDir",
+                Paths.get(System.getProperty("user.home"), ".mineportal").toString()));
     try {
       Files.createDirectories(dir);
     } catch (Exception ignored) {
