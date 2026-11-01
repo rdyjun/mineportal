@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.1.0'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.diffplug.spotless' version '8.10.4'
 }
 
 group = 'com.mineportal'
@@ -49,6 +50,15 @@ dependencies {
 sourceSets {
     main.java.srcDir '../shared/src/main/java'
     test.java.srcDir '../shared/src/test/java'
+}
+
+spotless {
+    java {
+        target 'src/**/*.java', '../shared/src/**/*.java'
+        // Spotless' Java 17 baseline; also runs consistently on developers' newer JDKs.
+        googleJavaFormat('1.28.0')
+        formatAnnotations()
+    }
 }
 
 tasks.named('test') {

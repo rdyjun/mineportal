@@ -22,12 +22,12 @@ jobs:
         working-directory: server
         run: |
           chmod +x gradlew
-          ./gradlew test bootJar --no-daemon
+          ./gradlew check bootJar --no-daemon
       - name: Test and package headless desktop agent
         working-directory: desktop-client
         run: |
           chmod +x gradlew
-          ./gradlew test shadowJar --no-daemon
+          ./gradlew check shadowJar --no-daemon
       - name: Model-check connection lifecycle
         shell: bash
         run: |

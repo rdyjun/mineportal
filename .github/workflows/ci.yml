@@ -31,7 +31,7 @@ jobs:
       - name: Test and build server JAR
         run: |
           chmod +x server/gradlew
-          ./server/gradlew -p server clean test bootJar --no-daemon
+          ./server/gradlew -p server clean check bootJar --no-daemon
 
   windows-agent:
     name: Windows background agent package
@@ -50,4 +50,4 @@ jobs:
 
       - name: Test and build headless agent JAR
         shell: pwsh
-        run: .\desktop-client\gradlew.bat -p desktop-client clean test shadowJar --no-daemon
+        run: .\desktop-client\gradlew.bat -p desktop-client clean check shadowJar --no-daemon

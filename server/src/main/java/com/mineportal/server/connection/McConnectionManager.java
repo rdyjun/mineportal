@@ -7,6 +7,18 @@ import com.mineportal.server.account.AccountState;
 import com.mineportal.server.servers.ServerConfig;
 import com.mineportal.server.status.PingResult;
 import com.mineportal.server.ws.EventBroadcaster;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.security.Signature;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.raphimc.minecraftauth.step.java.StepPlayerCertificates;
@@ -20,13 +32,13 @@ import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
 import org.geysermc.mcprotocollib.protocol.data.game.ArgumentSignature;
-import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
-import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundCustomPayloadPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.Holder;
 import org.geysermc.mcprotocollib.protocol.data.game.chat.ChatType;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandType;
+import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
+import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundCustomPayloadPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundCommandsPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerChatPacket;
@@ -39,415 +51,431 @@ import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundC
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundCustomQueryAnswerPacket;
 import org.springframework.stereotype.Service;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
-import java.security.Signature;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * MCProtocolLib을 통한 실제 마인크래프트 프로토콜 연결로, desktop-client의
- * com.mineportal.mc.ChatClient(이미 검증된 동일한 connect/listener/send-chat 구조)를 포팅한 것.
- * 채팅 서명은 예전 Node 백엔드(commit 113bb9b)에서 검증된 서명 바이트 레이아웃을 그대로
+ * MCProtocolLib을 통한 실제 마인크래프트 프로토콜 연결로, desktop-client의 com.mineportal.mc.ChatClient(이미 검증된 동일한
+ * connect/listener/send-chat 구조)를 포팅한 것. 채팅 서명은 예전 Node 백엔드(commit 113bb9b)에서 검증된 서명 바이트 레이아웃을 그대로
  * 포팅했고, 서명 인증서는 로그인 시 MinecraftAuth가 이미 발급받아둔 것을 사용한다.
  */
 @Service
 public class McConnectionManager {
 
-    private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
+  private static final PlainTextComponentSerializer PLAIN =
+      PlainTextComponentSerializer.plainText();
 
-    private final EventBroadcaster broadcaster;
-    private final Map<String, ClientSession> sessions = new ConcurrentHashMap<>();
-    private final Map<String, ChatSigner> chatSigners = new ConcurrentHashMap<>();
-    private final Map<String, CommandTree> commandTrees = new ConcurrentHashMap<>();
+  private final EventBroadcaster broadcaster;
+  private final Map<String, ClientSession> sessions = new ConcurrentHashMap<>();
+  private final Map<String, ChatSigner> chatSigners = new ConcurrentHashMap<>();
+  private final Map<String, CommandTree> commandTrees = new ConcurrentHashMap<>();
 
-    static {
-        ForgeHandshake.install();
+  static {
+    ForgeHandshake.install();
+  }
+
+  public McConnectionManager(EventBroadcaster broadcaster) {
+    this.broadcaster = broadcaster;
+  }
+
+  /** ping은 접속 직전 서버 상태 — 서버 버전(번역 필요 여부)과 Forge 여부를 여기서 판단한다. */
+  public void connect(
+      ServerConfig server, AccountState account, PingResult ping, ResolvedEndpoint endpoint) {
+    new Thread(() -> doConnect(server, account, ping, endpoint), "mc-connect-" + server.id).start();
+  }
+
+  private void doConnect(
+      ServerConfig server, AccountState account, PingResult ping, ResolvedEndpoint endpoint) {
+    var mcProfile = account.fullSession.getMcProfile();
+    GameProfile profile = new GameProfile(mcProfile.getId(), mcProfile.getName());
+    MinecraftProtocol protocol =
+        new MinecraftProtocol(profile, mcProfile.getMcToken().getAccessToken());
+
+    // ping 실패 등으로 버전을 모르면 0 — 번역 없이 우리 버전으로 시도한다.
+    int serverProtocol = ping.protocol() != null ? ping.protocol() : 0;
+    ClientSession client =
+        ViaTranslation.createSession(endpoint.socketAddress(), protocol, serverProtocol);
+    client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
+    if (ping.forgeNetVersion() != null) {
+      // 모드 서버는 Forge 표식이 없는 클라이언트를 바로 거절한다 — ForgeHandshake 참고.
+      client.setFlag(
+          MinecraftConstants.CLIENT_HOST,
+          ForgeHandshake.markHost(server.host, ping.forgeNetVersion(), serverProtocol));
     }
 
-    public McConnectionManager(EventBroadcaster broadcaster) {
-        this.broadcaster = broadcaster;
+    // 서명 인증서가 있고 만료되지 않았으면 채팅 서명을 활성화한다 — 없으면 서명 없이
+    // 보내고, secure-chat을 강제하는 서버는 chat.disabled.missingProfileKey로 조용히
+    // 거부한다(크래시나 킥 없이).
+    StepPlayerCertificates.PlayerCertificates certificates =
+        account.fullSession.getPlayerCertificates();
+    if (certificates != null && !certificates.isExpired()) {
+      chatSigners.put(server.id, new ChatSigner(profile.getId(), certificates));
+    } else {
+      chatSigners.remove(server.id);
     }
 
-    /** ping은 접속 직전 서버 상태 — 서버 버전(번역 필요 여부)과 Forge 여부를 여기서 판단한다. */
-    public void connect(ServerConfig server, AccountState account, PingResult ping, ResolvedEndpoint endpoint) {
-        new Thread(() -> doConnect(server, account, ping, endpoint), "mc-connect-" + server.id).start();
-    }
+    String accountName = mcProfile.getName();
+    client.addListener(
+        new SessionAdapter() {
+          private boolean joinAnnounced = false;
 
-    private void doConnect(ServerConfig server, AccountState account, PingResult ping, ResolvedEndpoint endpoint) {
-        var mcProfile = account.fullSession.getMcProfile();
-        GameProfile profile = new GameProfile(mcProfile.getId(), mcProfile.getName());
-        MinecraftProtocol protocol = new MinecraftProtocol(profile, mcProfile.getMcToken().getAccessToken());
+          @Override
+          public void packetReceived(Session s, Packet packet) {
+            if (packet instanceof ClientboundCustomQueryPacket p) {
+              ServerboundCustomQueryAnswerPacket reply = ForgeHandshake.reply(p);
+              if (reply != null) s.send(reply);
+              return;
+            }
+            if (packet instanceof ClientboundCustomPayloadPacket p) {
+              ServerboundCustomPayloadPacket reply = ForgeHandshake.reply(p);
+              if (reply != null) s.send(reply);
+              return;
+            }
+            if (packet instanceof ClientboundLoginPacket) {
+              // 서버에 우리 서명 키를 등록한다 — 이게 있어야 서버가 이후 서명된 채팅을
+              // 받아준다. play 상태 진입 직후, 실제 채팅 이전에 보내야 한다.
+              ChatSigner signer = chatSigners.get(server.id);
+              if (signer != null) {
+                s.send(signer.sessionUpdatePacket());
+              }
+              return;
+            }
+            if (packet instanceof ClientboundCommandsPacket p) {
+              // 이 서버의 명령어 트리를 저장해둔다 — sendChat()이 명령어를 보낼 때
+              // 어떤 인자가 서명이 필요한지 조회하는 데 쓴다.
+              commandTrees.put(server.id, new CommandTree(p.getNodes(), p.getFirstNodeIndex()));
+              // 진단 로그 — 어떤 명령어의 어떤 인자가 서명이 필요한지(parser=MESSAGE)
+              // 눈으로 확인하기 위함.
+              logSignableCommands(p.getNodes());
+              return;
+            }
+            String text;
+            if (packet instanceof ClientboundSystemChatPacket p) {
+              text = plain(p.getContent());
+            } else if (packet instanceof ClientboundPlayerChatPacket p) {
+              Component body = p.getUnsignedContent();
+              String message = body != null ? plain(body) : p.getContent();
+              text = renderChatType(p.getChatType(), plain(p.getName()), message);
+            } else {
+              // 진단용 — /gamemode처럼 아직 처리하지 않는 패킷이 실제로 오는지,
+              // 온다면 어떤 타입인지 확인하기 위함.
+              System.out.println("[unhandled-packet] " + packet.getClass().getSimpleName());
+              return;
+            }
+            if (!joinAnnounced) {
+              joinAnnounced = true;
+              server.connected = true;
+              broadcaster.setStatus(server, "connected", true);
+            }
+            broadcaster.chatReceived(
+                server, new ChatMessage(accountName, text, System.currentTimeMillis()));
+          }
 
-        // ping 실패 등으로 버전을 모르면 0 — 번역 없이 우리 버전으로 시도한다.
-        int serverProtocol = ping.protocol() != null ? ping.protocol() : 0;
-        ClientSession client = ViaTranslation.createSession(
-                endpoint.socketAddress(), protocol, serverProtocol);
-        client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
-        if (ping.forgeNetVersion() != null) {
-            // 모드 서버는 Forge 표식이 없는 클라이언트를 바로 거절한다 — ForgeHandshake 참고.
-            client.setFlag(MinecraftConstants.CLIENT_HOST,
-                    ForgeHandshake.markHost(server.host, ping.forgeNetVersion(), serverProtocol));
-        }
-
-        // 서명 인증서가 있고 만료되지 않았으면 채팅 서명을 활성화한다 — 없으면 서명 없이
-        // 보내고, secure-chat을 강제하는 서버는 chat.disabled.missingProfileKey로 조용히
-        // 거부한다(크래시나 킥 없이).
-        StepPlayerCertificates.PlayerCertificates certificates = account.fullSession.getPlayerCertificates();
-        if (certificates != null && !certificates.isExpired()) {
-            chatSigners.put(server.id, new ChatSigner(profile.getId(), certificates));
-        } else {
+          @Override
+          public void disconnected(DisconnectedEvent event) {
+            sessions.remove(server.id);
             chatSigners.remove(server.id);
-        }
-
-        String accountName = mcProfile.getName();
-        client.addListener(new SessionAdapter() {
-            private boolean joinAnnounced = false;
-
-            @Override
-            public void packetReceived(Session s, Packet packet) {
-                if (packet instanceof ClientboundCustomQueryPacket p) {
-                    ServerboundCustomQueryAnswerPacket reply = ForgeHandshake.reply(p);
-                    if (reply != null) s.send(reply);
-                    return;
-                }
-                if (packet instanceof ClientboundCustomPayloadPacket p) {
-                    ServerboundCustomPayloadPacket reply = ForgeHandshake.reply(p);
-                    if (reply != null) s.send(reply);
-                    return;
-                }
-                if (packet instanceof ClientboundLoginPacket) {
-                    // 서버에 우리 서명 키를 등록한다 — 이게 있어야 서버가 이후 서명된 채팅을
-                    // 받아준다. play 상태 진입 직후, 실제 채팅 이전에 보내야 한다.
-                    ChatSigner signer = chatSigners.get(server.id);
-                    if (signer != null) {
-                        s.send(signer.sessionUpdatePacket());
-                    }
-                    return;
-                }
-                if (packet instanceof ClientboundCommandsPacket p) {
-                    // 이 서버의 명령어 트리를 저장해둔다 — sendChat()이 명령어를 보낼 때
-                    // 어떤 인자가 서명이 필요한지 조회하는 데 쓴다.
-                    commandTrees.put(server.id, new CommandTree(p.getNodes(), p.getFirstNodeIndex()));
-                    // 진단 로그 — 어떤 명령어의 어떤 인자가 서명이 필요한지(parser=MESSAGE)
-                    // 눈으로 확인하기 위함.
-                    logSignableCommands(p.getNodes());
-                    return;
-                }
-                String text;
-                if (packet instanceof ClientboundSystemChatPacket p) {
-                    text = plain(p.getContent());
-                } else if (packet instanceof ClientboundPlayerChatPacket p) {
-                    Component body = p.getUnsignedContent();
-                    String message = body != null ? plain(body) : p.getContent();
-                    text = renderChatType(p.getChatType(), plain(p.getName()), message);
-                } else {
-                    // 진단용 — /gamemode처럼 아직 처리하지 않는 패킷이 실제로 오는지,
-                    // 온다면 어떤 타입인지 확인하기 위함.
-                    System.out.println("[unhandled-packet] " + packet.getClass().getSimpleName());
-                    return;
-                }
-                if (!joinAnnounced) {
-                    joinAnnounced = true;
-                    server.connected = true;
-                    broadcaster.setStatus(server, "connected", true);
-                }
-                broadcaster.chatReceived(server, new ChatMessage(accountName, text, System.currentTimeMillis()));
-            }
-
-            @Override
-            public void disconnected(DisconnectedEvent event) {
-                sessions.remove(server.id);
-                chatSigners.remove(server.id);
-                commandTrees.remove(server.id);
-                server.phase = "closed";
-                server.connected = false;
-                broadcaster.setStatus(server, "disconnected: " + plain(event.getReason()), true);
-            }
+            commandTrees.remove(server.id);
+            server.phase = "closed";
+            server.connected = false;
+            broadcaster.setStatus(server, "disconnected: " + plain(event.getReason()), true);
+          }
         });
 
-        sessions.put(server.id, client);
-        client.connect();
+    sessions.put(server.id, client);
+    client.connect();
+  }
+
+  /**
+   * 주어진 서버 id의 살아있는 연결을 강제로 끊는다 — 브라우저의 마지막 탭이 닫혔을 때 좀비로 남을 MCProtocolLib 연결을 정리하기 위해 사용된다. 실제
+   * 정리(맵에서 제거, phase/connected 갱신, 브로드캐스트)는 위 disconnected() 콜백이 처리한다.
+   */
+  public void disconnect(String serverId) {
+    ClientSession session = sessions.get(serverId);
+    if (session != null) {
+      session.disconnect("사용자 세션이 종료되어 연결을 닫았어요");
+    }
+  }
+
+  public void sendChat(String serverId, String message) {
+    ClientSession session = sessions.get(serverId);
+    if (session == null || !session.isConnected()) throw new NotConnectedException();
+
+    // "/"로 시작하면 일반 채팅이 아니라 명령어다 — ServerboundChatPacket으로 보내면
+    // 서버가 그냥 평문 채팅으로 취급해서 명령어가 실행되지 않는다.
+    if (message.startsWith("/")) {
+      sendCommand(serverId, session, message.substring(1));
+      return;
     }
 
-    /** 주어진 서버 id의 살아있는 연결을 강제로 끊는다 — 브라우저의 마지막 탭이 닫혔을 때
-     * 좀비로 남을 MCProtocolLib 연결을 정리하기 위해 사용된다. 실제 정리(맵에서 제거,
-     * phase/connected 갱신, 브로드캐스트)는 위 disconnected() 콜백이 처리한다. */
-    public void disconnect(String serverId) {
-        ClientSession session = sessions.get(serverId);
-        if (session != null) {
-            session.disconnect("사용자 세션이 종료되어 연결을 닫았어요");
+    ChatSigner signer = chatSigners.get(serverId);
+    long timestampMs = Instant.now().toEpochMilli();
+    if (signer != null) {
+      session.send(signer.signedChatPacket(message, timestampMs));
+    } else {
+      session.send(new ServerboundChatPacket(message, timestampMs, 0L, null, 0, new BitSet(), 0));
+    }
+  }
+
+  /**
+   * 명령어(슬래시 뺀 나머지)를 보낸다 — 이 서버의 명령어 트리에 서명이 필요한 인자 (parser=MESSAGE)가 있으면 그 인자만 서명해서
+   * ServerboundChatCommandSignedPacket으로, 없으면(또는 트리를 아직 못 받았거나 서명 인증서가 없으면) 지금처럼 무서명
+   * ServerboundChatCommandPacket으로 보낸다.
+   */
+  private void sendCommand(String serverId, ClientSession session, String command) {
+    CommandTree tree = commandTrees.get(serverId);
+    ChatSigner signer = chatSigners.get(serverId);
+    SignableArgument match =
+        (tree != null && signer != null) ? findSignableArgument(tree, command) : null;
+    if (match == null) {
+      session.send(new ServerboundChatCommandPacket(command));
+      return;
+    }
+    long timestampMs = Instant.now().toEpochMilli();
+    ChatSigner.SignedArgument signed = signer.signArgument(match.name(), match.text(), timestampMs);
+    session.send(
+        new ServerboundChatCommandSignedPacket(
+            command,
+            timestampMs,
+            signed.salt(),
+            List.of(signed.signature()),
+            0,
+            new BitSet(),
+            (byte) 0));
+  }
+
+  private record SignableArgument(String name, String text) {}
+
+  private record CommandTree(CommandNode[] nodes, int rootIndex) {}
+
+  /**
+   * command(공백으로 나뉜 토큰들)를 명령어 트리를 따라 내려가며 매칭한다. 리터럴 자식이 토큰과 일치하면 그 토큰을 소비하고 계속 내려가고, 인자 자식을 만나면 그
+   * parser가 MESSAGE인 경우 남은 토큰 전체를 그 인자의 텍스트로 간주해 반환한다(값 자체는 Brigadier에서 greedy string이라 나머지 전체를
+   * 소비하기 때문). MESSAGE가 아닌 인자는 토큰 하나를 소비한 것으로 보고 계속 진행한다 — 인용부호/좌표 등 여러 토큰을 쓰는 복잡한 인자 타입까지는 다루지 못하는
+   * 단순화된 구현이다.
+   */
+  private static SignableArgument findSignableArgument(CommandTree tree, String command) {
+    CommandNode[] nodes = tree.nodes();
+    String[] tokens = command.split(" ");
+    if (tokens.length == 0 || nodes.length == 0) return null;
+
+    int nodeIndex = tree.rootIndex();
+    int consumed = 0;
+    while (consumed < tokens.length) {
+      String token = tokens[consumed];
+      int[] children = nodes[nodeIndex].getChildIndices();
+
+      int literalMatch = -1;
+      for (int c : children) {
+        if (nodes[c].getType() == CommandType.LITERAL && nodes[c].getName().equals(token)) {
+          literalMatch = c;
+          break;
         }
+      }
+      if (literalMatch != -1) {
+        nodeIndex = literalMatch;
+        consumed++;
+        continue;
+      }
+
+      int argumentMatch = -1;
+      for (int c : children) {
+        if (nodes[c].getType() == CommandType.ARGUMENT) {
+          argumentMatch = c;
+          break;
+        }
+      }
+      if (argumentMatch == -1) return null; // 더 내려갈 곳이 없다
+
+      CommandNode argument = nodes[argumentMatch];
+      if (argument.getParser() == CommandParser.MESSAGE) {
+        String text = String.join(" ", Arrays.copyOfRange(tokens, consumed, tokens.length));
+        return new SignableArgument(argument.getName(), text);
+      }
+      nodeIndex = argumentMatch;
+      consumed++;
+    }
+    return null;
+  }
+
+  // 마인크래프트 클라이언트가 쓰는 것과 동일한 공식 한국어 언어 파일(ko_kr.json) — 서버가
+  // 보내는 TranslatableComponent(번역 키 + 인자)를 실제 클라이언트에서 보이는 것과 같은
+  // 문장으로 치환하는 데 쓴다. 패턴이 이미 Java의 String.format 스타일(%s, %1$s)이라
+  // 그대로 String.format에 넘기면 된다.
+  private static final Map<String, String> LANG = loadLang();
+
+  private static Map<String, String> loadLang() {
+    try (var in = McConnectionManager.class.getResourceAsStream("/lang/ko_kr.json")) {
+      @SuppressWarnings("unchecked")
+      Map<String, String> map =
+          (Map<String, String>)
+              (Map<?, ?>) new tools.jackson.databind.ObjectMapper().readValue(in, Map.class);
+      return map;
+    } catch (Exception e) {
+      throw new RuntimeException("마인크래프트 언어 파일을 불러오지 못했어요", e);
+    }
+  }
+
+  private static String plain(Component component) {
+    return component == null ? "" : render(component);
+  }
+
+  // 일반 채팅과 /say, /me는 서로 다른 chatType 번역 키(<%s> %s / [%s] %s / * %s %s)를
+  // 쓰는데, 서버가 그 chatType을 커스텀 데이터가 아니라 registry id로만 보내는 경우가
+  // 많다. 우리는 그 registry를 동기화해서 완전히 해석할 방법이 없어서, 바닐라 기본
+  // chat_type 레지스트리의 알려진 순서(id)를 그대로 가정한다 — 모드 없는 서버라면
+  // 대체로 안정적이지만, 확실하지 않으면 일반 채팅(chat.type.text)으로 취급한다.
+  private static String renderChatType(Holder<ChatType> holder, String sender, String message) {
+    String key;
+    if (holder.isCustom()) {
+      key = holder.custom().chat().translationKey();
+    } else {
+      key =
+          switch (holder.id()) {
+            case 1 -> "chat.type.emote"; // /me
+            case 4 -> "chat.type.announcement"; // /say
+            default -> "chat.type.text"; // 일반 채팅
+          };
+    }
+    String pattern = LANG.getOrDefault(key, "<%s> %s");
+    try {
+      return String.format(pattern, sender, message);
+    } catch (Exception e) {
+      return "<" + sender + "> " + message;
+    }
+  }
+
+  /**
+   * 컴포넌트를 실제 클라이언트가 보여주는 것과 같은 텍스트로 재귀적으로 렌더링한다. TranslatableComponent는 ko_kr.json에서 키를 찾아 인자를
+   * 치환하고, 그 외 타입은 Adventure의 기본 plain 직렬화에 맡긴다. 어떤 경우든 자식 컴포넌트를 이어붙인다.
+   */
+  private static String render(Component c) {
+    String own;
+    if (c instanceof net.kyori.adventure.text.TranslatableComponent tc) {
+      String pattern = LANG.getOrDefault(tc.key(), tc.key());
+      Object[] args = tc.args().stream().map(McConnectionManager::render).toArray();
+      try {
+        own = String.format(pattern, args);
+      } catch (Exception e) {
+        StringBuilder fallback = new StringBuilder(pattern);
+        for (Object arg : args) fallback.append(' ').append(arg);
+        own = fallback.toString();
+      }
+    } else if (c instanceof net.kyori.adventure.text.TextComponent tx) {
+      own = tx.content();
+    } else {
+      return PLAIN.serialize(c);
+    }
+    StringBuilder sb = new StringBuilder(own);
+    for (Component child : c.children()) {
+      sb.append(render(child));
+    }
+    return sb.toString();
+  }
+
+  /**
+   * 이 서버의 명령어 트리(Brigadier)를 훑어서, parser가 MESSAGE인(=서명이 필요한) 인자를 가진 명령어들을 콘솔에 출력한다 — "/say"뿐 아니라 이
+   * 서버에 실제로 어떤 명령어들이 서명을 요구하는지 눈으로 확인하기 위한 임시 진단용.
+   */
+  private static void logSignableCommands(CommandNode[] nodes) {
+    for (int i = 0; i < nodes.length; i++) {
+      CommandNode node = nodes[i];
+      if (node.getType() == CommandType.ARGUMENT && node.getParser() == CommandParser.MESSAGE) {
+        String commandName = findParentLiteralName(nodes, i);
+        System.out.println(
+            "[command-signing] /"
+                + commandName
+                + " <"
+                + node.getName()
+                + "> 는 서명이 필요해요 (parser=MESSAGE)");
+      }
+    }
+  }
+
+  /** childIndex를 자식으로 가진 리터럴(명령어 이름) 노드를 찾는다. */
+  private static String findParentLiteralName(CommandNode[] nodes, int childIndex) {
+    for (CommandNode node : nodes) {
+      if (node.getType() == CommandType.LITERAL) {
+        for (int c : node.getChildIndices()) {
+          if (c == childIndex) return node.getName();
+        }
+      }
+    }
+    return "?";
+  }
+
+  /**
+   * Mojang이 발급한 세션별 RSA 키로 채팅 메시지를 서명한다 — enforce-secure-profile=true인 서버가 우리 메시지를 거부하지 않고 받아주게 하기
+   * 위함. 서명 대상 바이트 레이아웃은 예전(하드코딩 프로토콜 클라이언트) Node 백엔드의 chatSigning.ts를 그대로 포팅한 것으로, 실제 라이브 서버에 대해
+   * 검증됐던 레이아웃이다.
+   */
+  private static final class ChatSigner {
+    private final UUID senderId;
+    private final UUID sessionId = UUID.randomUUID();
+    private final StepPlayerCertificates.PlayerCertificates certificates;
+    private final AtomicInteger messageIndex = new AtomicInteger(0);
+    private final SecureRandom random = new SecureRandom();
+
+    ChatSigner(UUID senderId, StepPlayerCertificates.PlayerCertificates certificates) {
+      this.senderId = senderId;
+      this.certificates = certificates;
     }
 
-    public void sendChat(String serverId, String message) {
-        ClientSession session = sessions.get(serverId);
-        if (session == null || !session.isConnected()) throw new NotConnectedException();
-
-        // "/"로 시작하면 일반 채팅이 아니라 명령어다 — ServerboundChatPacket으로 보내면
-        // 서버가 그냥 평문 채팅으로 취급해서 명령어가 실행되지 않는다.
-        if (message.startsWith("/")) {
-            sendCommand(serverId, session, message.substring(1));
-            return;
-        }
-
-        ChatSigner signer = chatSigners.get(serverId);
-        long timestampMs = Instant.now().toEpochMilli();
-        if (signer != null) {
-            session.send(signer.signedChatPacket(message, timestampMs));
-        } else {
-            session.send(new ServerboundChatPacket(message, timestampMs, 0L, null, 0, new BitSet(), 0));
-        }
+    ServerboundChatSessionUpdatePacket sessionUpdatePacket() {
+      return new ServerboundChatSessionUpdatePacket(
+          sessionId,
+          certificates.getExpireTimeMs(),
+          certificates.getPublicKey(),
+          certificates.getPublicKeySignature());
     }
 
-    /** 명령어(슬래시 뺀 나머지)를 보낸다 — 이 서버의 명령어 트리에 서명이 필요한 인자
-     * (parser=MESSAGE)가 있으면 그 인자만 서명해서 ServerboundChatCommandSignedPacket으로,
-     * 없으면(또는 트리를 아직 못 받았거나 서명 인증서가 없으면) 지금처럼 무서명
-     * ServerboundChatCommandPacket으로 보낸다. */
-    private void sendCommand(String serverId, ClientSession session, String command) {
-        CommandTree tree = commandTrees.get(serverId);
-        ChatSigner signer = chatSigners.get(serverId);
-        SignableArgument match = (tree != null && signer != null) ? findSignableArgument(tree, command) : null;
-        if (match == null) {
-            session.send(new ServerboundChatCommandPacket(command));
-            return;
-        }
-        long timestampMs = Instant.now().toEpochMilli();
-        ChatSigner.SignedArgument signed = signer.signArgument(match.name(), match.text(), timestampMs);
-        session.send(new ServerboundChatCommandSignedPacket(
-                command, timestampMs, signed.salt(), List.of(signed.signature()), 0, new BitSet(), (byte) 0));
+    record SignedArgument(long salt, ArgumentSignature signature) {}
+
+    /**
+     * 레이아웃: 버전 마커(4) + 발신자 UUID(16바이트) + 세션 UUID(16바이트) + 메시지 인덱스(4) + salt(8) + 타임스탬프(epoch 초, 8)
+     * + 메시지 길이(4) + 메시지 UTF-8 바이트 + 마지막으로 확인한 메시지 개수(4, 여기선 추적하지 않으므로 항상 0).
+     */
+    ServerboundChatPacket signedChatPacket(String message, long timestampMs) {
+      long salt = random.nextLong();
+      byte[] signature = sign(message, timestampMs, salt);
+      return new ServerboundChatPacket(message, timestampMs, salt, signature, 0, new BitSet(), 0);
     }
 
-    private record SignableArgument(String name, String text) {
+    /**
+     * 명령어 인자 하나를 채팅 메시지와 동일한 바이트 레이아웃으로 서명한다 — 메시지 인덱스는 일반 채팅과 같은 카운터를 이어서 쓴다(서버가 세션 전체에서 순서를 하나로
+     * 추적한다고 가정). 실제 서버 반응으로 검증이 필요한 부분이다.
+     */
+    SignedArgument signArgument(String argumentName, String text, long timestampMs) {
+      long salt = random.nextLong();
+      byte[] signature = sign(text, timestampMs, salt);
+      return new SignedArgument(salt, new ArgumentSignature(argumentName, signature));
     }
 
-    private record CommandTree(CommandNode[] nodes, int rootIndex) {
+    private byte[] sign(String text, long timestampMs, long salt) {
+      int index = messageIndex.getAndIncrement();
+      byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
+
+      ByteBuffer buf = ByteBuffer.allocate(4 + 16 + 16 + 4 + 8 + 8 + 4 + textBytes.length + 4);
+      buf.putInt(1);
+      putUuidBytes(buf, senderId);
+      putUuidBytes(buf, sessionId);
+      buf.putInt(index);
+      buf.putLong(salt);
+      buf.putLong(timestampMs / 1000);
+      buf.putInt(textBytes.length);
+      buf.put(textBytes);
+      buf.putInt(0);
+
+      try {
+        Signature sig = Signature.getInstance("SHA256withRSA");
+        sig.initSign(certificates.getPrivateKey());
+        sig.update(buf.array());
+        return sig.sign();
+      } catch (Exception e) {
+        throw new RuntimeException("서명에 실패했어요", e);
+      }
     }
 
-    /** command(공백으로 나뉜 토큰들)를 명령어 트리를 따라 내려가며 매칭한다. 리터럴
-     * 자식이 토큰과 일치하면 그 토큰을 소비하고 계속 내려가고, 인자 자식을 만나면 그
-     * parser가 MESSAGE인 경우 남은 토큰 전체를 그 인자의 텍스트로 간주해 반환한다(값
-     * 자체는 Brigadier에서 greedy string이라 나머지 전체를 소비하기 때문). MESSAGE가
-     * 아닌 인자는 토큰 하나를 소비한 것으로 보고 계속 진행한다 — 인용부호/좌표 등 여러
-     * 토큰을 쓰는 복잡한 인자 타입까지는 다루지 못하는 단순화된 구현이다. */
-    private static SignableArgument findSignableArgument(CommandTree tree, String command) {
-        CommandNode[] nodes = tree.nodes();
-        String[] tokens = command.split(" ");
-        if (tokens.length == 0 || nodes.length == 0) return null;
-
-        int nodeIndex = tree.rootIndex();
-        int consumed = 0;
-        while (consumed < tokens.length) {
-            String token = tokens[consumed];
-            int[] children = nodes[nodeIndex].getChildIndices();
-
-            int literalMatch = -1;
-            for (int c : children) {
-                if (nodes[c].getType() == CommandType.LITERAL && nodes[c].getName().equals(token)) {
-                    literalMatch = c;
-                    break;
-                }
-            }
-            if (literalMatch != -1) {
-                nodeIndex = literalMatch;
-                consumed++;
-                continue;
-            }
-
-            int argumentMatch = -1;
-            for (int c : children) {
-                if (nodes[c].getType() == CommandType.ARGUMENT) {
-                    argumentMatch = c;
-                    break;
-                }
-            }
-            if (argumentMatch == -1) return null; // 더 내려갈 곳이 없다
-
-            CommandNode argument = nodes[argumentMatch];
-            if (argument.getParser() == CommandParser.MESSAGE) {
-                String text = String.join(" ", Arrays.copyOfRange(tokens, consumed, tokens.length));
-                return new SignableArgument(argument.getName(), text);
-            }
-            nodeIndex = argumentMatch;
-            consumed++;
-        }
-        return null;
+    private static void putUuidBytes(ByteBuffer buf, UUID uuid) {
+      buf.putLong(uuid.getMostSignificantBits());
+      buf.putLong(uuid.getLeastSignificantBits());
     }
-
-    // 마인크래프트 클라이언트가 쓰는 것과 동일한 공식 한국어 언어 파일(ko_kr.json) — 서버가
-    // 보내는 TranslatableComponent(번역 키 + 인자)를 실제 클라이언트에서 보이는 것과 같은
-    // 문장으로 치환하는 데 쓴다. 패턴이 이미 Java의 String.format 스타일(%s, %1$s)이라
-    // 그대로 String.format에 넘기면 된다.
-    private static final Map<String, String> LANG = loadLang();
-
-    private static Map<String, String> loadLang() {
-        try (var in = McConnectionManager.class.getResourceAsStream("/lang/ko_kr.json")) {
-            @SuppressWarnings("unchecked")
-            Map<String, String> map = (Map<String, String>) (Map<?, ?>) new tools.jackson.databind.ObjectMapper().readValue(in, Map.class);
-            return map;
-        } catch (Exception e) {
-            throw new RuntimeException("마인크래프트 언어 파일을 불러오지 못했어요", e);
-        }
-    }
-
-    private static String plain(Component component) {
-        return component == null ? "" : render(component);
-    }
-
-    // 일반 채팅과 /say, /me는 서로 다른 chatType 번역 키(<%s> %s / [%s] %s / * %s %s)를
-    // 쓰는데, 서버가 그 chatType을 커스텀 데이터가 아니라 registry id로만 보내는 경우가
-    // 많다. 우리는 그 registry를 동기화해서 완전히 해석할 방법이 없어서, 바닐라 기본
-    // chat_type 레지스트리의 알려진 순서(id)를 그대로 가정한다 — 모드 없는 서버라면
-    // 대체로 안정적이지만, 확실하지 않으면 일반 채팅(chat.type.text)으로 취급한다.
-    private static String renderChatType(Holder<ChatType> holder, String sender, String message) {
-        String key;
-        if (holder.isCustom()) {
-            key = holder.custom().chat().translationKey();
-        } else {
-            key = switch (holder.id()) {
-                case 1 -> "chat.type.emote"; // /me
-                case 4 -> "chat.type.announcement"; // /say
-                default -> "chat.type.text"; // 일반 채팅
-            };
-        }
-        String pattern = LANG.getOrDefault(key, "<%s> %s");
-        try {
-            return String.format(pattern, sender, message);
-        } catch (Exception e) {
-            return "<" + sender + "> " + message;
-        }
-    }
-
-    /** 컴포넌트를 실제 클라이언트가 보여주는 것과 같은 텍스트로 재귀적으로 렌더링한다.
-     * TranslatableComponent는 ko_kr.json에서 키를 찾아 인자를 치환하고, 그 외 타입은
-     * Adventure의 기본 plain 직렬화에 맡긴다. 어떤 경우든 자식 컴포넌트를 이어붙인다. */
-    private static String render(Component c) {
-        String own;
-        if (c instanceof net.kyori.adventure.text.TranslatableComponent tc) {
-            String pattern = LANG.getOrDefault(tc.key(), tc.key());
-            Object[] args = tc.args().stream().map(McConnectionManager::render).toArray();
-            try {
-                own = String.format(pattern, args);
-            } catch (Exception e) {
-                StringBuilder fallback = new StringBuilder(pattern);
-                for (Object arg : args) fallback.append(' ').append(arg);
-                own = fallback.toString();
-            }
-        } else if (c instanceof net.kyori.adventure.text.TextComponent tx) {
-            own = tx.content();
-        } else {
-            return PLAIN.serialize(c);
-        }
-        StringBuilder sb = new StringBuilder(own);
-        for (Component child : c.children()) {
-            sb.append(render(child));
-        }
-        return sb.toString();
-    }
-
-    /** 이 서버의 명령어 트리(Brigadier)를 훑어서, parser가 MESSAGE인(=서명이 필요한)
-     * 인자를 가진 명령어들을 콘솔에 출력한다 — "/say"뿐 아니라 이 서버에 실제로 어떤
-     * 명령어들이 서명을 요구하는지 눈으로 확인하기 위한 임시 진단용. */
-    private static void logSignableCommands(CommandNode[] nodes) {
-        for (int i = 0; i < nodes.length; i++) {
-            CommandNode node = nodes[i];
-            if (node.getType() == CommandType.ARGUMENT && node.getParser() == CommandParser.MESSAGE) {
-                String commandName = findParentLiteralName(nodes, i);
-                System.out.println("[command-signing] /" + commandName + " <" + node.getName() + "> 는 서명이 필요해요 (parser=MESSAGE)");
-            }
-        }
-    }
-
-    /** childIndex를 자식으로 가진 리터럴(명령어 이름) 노드를 찾는다. */
-    private static String findParentLiteralName(CommandNode[] nodes, int childIndex) {
-        for (CommandNode node : nodes) {
-            if (node.getType() == CommandType.LITERAL) {
-                for (int c : node.getChildIndices()) {
-                    if (c == childIndex) return node.getName();
-                }
-            }
-        }
-        return "?";
-    }
-
-    /** Mojang이 발급한 세션별 RSA 키로 채팅 메시지를 서명한다 — enforce-secure-profile=true인
-     * 서버가 우리 메시지를 거부하지 않고 받아주게 하기 위함. 서명 대상 바이트 레이아웃은
-     * 예전(하드코딩 프로토콜 클라이언트) Node 백엔드의 chatSigning.ts를 그대로 포팅한 것으로,
-     * 실제 라이브 서버에 대해 검증됐던 레이아웃이다. */
-    private static final class ChatSigner {
-        private final UUID senderId;
-        private final UUID sessionId = UUID.randomUUID();
-        private final StepPlayerCertificates.PlayerCertificates certificates;
-        private final AtomicInteger messageIndex = new AtomicInteger(0);
-        private final SecureRandom random = new SecureRandom();
-
-        ChatSigner(UUID senderId, StepPlayerCertificates.PlayerCertificates certificates) {
-            this.senderId = senderId;
-            this.certificates = certificates;
-        }
-
-        ServerboundChatSessionUpdatePacket sessionUpdatePacket() {
-            return new ServerboundChatSessionUpdatePacket(
-                    sessionId, certificates.getExpireTimeMs(), certificates.getPublicKey(), certificates.getPublicKeySignature());
-        }
-
-        record SignedArgument(long salt, ArgumentSignature signature) {
-        }
-
-        /** 레이아웃: 버전 마커(4) + 발신자 UUID(16바이트) + 세션 UUID(16바이트) +
-         * 메시지 인덱스(4) + salt(8) + 타임스탬프(epoch 초, 8) + 메시지 길이(4) + 메시지
-         * UTF-8 바이트 + 마지막으로 확인한 메시지 개수(4, 여기선 추적하지 않으므로 항상 0). */
-        ServerboundChatPacket signedChatPacket(String message, long timestampMs) {
-            long salt = random.nextLong();
-            byte[] signature = sign(message, timestampMs, salt);
-            return new ServerboundChatPacket(message, timestampMs, salt, signature, 0, new BitSet(), 0);
-        }
-
-        /** 명령어 인자 하나를 채팅 메시지와 동일한 바이트 레이아웃으로 서명한다 — 메시지
-         * 인덱스는 일반 채팅과 같은 카운터를 이어서 쓴다(서버가 세션 전체에서 순서를
-         * 하나로 추적한다고 가정). 실제 서버 반응으로 검증이 필요한 부분이다. */
-        SignedArgument signArgument(String argumentName, String text, long timestampMs) {
-            long salt = random.nextLong();
-            byte[] signature = sign(text, timestampMs, salt);
-            return new SignedArgument(salt, new ArgumentSignature(argumentName, signature));
-        }
-
-        private byte[] sign(String text, long timestampMs, long salt) {
-            int index = messageIndex.getAndIncrement();
-            byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
-
-            ByteBuffer buf = ByteBuffer.allocate(4 + 16 + 16 + 4 + 8 + 8 + 4 + textBytes.length + 4);
-            buf.putInt(1);
-            putUuidBytes(buf, senderId);
-            putUuidBytes(buf, sessionId);
-            buf.putInt(index);
-            buf.putLong(salt);
-            buf.putLong(timestampMs / 1000);
-            buf.putInt(textBytes.length);
-            buf.put(textBytes);
-            buf.putInt(0);
-
-            try {
-                Signature sig = Signature.getInstance("SHA256withRSA");
-                sig.initSign(certificates.getPrivateKey());
-                sig.update(buf.array());
-                return sig.sign();
-            } catch (Exception e) {
-                throw new RuntimeException("서명에 실패했어요", e);
-            }
-        }
-
-        private static void putUuidBytes(ByteBuffer buf, UUID uuid) {
-            buf.putLong(uuid.getMostSignificantBits());
-            buf.putLong(uuid.getLeastSignificantBits());
-        }
-    }
-
+  }
 }

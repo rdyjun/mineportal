@@ -2,11 +2,6 @@ package com.mineportal.server.status;
 
 import com.mineportal.protocol.MinecraftAddressResolver;
 import com.mineportal.protocol.MinecraftAddressResolver.ResolvedEndpoint;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import org.springframework.stereotype.Service;
-
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -16,204 +11,218 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
- * Server List Ping —실제 런처들이 멀티플레이 목록에서 서버의 접속자 수/MOTD를 보여줄 때
- * 사용하는, 로그인이 필요 없는 가벼운 상태 조회와 동일한 방식이다. 예전 Node 구현
- * (src/protocol/serverPing.ts)에서 1:1로 포팅했으며, "서버에 연결할 수 없음"이라는 정상적인
- * 결과에 대해서는 절대 예외를 던지지 않고, 진짜로 예상치 못한 상태에서만 던진다.
+ * Server List Ping —실제 런처들이 멀티플레이 목록에서 서버의 접속자 수/MOTD를 보여줄 때 사용하는, 로그인이 필요 없는 가벼운 상태 조회와 동일한 방식이다.
+ * 예전 Node 구현 (src/protocol/serverPing.ts)에서 1:1로 포팅했으며, "서버에 연결할 수 없음"이라는 정상적인 결과에 대해서는 절대 예외를 던지지
+ * 않고, 진짜로 예상치 못한 상태에서만 던진다.
  */
 @Service
 public class PingService {
 
-    private static final int PING_TIMEOUT_MS = 3000;
-    private static final int MAX_STATUS_FRAME_BYTES = 1024 * 1024;
-    // 상태 조회 자체는 어떤 프로토콜 번호로도 통하지만, ViaVersion 플러그인을 쓰는 서버는
-    // 자기가 받아줄 수 있는 요청 번호를 version.protocol로 그대로 돌려준다 — 우리가 실제로
-    // 접속할 때 쓰는 번호(MCProtocolLib 코덱)를 보내야 그 응답으로 번역 필요 여부를 판단할 수 있다.
-    private static final int HANDSHAKE_PROTOCOL_VERSION = MinecraftCodec.CODEC.getProtocolVersion();
+  private static final int PING_TIMEOUT_MS = 3000;
+  private static final int MAX_STATUS_FRAME_BYTES = 1024 * 1024;
+  // 상태 조회 자체는 어떤 프로토콜 번호로도 통하지만, ViaVersion 플러그인을 쓰는 서버는
+  // 자기가 받아줄 수 있는 요청 번호를 version.protocol로 그대로 돌려준다 — 우리가 실제로
+  // 접속할 때 쓰는 번호(MCProtocolLib 코덱)를 보내야 그 응답으로 번역 필요 여부를 판단할 수 있다.
+  private static final int HANDSHAKE_PROTOCOL_VERSION = MinecraftCodec.CODEC.getProtocolVersion();
 
-    // 여러 사용자가 같은 서버를 짧은 시간 안에 반복 조회해도 실제 TCP ping은 한 번만
-    // 나가도록 host:port 단위로 결과를 잠깐 캐싱한다. ConcurrentHashMap#compute는 같은
-    // 키에 대해서는 호출을 직렬화하므로, TTL이 지나기 전 동시에 들어온 요청들도 중복으로
-    // 소켓을 열지 않고 진행 중인 ping의 결과를 함께 기다렸다가 공유해서 받는다.
-    private static final long CACHE_TTL_MS = 15_000;
-    private static final int MAX_CACHE_ENTRIES = 4096;
-    private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
+  // 여러 사용자가 같은 서버를 짧은 시간 안에 반복 조회해도 실제 TCP ping은 한 번만
+  // 나가도록 host:port 단위로 결과를 잠깐 캐싱한다. ConcurrentHashMap#compute는 같은
+  // 키에 대해서는 호출을 직렬화하므로, TTL이 지나기 전 동시에 들어온 요청들도 중복으로
+  // 소켓을 열지 않고 진행 중인 ping의 결과를 함께 기다렸다가 공유해서 받는다.
+  private static final long CACHE_TTL_MS = 15_000;
+  private static final int MAX_CACHE_ENTRIES = 4096;
+  private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
 
-    public record PingObservation(PingResult result, ResolvedEndpoint endpoint) {
+  public record PingObservation(PingResult result, ResolvedEndpoint endpoint) {}
+
+  private record CacheEntry(PingObservation observation, long expiresAt) {}
+
+  private final ObjectMapper objectMapper = new ObjectMapper();
+  private final MinecraftAddressResolver addressResolver = new MinecraftAddressResolver();
+
+  public PingResult ping(String host, int port) {
+    try {
+      return observePublic(host, port).result();
+    } catch (UnknownHostException e) {
+      return PingResult.offline(e.getMessage());
     }
+  }
 
-    private record CacheEntry(PingObservation observation, long expiresAt) {
+  /** Resolve SRV/A once, validate the final bytes, and keep that exact endpoint with the ping. */
+  public PingObservation observePublic(String host, int port) throws UnknownHostException {
+    ResolvedEndpoint endpoint = addressResolver.resolve(host, port, true);
+    String key =
+        endpoint.logicalHost()
+            + "/"
+            + endpoint.address().getHostAddress()
+            + ":"
+            + endpoint.targetPort();
+    long now = System.currentTimeMillis();
+    if (cache.size() >= MAX_CACHE_ENTRIES && !cache.containsKey(key)) {
+      cache.entrySet().removeIf(entry -> entry.getValue().expiresAt() <= now);
+      if (cache.size() >= MAX_CACHE_ENTRIES) {
+        return new PingObservation(PingResult.offline("ping capacity reached"), endpoint);
+      }
     }
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final MinecraftAddressResolver addressResolver = new MinecraftAddressResolver();
-
-    public PingResult ping(String host, int port) {
-        try {
-            return observePublic(host, port).result();
-        } catch (UnknownHostException e) {
-            return PingResult.offline(e.getMessage());
-        }
-    }
-
-    /** Resolve SRV/A once, validate the final bytes, and keep that exact endpoint with the ping. */
-    public PingObservation observePublic(String host, int port) throws UnknownHostException {
-        ResolvedEndpoint endpoint = addressResolver.resolve(host, port, true);
-        String key = endpoint.logicalHost() + "/" + endpoint.address().getHostAddress()
-                + ":" + endpoint.targetPort();
-        long now = System.currentTimeMillis();
-        if (cache.size() >= MAX_CACHE_ENTRIES && !cache.containsKey(key)) {
-            cache.entrySet().removeIf(entry -> entry.getValue().expiresAt() <= now);
-            if (cache.size() >= MAX_CACHE_ENTRIES) {
-                return new PingObservation(PingResult.offline("ping capacity reached"), endpoint);
-            }
-        }
-        return cache.compute(key, (k, existing) -> {
-            if (existing != null && existing.expiresAt() > now) {
+    return cache
+        .compute(
+            key,
+            (k, existing) -> {
+              if (existing != null && existing.expiresAt() > now) {
                 return existing;
-            }
-            return new CacheEntry(new PingObservation(doPing(endpoint), endpoint), now + CACHE_TTL_MS);
-        }).observation();
+              }
+              return new CacheEntry(
+                  new PingObservation(doPing(endpoint), endpoint), now + CACHE_TTL_MS);
+            })
+        .observation();
+  }
+
+  private PingResult doPing(ResolvedEndpoint endpoint) {
+    try (Socket socket = new Socket()) {
+      socket.connect(endpoint.socketAddress(), PING_TIMEOUT_MS);
+      socket.setSoTimeout(PING_TIMEOUT_MS);
+
+      OutputStream out = socket.getOutputStream();
+      writeFrame(out, buildHandshakePacket(endpoint.logicalHost(), endpoint.targetPort()));
+      writeFrame(out, buildStatusRequestPacket());
+
+      InputStream in = socket.getInputStream();
+      int frameLength = readVarInt(in);
+      if (frameLength <= 0 || frameLength > MAX_STATUS_FRAME_BYTES) {
+        return PingResult.offline("invalid status response size");
+      }
+      byte[] body = in.readNBytes(frameLength);
+      if (body.length < frameLength) {
+        return PingResult.offline("connection closed before full response");
+      }
+
+      ByteArrayInputStreamCursor cursor = new ByteArrayInputStreamCursor(body);
+      int packetId = cursor.readVarInt();
+      if (packetId != 0x00) {
+        return PingResult.offline("unexpected packet id " + packetId);
+      }
+      String json = cursor.readString();
+      JsonNode root = objectMapper.readTree(json);
+
+      JsonNode players = root.path("players");
+      Integer playersOnline = players.has("online") ? players.get("online").asInt() : null;
+      Integer playersMax = players.has("max") ? players.get("max").asInt() : null;
+      String motd = extractMotd(root.path("description"));
+      String version = root.path("version").path("name").asText(null);
+      Integer protocol =
+          root.path("version").has("protocol")
+              ? root.path("version").get("protocol").asInt()
+              : null;
+      JsonNode forgeData = root.path("forgeData");
+      Integer forgeNetVersion =
+          forgeData.isObject() ? forgeData.path("fmlNetworkVersion").asInt(0) : null;
+
+      return PingResult.online(playersOnline, playersMax, motd, version, protocol, forgeNetVersion);
+    } catch (java.net.SocketTimeoutException e) {
+      return PingResult.offline("timed out");
+    } catch (IOException e) {
+      return PingResult.offline(e.getMessage());
+    }
+  }
+
+  private String extractMotd(JsonNode description) {
+    if (description.isTextual()) return description.asText();
+    if (description.has("text")) return description.get("text").asText();
+    return null;
+  }
+
+  private byte[] buildHandshakePacket(String host, int port) throws IOException {
+    ByteArrayOutputStream body = new ByteArrayOutputStream();
+    writeVarInt(body, 0x00); // 패킷 id
+    writeVarInt(body, HANDSHAKE_PROTOCOL_VERSION);
+    writeString(body, host);
+    body.write((port >>> 8) & 0xFF);
+    body.write(port & 0xFF);
+    writeVarInt(body, 1); // 다음 상태: status
+    return body.toByteArray();
+  }
+
+  private byte[] buildStatusRequestPacket() throws IOException {
+    ByteArrayOutputStream body = new ByteArrayOutputStream();
+    writeVarInt(body, 0x00); // 패킷 id, 빈 본문
+    return body.toByteArray();
+  }
+
+  private void writeFrame(OutputStream out, byte[] packetBody) throws IOException {
+    ByteArrayOutputStream frame = new ByteArrayOutputStream();
+    writeVarInt(frame, packetBody.length);
+    frame.write(packetBody);
+    out.write(frame.toByteArray());
+    out.flush();
+  }
+
+  private static void writeVarInt(OutputStream out, int value) throws IOException {
+    while (true) {
+      if ((value & ~0x7F) == 0) {
+        out.write(value);
+        return;
+      }
+      out.write((value & 0x7F) | 0x80);
+      value >>>= 7;
+    }
+  }
+
+  private static void writeString(OutputStream out, String value) throws IOException {
+    byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+    writeVarInt(out, bytes.length);
+    out.write(bytes);
+  }
+
+  private static int readVarInt(InputStream in) throws IOException {
+    int value = 0;
+    int position = 0;
+    while (true) {
+      int currentByte = in.read();
+      if (currentByte == -1) throw new EOFException("stream closed while reading VarInt");
+      value |= (currentByte & 0x7F) << position;
+      if ((currentByte & 0x80) == 0) break;
+      position += 7;
+      if (position >= 32) throw new IOException("VarInt too big");
+    }
+    return value;
+  }
+
+  /** 이미 버퍼에 담긴 패킷 본문에서 VarInt/String 필드를 읽어내기 위한 작은 커서. */
+  private static final class ByteArrayInputStreamCursor {
+    private final byte[] data;
+    private int pos = 0;
+
+    ByteArrayInputStreamCursor(byte[] data) {
+      this.data = data;
     }
 
-    private PingResult doPing(ResolvedEndpoint endpoint) {
-        try (Socket socket = new Socket()) {
-            socket.connect(endpoint.socketAddress(), PING_TIMEOUT_MS);
-            socket.setSoTimeout(PING_TIMEOUT_MS);
-
-            OutputStream out = socket.getOutputStream();
-            writeFrame(out, buildHandshakePacket(endpoint.logicalHost(), endpoint.targetPort()));
-            writeFrame(out, buildStatusRequestPacket());
-
-            InputStream in = socket.getInputStream();
-            int frameLength = readVarInt(in);
-            if (frameLength <= 0 || frameLength > MAX_STATUS_FRAME_BYTES) {
-                return PingResult.offline("invalid status response size");
-            }
-            byte[] body = in.readNBytes(frameLength);
-            if (body.length < frameLength) {
-                return PingResult.offline("connection closed before full response");
-            }
-
-            ByteArrayInputStreamCursor cursor = new ByteArrayInputStreamCursor(body);
-            int packetId = cursor.readVarInt();
-            if (packetId != 0x00) {
-                return PingResult.offline("unexpected packet id " + packetId);
-            }
-            String json = cursor.readString();
-            JsonNode root = objectMapper.readTree(json);
-
-            JsonNode players = root.path("players");
-            Integer playersOnline = players.has("online") ? players.get("online").asInt() : null;
-            Integer playersMax = players.has("max") ? players.get("max").asInt() : null;
-            String motd = extractMotd(root.path("description"));
-            String version = root.path("version").path("name").asText(null);
-            Integer protocol = root.path("version").has("protocol") ? root.path("version").get("protocol").asInt() : null;
-            JsonNode forgeData = root.path("forgeData");
-            Integer forgeNetVersion = forgeData.isObject() ? forgeData.path("fmlNetworkVersion").asInt(0) : null;
-
-            return PingResult.online(playersOnline, playersMax, motd, version, protocol, forgeNetVersion);
-        } catch (java.net.SocketTimeoutException e) {
-            return PingResult.offline("timed out");
-        } catch (IOException e) {
-            return PingResult.offline(e.getMessage());
-        }
+    int readVarInt() throws IOException {
+      int value = 0;
+      int position = 0;
+      while (true) {
+        if (pos >= data.length) throw new EOFException("ran out of bytes reading VarInt");
+        int currentByte = data[pos++] & 0xFF;
+        value |= (currentByte & 0x7F) << position;
+        if ((currentByte & 0x80) == 0) break;
+        position += 7;
+        if (position >= 32) throw new IOException("VarInt too big");
+      }
+      return value;
     }
 
-    private String extractMotd(JsonNode description) {
-        if (description.isTextual()) return description.asText();
-        if (description.has("text")) return description.get("text").asText();
-        return null;
+    String readString() throws IOException {
+      int length = readVarInt();
+      if (length < 0 || length > data.length - pos)
+        throw new EOFException("string length exceeds remaining bytes");
+      String s = new String(data, pos, length, StandardCharsets.UTF_8);
+      pos += length;
+      return s;
     }
-
-    private byte[] buildHandshakePacket(String host, int port) throws IOException {
-        ByteArrayOutputStream body = new ByteArrayOutputStream();
-        writeVarInt(body, 0x00); // 패킷 id
-        writeVarInt(body, HANDSHAKE_PROTOCOL_VERSION);
-        writeString(body, host);
-        body.write((port >>> 8) & 0xFF);
-        body.write(port & 0xFF);
-        writeVarInt(body, 1); // 다음 상태: status
-        return body.toByteArray();
-    }
-
-    private byte[] buildStatusRequestPacket() throws IOException {
-        ByteArrayOutputStream body = new ByteArrayOutputStream();
-        writeVarInt(body, 0x00); // 패킷 id, 빈 본문
-        return body.toByteArray();
-    }
-
-    private void writeFrame(OutputStream out, byte[] packetBody) throws IOException {
-        ByteArrayOutputStream frame = new ByteArrayOutputStream();
-        writeVarInt(frame, packetBody.length);
-        frame.write(packetBody);
-        out.write(frame.toByteArray());
-        out.flush();
-    }
-
-    private static void writeVarInt(OutputStream out, int value) throws IOException {
-        while (true) {
-            if ((value & ~0x7F) == 0) {
-                out.write(value);
-                return;
-            }
-            out.write((value & 0x7F) | 0x80);
-            value >>>= 7;
-        }
-    }
-
-    private static void writeString(OutputStream out, String value) throws IOException {
-        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-        writeVarInt(out, bytes.length);
-        out.write(bytes);
-    }
-
-    private static int readVarInt(InputStream in) throws IOException {
-        int value = 0;
-        int position = 0;
-        while (true) {
-            int currentByte = in.read();
-            if (currentByte == -1) throw new EOFException("stream closed while reading VarInt");
-            value |= (currentByte & 0x7F) << position;
-            if ((currentByte & 0x80) == 0) break;
-            position += 7;
-            if (position >= 32) throw new IOException("VarInt too big");
-        }
-        return value;
-    }
-
-    /** 이미 버퍼에 담긴 패킷 본문에서 VarInt/String 필드를 읽어내기 위한 작은 커서. */
-    private static final class ByteArrayInputStreamCursor {
-        private final byte[] data;
-        private int pos = 0;
-
-        ByteArrayInputStreamCursor(byte[] data) {
-            this.data = data;
-        }
-
-        int readVarInt() throws IOException {
-            int value = 0;
-            int position = 0;
-            while (true) {
-                if (pos >= data.length) throw new EOFException("ran out of bytes reading VarInt");
-                int currentByte = data[pos++] & 0xFF;
-                value |= (currentByte & 0x7F) << position;
-                if ((currentByte & 0x80) == 0) break;
-                position += 7;
-                if (position >= 32) throw new IOException("VarInt too big");
-            }
-            return value;
-        }
-
-        String readString() throws IOException {
-            int length = readVarInt();
-            if (length < 0 || length > data.length - pos) throw new EOFException("string length exceeds remaining bytes");
-            String s = new String(data, pos, length, StandardCharsets.UTF_8);
-            pos += length;
-            return s;
-        }
-    }
-
+  }
 }
