@@ -63,6 +63,43 @@ jobs:
           fi
           jimage list "$MODULES" > "$RUNNER_TEMP/mineportal-runtime-modules.txt"
           grep -q '^Module: jdk.naming.dns$' "$RUNNER_TEMP/mineportal-runtime-modules.txt"
+      - name: Start the Apple Silicon launcher with its bundled runtime
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          MINEPORTAL_WS_URL: ws://127.0.0.1:9
+        run: |
+          set -euo pipefail
+          export JAVA_TOOL_OPTIONS="-Dmineportal.dataDir=$RUNNER_TEMP/mineportal-package-smoke"
+          desktop-client/build/package/MinePortal.app/Contents/MacOS/MinePortal --headless > "$RUNNER_TEMP/mineportal-launcher.log" 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+          sleep 8
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            cat "$RUNNER_TEMP/mineportal-launcher.log"
+            exit 1
+          fi
+      - name: Start the Windows launcher with its bundled runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          MINEPORTAL_WS_URL: ws://127.0.0.1:9
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:JAVA_TOOL_OPTIONS = "-Dmineportal.dataDir=$env:RUNNER_TEMP/mineportal-package-smoke"
+          $launcher = Resolve-Path 'desktop-client/build/package/MinePortal/MinePortal.exe'
+          $process = Start-Process -FilePath $launcher.Path -ArgumentList '--headless' -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            $process.Refresh()
+            if ($process.HasExited) {
+              throw "Bundled Windows launcher exited during startup with code $($process.ExitCode)"
+            }
+          } finally {
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+            }
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: MinePortal-${{ runner.os }}
