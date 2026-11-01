@@ -1,0 +1,59 @@
+# Desktop restoration security review
+
+Reviewed PR #31 on 2026-11-02 before merging. Scope: the desktop/WebView boundary,
+pairing and authenticated desktop events, local routing and transfers, download
+URLs, package workflow permissions, newly introduced runtime dependencies, and
+credential patterns in added lines. This is a focused source review, not a
+penetration test or a complete audit of all existing dependencies.
+
+## Finding fixed before merge
+
+**Medium: unauthorized desktop disconnect events could remove another connection's
+routing state.** `DesktopWsHandler.handleDisconnected` removed a route before
+checking that the socket owned the requested server. A socket knowing a server ID
+and its connection attempt could affect routing even when unauthenticated or paired
+to another owner. Replaced sockets also retained owner attributes until closure.
+
+The handler now verifies both current registered socket identity and server
+ownership before accepting state/chat events or modifying routing. Five regression
+tests cover unauthenticated sockets, other owners, replaced sockets (including
+injected connected/chat events), legitimate disconnects, and missing server IDs.
+All 36 server tests, the server build and formatting checks passed locally.
+
+## Other checks
+
+- Remote JavaScript receives no Java object/native execution bridge. Pairing status
+  events require the exact official HTTPS origin and a bounded alphanumeric code;
+  the backend still requires a single-use, expiring pairing grant. Presentation
+  detection through User-Agent is not used as authentication.
+- Server ownership is resolved from the authenticated account. Desktop-only
+  requests reject unavailable local apps rather than fall back to the public relay.
+  Public probes still resolve/validate public addresses and pin resolved bytes;
+  desktop connections intentionally support user-selected LAN destinations.
+- Transfers have bounded host/port/count checks, and canceled or stale sessions
+  cannot initiate a later connection. Only the authenticated current desktop socket
+  can publish server state or chat for its own account.
+- Download URLs use fixed GitHub release asset names. The new package workflow has
+  read-only repository permissions, no deployment credentials and no PR-head input
+  interpolated into commands. The upload action is now pinned to its commit, like
+  checkout and setup-java.
+- Added-line scans found no private key, GitHub token, AWS access key or JWT patterns.
+  Validation records omit credentials, verification codes and raw chat. Pattern
+  scans do not prove that all possible secret formats are absent.
+- OSV queries for `org.openjfx:javafx-base`, `javafx-graphics`, `javafx-controls`,
+  `javafx-media` and `javafx-web` version `21.0.13` returned no advisories at review
+  time. The upstream [October 2026 patch announcement](https://gluonhq.com/news/2026-10-20-oct-2026-critical-patch-update/)
+  includes this release. This is not a complete transitive dependency assessment.
+- GitHub Dependabot and secret-scanning APIs reported those features disabled on
+  this repository. No settings or authentication scopes were changed.
+
+## Remaining release checks
+
+Native GUI/OAuth/pairing interaction checks still await computer-control permission
+approval. Signing/notarization, publishing matching installer release assets and
+download verification remain outstanding. CI launcher checks use headless mode
+and do not establish native GUI security or full compatibility. Merging main
+triggers the repository's existing web deployment; it does not publish installers.
+
+No remaining merge-blocking issue was identified within this review's scope after
+the ownership fix. Release validation remains tracked in `desktop-validation.md`.
