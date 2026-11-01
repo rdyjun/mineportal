@@ -1,0 +1,106 @@
+name: Desktop packages
+
+on:
+  pull_request:
+    paths: ['desktop-client/**', 'shared/**', 'client/**', '.github/workflows/desktop-package.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Build platform-native GUI and connection engine
+        shell: bash
+        run: bash desktop-client/gradlew -p desktop-client test shadowJar spotlessCheck --no-daemon
+      - name: Test website download routing
+        run: node --test client/downloads.test.cjs
+      - name: Package Apple Silicon application and disk image
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          jpackage --type app-image --name MinePortal --app-version 1.1.0 \
+            --input desktop-client/build/libs --main-jar mineportal-client.jar \
+            --main-class com.mineportal.Main --dest desktop-client/build/package \
+            --add-modules java.se,jdk.crypto.ec,jdk.jsobject,jdk.unsupported,jdk.naming.dns \
+            --mac-package-identifier kr.mineportal.desktop
+          mkdir -p desktop-client/build/dmg-root desktop-client/build/installers
+          cp -R desktop-client/build/package/MinePortal.app desktop-client/build/dmg-root/
+          ln -s /Applications desktop-client/build/dmg-root/Applications
+          hdiutil create -volname MinePortal -srcfolder desktop-client/build/dmg-root \
+            -ov -format UDZO desktop-client/build/installers/MinePortal-mac-arm64.dmg
+      - name: Package Windows app with bundled Java runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          jpackage --type app-image --name MinePortal --app-version 1.1.0 `
+            --input desktop-client/build/libs --main-jar mineportal-client.jar `
+            --main-class com.mineportal.Main --dest desktop-client/build/package `
+            --add-modules java.se,jdk.crypto.ec,jdk.jsobject,jdk.unsupported,jdk.naming.dns
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force desktop-client/build/installers
+          Compress-Archive desktop-client/build/package/MinePortal desktop-client/build/installers/MinePortal-win.zip
+      - name: Verify bundled DNS SRV provider
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            MODULES=desktop-client/build/package/MinePortal.app/Contents/runtime/Contents/Home/lib/modules
+          else
+            MODULES=desktop-client/build/package/MinePortal/runtime/lib/modules
+          fi
+          jimage list "$MODULES" > "$RUNNER_TEMP/mineportal-runtime-modules.txt"
+          grep -q '^Module: jdk.naming.dns$' "$RUNNER_TEMP/mineportal-runtime-modules.txt"
+      - name: Start the Apple Silicon launcher with its bundled runtime
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          MINEPORTAL_WS_URL: ws://127.0.0.1:9
+        run: |
+          set -euo pipefail
+          export JAVA_TOOL_OPTIONS="-Dmineportal.dataDir=$RUNNER_TEMP/mineportal-package-smoke"
+          desktop-client/build/package/MinePortal.app/Contents/MacOS/MinePortal --headless > "$RUNNER_TEMP/mineportal-launcher.log" 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+          sleep 8
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            cat "$RUNNER_TEMP/mineportal-launcher.log"
+            exit 1
+          fi
+      - name: Start the Windows launcher with its bundled runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          MINEPORTAL_WS_URL: ws://127.0.0.1:9
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:JAVA_TOOL_OPTIONS = "-Dmineportal.dataDir=$env:RUNNER_TEMP/mineportal-package-smoke"
+          $launcher = Resolve-Path 'desktop-client/build/package/MinePortal/MinePortal.exe'
+          $process = Start-Process -FilePath $launcher.Path -ArgumentList '--headless' -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            $process.Refresh()
+            if ($process.HasExited) {
+              throw "Bundled Windows launcher exited during startup with code $($process.ExitCode)"
+            }
+          } finally {
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+            }
+          }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: MinePortal-${{ runner.os }}
+          path: desktop-client/build/installers/*

@@ -3,12 +3,11 @@ package com.mineportal;
 import com.mineportal.net.BackendClient;
 import com.mineportal.pair.ProtocolRegistrar;
 import com.mineportal.pair.SingleInstance;
+import com.mineportal.ui.DesktopApp;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 
-/**
- * UI가 전혀 없는 백그라운드 프로그램 — 웹(mineportal.kr)이 백엔드를 통해 보내는 명령(로그인 토큰/연결/해제/채팅)을 BackendClient로 받아 실행한다.
- * 서버 목록, 로그인 버튼, 채팅창은 전부 웹에 있다 — 이 앱은 사용자 실IP로 실제 마인크래프트 프로토콜 접속만 대신 수행한다.
- */
+/** Desktop window and local Minecraft connection engine. */
 public final class Main {
 
   public static void main(String[] args) {
@@ -28,8 +27,11 @@ public final class Main {
     }
     client.start();
 
-    // All worker threads are daemon threads. Keep this UI-less agent alive until Windows or
-    // the user terminates the process; every user-facing action remains on the website.
+    // Keep an explicit background mode for diagnostics and existing web pairing integrations.
+    if (!Arrays.asList(args).contains("--headless")) {
+      DesktopApp.open(client);
+      return;
+    }
     try {
       new CountDownLatch(1).await();
     } catch (InterruptedException e) {

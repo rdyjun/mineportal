@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.auth.SessionService;
+import org.geysermc.mcprotocollib.network.BuiltinFlags;
 import org.geysermc.mcprotocollib.network.ClientSession;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.event.session.DisconnectedEvent;
@@ -37,6 +38,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandType;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
+import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundTransferPacket;
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundCustomPayloadPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundCommandsPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
@@ -78,10 +80,28 @@ public final class ChatClient {
   private volatile ClientSession session;
   private volatile ChatSigner chatSigner;
   private volatile CommandTree commandTree;
+  private final Object lifecycle = new Object();
+  private final SessionFactory sessionFactory;
+  private long generation;
+  private boolean stopped;
+  private boolean joinAnnounced;
+  private int transferCount;
+
+  @FunctionalInterface
+  interface SessionFactory {
+    ClientSession create(String host, int port, int protocol, int forge, boolean transferring);
+  }
 
   public ChatClient(Account account, Listener listener) {
     this.account = account;
     this.listener = listener;
+    this.sessionFactory = this::createSession;
+  }
+
+  ChatClient(Account account, Listener listener, SessionFactory factory) {
+    this.account = account;
+    this.listener = listener;
+    this.sessionFactory = factory;
   }
 
   /**
@@ -89,6 +109,18 @@ public final class ChatClient {
    * without translation). forgeNetVersion: forgeData.fmlNetworkVersion (-1 = not Forge).
    */
   public void connect(String host, int port, int serverProtocol, int forgeNetVersion) {
+    long attempt;
+    synchronized (lifecycle) {
+      stopped = false;
+      joinAnnounced = false;
+      transferCount = 0;
+      attempt = ++generation;
+    }
+    connectSession(host, port, serverProtocol, forgeNetVersion, false, attempt);
+  }
+
+  private ClientSession createSession(
+      String host, int port, int serverProtocol, int forgeNetVersion, boolean transferring) {
     GameProfile profile = new GameProfile(account.uuid, account.name);
     MinecraftProtocol protocol = new MinecraftProtocol(profile, account.accessToken);
 
@@ -115,6 +147,8 @@ public final class ChatClient {
     ClientSession client =
         ViaTranslation.createSession(endpoint.socketAddress(), protocol, selectedProtocol);
     client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
+    client.setFlag(MinecraftConstants.CLIENT_HOST, endpoint.logicalHost());
+    client.setFlag(MinecraftConstants.CLIENT_PORT, endpoint.requestedPort());
     if (selectedForgeNetVersion >= 0) {
       // Modded servers reject clients without the Forge marker; see ForgeHandshake.
       client.setFlag(
@@ -122,6 +156,16 @@ public final class ChatClient {
           ForgeHandshake.markHost(host, selectedForgeNetVersion, selectedProtocol));
     }
 
+    return client;
+  }
+
+  private void connectSession(
+      String host, int port, int protocol, int forge, boolean transferring, long attempt) {
+    ClientSession client = sessionFactory.create(host, port, protocol, forge, transferring);
+    // MCProtocolLib's automatic transfer creates a new session without our ViaVersion
+    // pipeline or listeners. Own the replacement explicitly so it can always be closed.
+    client.setFlag(MinecraftConstants.FOLLOW_TRANSFERS, false);
+    client.setFlag(BuiltinFlags.CLIENT_TRANSFERRING, transferring);
     Account.SigningCert cert = account.signingCert;
     chatSigner = (cert != null && !cert.isExpired()) ? new ChatSigner(account.uuid, cert) : null;
     commandTree = null;
@@ -130,6 +174,13 @@ public final class ChatClient {
         new SessionAdapter() {
           @Override
           public void packetReceived(Session s, Packet packet) {
+            synchronized (lifecycle) {
+              if (stopped || session != s) return;
+            }
+            if (packet instanceof ClientboundTransferPacket transfer) {
+              transferTo(client, transfer);
+              return;
+            }
             if (packet instanceof ClientboundCustomQueryPacket p) {
               ForgeHandshake.Result<ServerboundCustomQueryAnswerPacket> result =
                   ForgeHandshake.handle(p);
@@ -151,6 +202,12 @@ public final class ChatClient {
               return;
             }
             if (packet instanceof ClientboundLoginPacket) {
+              boolean announce;
+              synchronized (lifecycle) {
+                announce = !joinAnnounced;
+                joinAnnounced = true;
+              }
+              if (announce) listener.onConnected();
               // Register our signing key with the server before any chat is sent, same as
               // McConnectionManager does for the trial-mode relay.
               ChatSigner signer = chatSigner;
@@ -174,19 +231,64 @@ public final class ChatClient {
 
           @Override
           public void disconnected(DisconnectedEvent event) {
-            session = null;
-            chatSigner = null;
-            commandTree = null;
-            listener.onDisconnected(Text.plain(event.getReason()));
+            synchronized (lifecycle) {
+              if (stopped || session != event.getSession()) return;
+              stopped = true;
+              session = null;
+              chatSigner = null;
+              commandTree = null;
+            }
+            listener.onDisconnected(plain(event.getReason()));
           }
         });
 
-    this.session = client;
-    // connect() establishes the TCP connection; login proceeds asynchronously.
-    // onConnected is signalled here so the caller can switch state; a failure surfaces
-    // via disconnected().
-    client.connect();
-    listener.onConnected();
+    synchronized (lifecycle) {
+      if (stopped || generation != attempt) {
+        client.disconnect(Component.text("Connection cancelled"));
+        return;
+      }
+      session = client;
+      // Non-blocking: a user cancellation cannot be followed by a late connect().
+      client.connect(false);
+    }
+  }
+
+  private void transferTo(ClientSession source, ClientboundTransferPacket transfer) {
+    long attempt;
+    synchronized (lifecycle) {
+      if (stopped || session != source) return;
+      if (++transferCount > 8
+          || transfer.getHost() == null
+          || transfer.getHost().isBlank()
+          || transfer.getHost().length() > 253
+          || transfer.getPort() < 1
+          || transfer.getPort() > 65535) {
+        source.disconnect(Component.text("Invalid or excessive server transfers"));
+        return;
+      }
+      session = null;
+      chatSigner = null;
+      commandTree = null;
+      attempt = ++generation;
+    }
+    source.disconnect(Component.text("Transferring to server"));
+    Thread worker =
+        new Thread(
+            () -> {
+              try {
+                connectSession(transfer.getHost(), transfer.getPort(), 0, -1, true, attempt);
+              } catch (Exception error) {
+                synchronized (lifecycle) {
+                  if (stopped || generation != attempt) return;
+                  stopped = true;
+                  session = null;
+                }
+                listener.onDisconnected("Server transfer failed: " + error.getMessage());
+              }
+            },
+            "mineportal-server-transfer");
+    worker.setDaemon(true);
+    worker.start();
   }
 
   public boolean isConnected() {
@@ -239,13 +341,16 @@ public final class ChatClient {
   }
 
   public void disconnect() {
-    ClientSession s = session;
-    session = null;
-    chatSigner = null;
-    commandTree = null;
-    if (s != null) {
-      s.disconnect(Component.text("Disconnected by user"));
+    ClientSession s;
+    synchronized (lifecycle) {
+      stopped = true;
+      generation++;
+      s = session;
+      session = null;
+      chatSigner = null;
+      commandTree = null;
     }
+    if (s != null) s.disconnect(Component.text("Disconnected by user"));
   }
 
   private record SignableArgument(String name, String text) {}

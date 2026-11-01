@@ -2,14 +2,20 @@ plugins {
     id 'application'
     id 'com.gradleup.shadow' version '9.1.0'
     id 'com.diffplug.spotless' version '8.10.4'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
 group = 'com.mineportal'
-version = '1.0.0'
+version = '1.1.0'
+
+javafx {
+    version = '21.0.13'
+    modules = ['javafx.controls', 'javafx.web']
+}
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
@@ -36,11 +42,13 @@ dependencies {
     implementation 'com.google.guava:guava:33.4.8-jre' // ViaVersion 런타임 의존성
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation 'org.mockito:mockito-core:5.23.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.11.4'
 }
 
 sourceSets {
     main.java.srcDir '../shared/src/main/java'
+    test.java.srcDir '../shared/src/test/java'
 }
 
 tasks.named('test') {

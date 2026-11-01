@@ -17,6 +17,7 @@ public final class ProtocolRegistrar {
   private static final String SCHEME = "mineportal";
 
   public static void registerIfNeeded() {
+    if (!System.getProperty("os.name", "").startsWith("Windows")) return;
     Path exe = launcherExe();
     if (exe == null || !Files.isRegularFile(exe))
       return; // dev/IDE run, or jar-only layout after a self-update — nothing to point the scheme

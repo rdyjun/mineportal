@@ -110,8 +110,8 @@ public class DesktopWsHandler extends TextWebSocketHandler {
   private void handleDisconnected(
       WebSocketSession session, String serverId, long attemptId, String reason) {
     ServerConfig server = serverOf(session, serverId);
-    desktopConnections.unmarkRouted(serverId, attemptId);
     if (server == null) return;
+    desktopConnections.unmarkRouted(serverId, attemptId);
     if (server.markClosed(attemptId)) {
       broadcaster.setStatus(server, "disconnected: " + reason, true);
     }
@@ -126,6 +126,7 @@ public class DesktopWsHandler extends TextWebSocketHandler {
   }
 
   private ServerConfig serverOf(WebSocketSession session, String serverId) {
+    if (!desktopConnections.isCurrentSession(session)) return null;
     String ownerId = desktopConnections.ownerIdOf(session);
     if (ownerId == null || serverId == null) return null;
     return registry.getServer(serverId, ownerId).orElse(null);

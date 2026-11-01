@@ -31,10 +31,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 이 앱의 유일한 네트워크 진입점. 백엔드로 아웃바운드 WS(/app-ws)를 열어두고 그 안에서만 동작한다 — 로컬 포트를 여는 것도, 사용자에게 GUI를 보여주는 것도 전혀
- * 없다. 페어링은 웹의 "데스크톱 앱 연동" 버튼이 여는 mineportal:// 링크로만 이뤄진다(ProtocolRegistrar/ SingleInstance 참고).
- * 브라우저가 백엔드에 보내는 연결/해제/채팅 요청을 백엔드가 이 커넥션으로 그대로 넘겨주면, 실제 마인크래프트 프로토콜 접속은 여기(사용자 PC, 사용자 실IP)에서
- * ChatClient가 수행하고, 결과(연결됨/끊김/채팅)를 다시 이 커넥션으로 올려보낸다.
+ * Outbound backend control channel. Commands arrive over the paired WebSocket; Minecraft
+ * connections and chat run on this PC. Shared by the desktop window and --headless mode.
  */
 public final class BackendClient {
 

@@ -117,6 +117,11 @@ public class DesktopConnectionManager {
     return (String) session.getAttributes().get("ownerId");
   }
 
+  public boolean isCurrentSession(WebSocketSession session) {
+    String ownerId = ownerIdOf(session);
+    return ownerId != null && appSessions.get(ownerId) == session;
+  }
+
   public boolean isConnected(String ownerId) {
     WebSocketSession session = appSessions.get(ownerId);
     return session != null && session.isOpen();

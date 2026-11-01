@@ -121,6 +121,8 @@ public class McConnectionManager {
         ViaTranslation.createSession(endpoint.socketAddress(), protocol, serverProtocol);
     if (!server.isCurrentAttempt(attemptId)) return;
     client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
+    client.setFlag(MinecraftConstants.CLIENT_HOST, endpoint.logicalHost());
+    client.setFlag(MinecraftConstants.CLIENT_PORT, endpoint.requestedPort());
     if (ping.forgeNetVersion() != null) {
       // 모드 서버는 Forge 표식이 없는 클라이언트를 바로 거절한다 — ForgeHandshake 참고.
       client.setFlag(

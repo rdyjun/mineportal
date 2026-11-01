@@ -2,7 +2,7 @@
 
 MinePortal uses the Java 17-compatible MCProtocolLib 26.1 codec as its native wire format.
 ViaVersion and ViaBackwards 5.12.2 translate registered protocol versions on both the backend
-relay and the headless Windows agent. A server-reported positive protocol that Via does not
+relay and the desktop application. A server-reported positive protocol that Via does not
 recognize is rejected instead of being attempted with the wrong packet codec.
 
 ## Public-listing sample

@@ -50,7 +50,10 @@ public class ConnectionController {
   }
 
   @PostMapping("/{id}/connect")
-  public ResponseEntity<?> connect(@RequestAttribute("sid") String sid, @PathVariable String id) {
+  public ResponseEntity<?> connect(
+      @RequestAttribute("sid") String sid,
+      @PathVariable String id,
+      @RequestParam(defaultValue = "false") boolean desktopOnly) {
     String ownerId = ownerId(sid);
     if (ownerId == null) {
       return ResponseEntity.status(409)
@@ -65,11 +68,26 @@ public class ConnectionController {
     if (server == null) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "server not found"));
     }
+    boolean viaDesktop = desktopConnections.isConnected(ownerId);
+    // Desktop mode must never silently fall back to the public relay when the local
+    // application is starting, reconnecting, or has lost its control channel.
+    if (desktopOnly && !viaDesktop) {
+      return ResponseEntity.status(HttpStatus.CONFLICT)
+          .body(Map.of("error", "desktop app is not connected", "code", "desktop-offline"));
+    }
     if (server.isActive()) {
+      if (desktopOnly && !desktopConnections.isRouted(server.id)) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(
+                Map.of(
+                    "error",
+                    "Disconnect the existing web connection before connecting from this PC",
+                    "code",
+                    "web-connection-active"));
+      }
       return ResponseEntity.ok(Map.of("ok", true));
     }
     AccountState account = accountSessions.get(sid);
-    boolean viaDesktop = desktopConnections.isConnected(ownerId);
     PingObservation observation = null;
     PingResult ping;
     if (viaDesktop) {
