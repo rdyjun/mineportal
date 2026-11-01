@@ -13,6 +13,6 @@
     "vite": "^8.2.0"
   },
   "dependencies": {
-    "@apps-in-toss/web-framework": "^2.10.8"
+    "@apps-in-toss/web-framework": "^3.9.0"
   }
 }
