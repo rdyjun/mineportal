@@ -60,5 +60,20 @@ jobs:
                 exit 1
               fi
               docker compose --env-file server/.env ps
+              if [ -x /usr/sbin/nginx ]; then
+                sudo -n /usr/sbin/nginx -t
+                sudo -n /usr/sbin/nginx -s reload
+              fi
               docker image prune -f
             fi
+      - name: Verify public endpoint
+        shell: bash
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error https://mineportal.kr/ >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "mineportal.kr did not become reachable"
+          exit 1
