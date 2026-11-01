@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,7 @@ public class AccountSessionManager {
   private final ApplicationEventPublisher events;
   private final long idleTimeoutMs;
 
+  @Autowired
   public AccountSessionManager(ApplicationEventPublisher events) {
     this(
         events,
