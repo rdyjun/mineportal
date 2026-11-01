@@ -1,0 +1,104 @@
+version: 2
+
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 5
+    groups:
+      server-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      server-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  - package-ecosystem: "gradle"
+    directory: "/desktop-client"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:10"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 5
+    groups:
+      desktop-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      desktop-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/toss-client"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:20"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 5
+    groups:
+      toss-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      toss-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:30"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:40"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:50"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      actions-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
