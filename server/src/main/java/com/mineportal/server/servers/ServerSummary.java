@@ -10,6 +10,6 @@ public record ServerSummary(
     boolean connected) {
 
   public static ServerSummary of(ServerConfig s) {
-    return new ServerSummary(s.id, s.host, s.port, s.version, s.status, s.phase, s.connected);
+    return new ServerSummary(s.id, s.host, s.port, s.version, s.status, s.phase(), s.connected());
   }
 }

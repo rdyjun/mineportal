@@ -49,7 +49,11 @@ public class ServerWsHandler extends TextWebSocketHandler {
     if (profile == null) return;
     String ownerId = profile.id();
     for (var server : registry.listServers(ownerId)) {
-      if ("active".equals(server.phase)) {
+      if (server.isActive()) {
+        long attemptId = server.currentAttemptId();
+        if (server.markClosed(attemptId)) {
+          broadcaster.setStatus(server, "browser session closed", true);
+        }
         if (desktopConnections.isRouted(server.id)) {
           desktopConnections.send(ownerId, Map.of("type", "disconnect", "serverId", server.id));
           desktopConnections.unmarkRouted(server.id);

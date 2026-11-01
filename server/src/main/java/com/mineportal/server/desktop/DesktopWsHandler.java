@@ -47,10 +47,15 @@ public class DesktopWsHandler extends TextWebSocketHandler {
     switch (type) {
       case "pair" -> handlePair(session, json.path("code").asText(null));
       case "resume" -> handleResume(session, json.path("deviceToken").asText(null));
-      case "connected" -> handleConnected(session, json.path("serverId").asText(null));
+      case "connected" ->
+          handleConnected(
+              session, json.path("serverId").asText(null), json.path("attemptId").asLong(0));
       case "disconnected" ->
           handleDisconnected(
-              session, json.path("serverId").asText(null), json.path("reason").asText(""));
+              session,
+              json.path("serverId").asText(null),
+              json.path("attemptId").asLong(0),
+              json.path("reason").asText(""));
       case "chat" ->
           handleChat(
               session,
@@ -94,20 +99,22 @@ public class DesktopWsHandler extends TextWebSocketHandler {
     if (state != null) desktopConnections.pushTokenIfConnected(state);
   }
 
-  private void handleConnected(WebSocketSession session, String serverId) {
+  private void handleConnected(WebSocketSession session, String serverId, long attemptId) {
     ServerConfig server = serverOf(session, serverId);
     if (server == null) return;
-    server.connected = true;
-    broadcaster.setStatus(server, "connected", true);
+    if (server.markConnected(attemptId)) {
+      broadcaster.setStatus(server, "connected", true);
+    }
   }
 
-  private void handleDisconnected(WebSocketSession session, String serverId, String reason) {
+  private void handleDisconnected(
+      WebSocketSession session, String serverId, long attemptId, String reason) {
     ServerConfig server = serverOf(session, serverId);
-    desktopConnections.unmarkRouted(serverId);
+    desktopConnections.unmarkRouted(serverId, attemptId);
     if (server == null) return;
-    server.phase = "closed";
-    server.connected = false;
-    broadcaster.setStatus(server, "disconnected: " + reason, true);
+    if (server.markClosed(attemptId)) {
+      broadcaster.setStatus(server, "disconnected: " + reason, true);
+    }
   }
 
   private void handleChat(
@@ -127,8 +134,19 @@ public class DesktopWsHandler extends TextWebSocketHandler {
   @Override
   public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
     String ownerId = desktopConnections.ownerIdOf(session);
-    desktopConnections.unregister(session);
-    if (ownerId != null) broadcaster.refreshAccountForOwner(ownerId);
+    boolean wasCurrentSession = desktopConnections.unregister(session);
+    if (ownerId == null) return;
+    if (wasCurrentSession) {
+      for (ServerConfig server : registry.listServers(ownerId)) {
+        long attemptId = desktopConnections.routedAttempt(server.id);
+        if (attemptId == 0) continue;
+        desktopConnections.unmarkRouted(server.id, attemptId);
+        if (server.markFailed(attemptId)) {
+          broadcaster.setStatus(server, "desktop app disconnected", true);
+        }
+      }
+    }
+    broadcaster.refreshAccountForOwner(ownerId);
   }
 
   private void send(WebSocketSession session, Object payload) throws Exception {

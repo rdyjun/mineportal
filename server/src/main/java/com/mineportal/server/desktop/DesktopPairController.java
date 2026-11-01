@@ -41,8 +41,7 @@ public class DesktopPairController {
       if (desktopConnections.isRouted(server.id)) {
         desktopConnections.send(profile.id(), Map.of("type", "disconnect", "serverId", server.id));
         desktopConnections.unmarkRouted(server.id);
-        server.phase = "closed";
-        server.connected = false;
+        server.markClosed();
         broadcaster.setStatus(server, "desktop app unlinked", true);
       }
     }

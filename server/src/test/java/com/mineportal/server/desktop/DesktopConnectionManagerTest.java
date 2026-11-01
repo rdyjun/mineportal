@@ -70,4 +70,16 @@ class DesktopConnectionManagerTest {
 
     assertNull(manager.consumePairingCode(code));
   }
+
+  @Test
+  void staleDesktopAttemptCannotUnrouteANewerConnection() {
+    DesktopConnectionManager manager = new DesktopConnectionManager();
+    manager.markRouted("server-a", 1);
+    manager.markRouted("server-a", 2);
+
+    manager.unmarkRouted("server-a", 1);
+
+    assertTrue(manager.isRouted("server-a"));
+    assertEquals(2, manager.routedAttempt("server-a"));
+  }
 }
