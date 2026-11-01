@@ -14,9 +14,9 @@ concurrency:
 
 jobs:
   server:
-    name: Server tests and package
+    name: Server tests and production runtime
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Check out source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -32,6 +32,60 @@ jobs:
         run: |
           chmod +x server/gradlew
           ./server/gradlew -p server clean test bootJar --no-daemon
+
+      - name: Build and start the production container
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cleanup() {
+            docker logs mineportal-ci-app 2>/dev/null || true
+            docker rm --force mineportal-ci-app mineportal-ci-db 2>/dev/null || true
+            docker network rm mineportal-ci 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          docker network create mineportal-ci
+          docker run --detach --name mineportal-ci-db --network mineportal-ci \
+            --env POSTGRES_DB=mineportal \
+            --env POSTGRES_USER=mineportal \
+            --env POSTGRES_PASSWORD=mineportal \
+            postgres:18-alpine
+
+          for attempt in {1..30}; do
+            if docker exec mineportal-ci-db pg_isready -U mineportal -d mineportal; then
+              break
+            fi
+            if [ "$attempt" = 30 ]; then
+              echo "PostgreSQL did not become ready"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          docker build --tag mineportal-ci-app --file server/Dockerfile .
+          docker run --detach --name mineportal-ci-app --network mineportal-ci \
+            --publish 127.0.0.1:3000:3000 \
+            --env DB_HOST=mineportal-ci-db \
+            --env DB_NAME=mineportal \
+            --env DB_USER=mineportal \
+            --env DB_PASSWORD=mineportal \
+            mineportal-ci-app
+
+          for attempt in {1..30}; do
+            if ! docker inspect --format '{{.State.Running}}' mineportal-ci-app | grep -q true; then
+              echo "Production container exited before becoming ready"
+              exit 1
+            fi
+            if curl --fail --silent --show-error http://127.0.0.1:3000/ >/dev/null && \
+              curl --fail --silent --show-error http://127.0.0.1:3000/api/account >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Production container did not serve its web and API endpoints"
+          exit 1
 
   windows-agent:
     name: Windows background agent package
@@ -51,3 +105,33 @@ jobs:
       - name: Test and build headless agent JAR
         shell: pwsh
         run: .\desktop-client\gradlew.bat -p desktop-client clean test shadowJar --no-daemon
+
+      - name: Start the packaged headless agent
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:MINEPORTAL_WS_URL = 'ws://127.0.0.1:9'
+          $jar = Resolve-Path 'desktop-client/build/libs/mineportal-client.jar'
+          $stdout = Join-Path $env:RUNNER_TEMP 'mineportal-agent.stdout.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'mineportal-agent.stderr.log'
+          $startArgs = @{
+            FilePath = 'java'
+            ArgumentList = @('-jar', $jar.Path)
+            PassThru = $true
+            WindowStyle = 'Hidden'
+            RedirectStandardOutput = $stdout
+            RedirectStandardError = $stderr
+          }
+          $process = Start-Process @startArgs
+          try {
+            Start-Sleep -Seconds 8
+            $process.Refresh()
+            if ($process.HasExited) {
+              Get-Content $stdout, $stderr -ErrorAction SilentlyContinue
+              throw "Packaged headless agent exited during startup with code $($process.ExitCode)"
+            }
+          } finally {
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+            }
+          }
