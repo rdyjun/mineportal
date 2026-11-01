@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.1.0'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.diffplug.spotless' version '8.10.4'
 }
 
 group = 'com.mineportal'
@@ -43,6 +44,14 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+spotless {
+    java {
+        target 'src/**/*.java', '../shared/src/**/*.java'
+        googleJavaFormat('1.28.0')
+        formatAnnotations()
+    }
 }
 
 tasks.named('bootJar') {
