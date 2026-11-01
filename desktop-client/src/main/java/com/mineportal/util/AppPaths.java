@@ -7,19 +7,18 @@ import java.nio.file.Paths;
 /** Resolves the per-user config directory (~/.mineportal) and its files. */
 public final class AppPaths {
 
-    public static Path dir() {
-        Path dir = Paths.get(System.getProperty("user.home"), ".mineportal");
-        try {
-            Files.createDirectories(dir);
-        } catch (Exception ignored) {
-        }
-        return dir;
+  public static Path dir() {
+    Path dir = Paths.get(System.getProperty("user.home"), ".mineportal");
+    try {
+      Files.createDirectories(dir);
+    } catch (Exception ignored) {
     }
+    return dir;
+  }
 
-    public static Path deviceFile() {
-        return dir().resolve("device.json");
-    }
+  public static Path deviceFile() {
+    return dir().resolve("device.json");
+  }
 
-    private AppPaths() {
-    }
+  private AppPaths() {}
 }
