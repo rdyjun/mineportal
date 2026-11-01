@@ -31,7 +31,7 @@ public class PingController {
           .body(Map.of("error", "host and a valid port are required"));
     }
     try {
-      return ResponseEntity.ok(pingService.ping(host, port));
+      return ResponseEntity.ok(pingService.observePublic(host, port).result());
     } catch (java.net.UnknownHostException e) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST)
           .body(Map.of("error", "cannot ping private/internal or unresolved hosts"));
