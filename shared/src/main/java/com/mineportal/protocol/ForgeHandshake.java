@@ -1,4 +1,4 @@
-package com.mineportal.server.connection;
+package com.mineportal.protocol;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -28,7 +28,9 @@ import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundC
  *       쿼리 데이터는 [내부 채널 이름][VarInt 길이][Byte 판별자][본문].</li>
  * </ul>
  */
-final class ForgeHandshake {
+public final class ForgeHandshake {
+
+    private static final int MAX_HANDSHAKE_PAYLOAD_BYTES = 1024 * 1024;
 
     /** 1.20.2 — Forge가 핸드셰이크를 login 단계에서 configuration 단계로 옮긴 버전. */
     private static final int PROTOCOL_1_20_2 = 764;
@@ -58,7 +60,7 @@ final class ForgeHandshake {
      * 알 수 없는 인자 타입은 속성 길이도 알 수 없어서 트리의 일부만 살릴 수는 없다.
      * 공용 static 코덱을 바꾸므로 첫 접속 전에 한 번만 부른다.
      */
-    static void install() {
+    public static void install() {
         PacketRegistry game = MinecraftCodec.CODEC.getCodec(ProtocolState.GAME);
         int id = game.getClientboundId(ClientboundCommandsPacket.class);
         game.registerClientbound(new PacketDefinition<>(id, ClientboundCommandsPacket.class,
@@ -76,25 +78,27 @@ final class ForgeHandshake {
      * ClientIntention의 host 뒤에 붙는 Forge 표식. fmlNetworkVersion은 서버 ping의
      * forgeData.fmlNetworkVersion(1.20.1 이하는 2/3), serverProtocol은 서버의 프로토콜 번호.
      */
-    static String markHost(String host, int fmlNetworkVersion, int serverProtocol) {
+    public static String markHost(String host, int fmlNetworkVersion, int serverProtocol) {
         if (serverProtocol >= PROTOCOL_1_20_2) return host + "\0FORGE"; // NetworkContext.enhanceHostName
         return host + "\0FML" + fmlNetworkVersion + "\0";             // NetworkConstants.NETVERSION
     }
 
     /** 1.20.2+ forge:handshake 요청에 대한 응답 패킷, 답할 필요 없으면 null. */
-    static ServerboundCustomPayloadPacket reply(ClientboundCustomPayloadPacket packet) {
+    public static ServerboundCustomPayloadPacket reply(ClientboundCustomPayloadPacket packet) {
         if (!CHANNEL.equals(packet.getChannel())) return null;
         byte[] data = packet.getData();
-        ByteBuf in = Unpooled.wrappedBuffer(data);
-        int id = MinecraftTypes.readVarInt(in);
-        return switch (id) {
-            // 모드/채널 목록은 서버가 보낸 것을 그대로 돌려준다 — 서버는 클라이언트 채널
-            // 목록이 자기 것과 맞는지만 검사하므로 똑같이 돌려주면 항상 통과한다.
-            case MOD_VERSIONS, CHANNEL_VERSIONS -> new ServerboundCustomPayloadPacket(CHANNEL, data);
-            // 레지스트리 동기화는 토큰에 대한 Acknowledge만 보내면 다음으로 넘어간다.
-            case REGISTRY_LIST, REGISTRY_DATA -> acknowledge(MinecraftTypes.readVarInt(in));
-            default -> null; // ConfigData 등은 응답이 필요 없다
-        };
+        if (data == null || data.length == 0 || data.length > MAX_HANDSHAKE_PAYLOAD_BYTES) return null;
+        try {
+            ByteBuf in = Unpooled.wrappedBuffer(data);
+            int id = MinecraftTypes.readVarInt(in);
+            return switch (id) {
+                case MOD_VERSIONS, CHANNEL_VERSIONS -> new ServerboundCustomPayloadPacket(CHANNEL, data);
+                case REGISTRY_LIST, REGISTRY_DATA -> acknowledge(MinecraftTypes.readVarInt(in));
+                default -> null;
+            };
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     private static ServerboundCustomPayloadPacket acknowledge(int token) {
@@ -108,40 +112,50 @@ final class ForgeHandshake {
      * 1.20.1 이하 login 단계 커스텀 쿼리에 대한 응답, 답하지 말아야 하면 null. Forge가 아닌
      * 쿼리에는 바닐라 클라이언트처럼 "모름"(데이터 없음)으로 답한다.
      */
-    static ServerboundCustomQueryAnswerPacket reply(ClientboundCustomQueryPacket packet) {
+    public static ServerboundCustomQueryAnswerPacket reply(ClientboundCustomQueryPacket packet) {
         if (!FML_LOGIN_WRAPPER.equals(packet.getChannel())) {
             return new ServerboundCustomQueryAnswerPacket(packet.getMessageId());
         }
-        ByteBuf in = Unpooled.wrappedBuffer(packet.getData());
-        Key target = MinecraftTypes.readResourceLocation(in);
-        MinecraftTypes.readVarInt(in); // 감싼 페이로드 길이
-        if (!FML_HANDSHAKE.equals(target)) return null;
-
-        ByteBuf out = Unpooled.buffer();
-        switch (in.readUnsignedByte()) {
-            case FML_MOD_LIST -> {
-                // S2CModList의 앞부분(모드 목록, 채널 목록)은 C2SModListReply와 형식이 같다 —
-                // 그대로 돌려주면 서버의 채널 검사를 통과한다. 레지스트리 해시는 Forge
-                // 클라이언트처럼 빈 맵으로 보낸다.
-                int start = in.readerIndex();
-                int mods = MinecraftTypes.readVarInt(in);
-                for (int i = 0; i < mods; i++) MinecraftTypes.readString(in);
-                int channels = MinecraftTypes.readVarInt(in);
-                for (int i = 0; i < channels * 2; i++) MinecraftTypes.readString(in);
-                out.writeByte(FML_MOD_LIST_REPLY);
-                out.writeBytes(in, start, in.readerIndex() - start);
-                MinecraftTypes.writeVarInt(out, 0);
-            }
-            case FML_REGISTRY, FML_CONFIG_DATA -> out.writeByte(FML_ACKNOWLEDGE);
-            default -> {
-                return null; // S2CModData 등은 Forge 클라이언트도 답하지 않는다
-            }
+        byte[] data = packet.getData();
+        if (data == null || data.length == 0 || data.length > MAX_HANDSHAKE_PAYLOAD_BYTES) {
+            return new ServerboundCustomQueryAnswerPacket(packet.getMessageId());
         }
-        ByteBuf wrapped = Unpooled.buffer();
-        MinecraftTypes.writeResourceLocation(wrapped, FML_HANDSHAKE);
-        MinecraftTypes.writeVarInt(wrapped, out.readableBytes());
-        wrapped.writeBytes(out);
-        return new ServerboundCustomQueryAnswerPacket(packet.getMessageId(), bytes(wrapped));
+        try {
+            ByteBuf in = Unpooled.wrappedBuffer(data);
+            Key target = MinecraftTypes.readResourceLocation(in);
+            int declaredLength = MinecraftTypes.readVarInt(in);
+            if (!FML_HANDSHAKE.equals(target) || declaredLength < 0 || declaredLength > in.readableBytes()) return null;
+
+            ByteBuf out = Unpooled.buffer();
+            switch (in.readUnsignedByte()) {
+                case FML_MOD_LIST -> {
+                    int start = in.readerIndex();
+                    int mods = boundedCount(MinecraftTypes.readVarInt(in));
+                    for (int i = 0; i < mods; i++) MinecraftTypes.readString(in);
+                    int channels = boundedCount(MinecraftTypes.readVarInt(in));
+                    for (int i = 0; i < channels * 2; i++) MinecraftTypes.readString(in);
+                    out.writeByte(FML_MOD_LIST_REPLY);
+                    out.writeBytes(in, start, in.readerIndex() - start);
+                    MinecraftTypes.writeVarInt(out, 0);
+                }
+                case FML_REGISTRY, FML_CONFIG_DATA -> out.writeByte(FML_ACKNOWLEDGE);
+                default -> {
+                    return null;
+                }
+            }
+            ByteBuf wrapped = Unpooled.buffer();
+            MinecraftTypes.writeResourceLocation(wrapped, FML_HANDSHAKE);
+            MinecraftTypes.writeVarInt(wrapped, out.readableBytes());
+            wrapped.writeBytes(out);
+            return new ServerboundCustomQueryAnswerPacket(packet.getMessageId(), bytes(wrapped));
+        } catch (RuntimeException e) {
+            return new ServerboundCustomQueryAnswerPacket(packet.getMessageId());
+        }
+    }
+
+    private static int boundedCount(int count) {
+        if (count < 0 || count > 65535) throw new IllegalArgumentException("invalid handshake count");
+        return count;
     }
 
     private static byte[] bytes(ByteBuf buf) {

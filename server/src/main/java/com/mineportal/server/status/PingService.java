@@ -1,5 +1,7 @@
 package com.mineportal.server.status;
 
+import com.mineportal.protocol.MinecraftAddressResolver;
+import com.mineportal.protocol.MinecraftAddressResolver.ResolvedEndpoint;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -10,9 +12,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,47 +41,50 @@ public class PingService {
     private static final int MAX_CACHE_ENTRIES = 4096;
     private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
 
-    private record CacheEntry(PingResult result, long expiresAt) {
+    public record PingObservation(PingResult result, ResolvedEndpoint endpoint) {
+    }
+
+    private record CacheEntry(PingObservation observation, long expiresAt) {
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final PublicAddressResolver addressResolver;
+    private final MinecraftAddressResolver addressResolver = new MinecraftAddressResolver();
 
-    public PingService(PublicAddressResolver addressResolver) {
-        this.addressResolver = addressResolver;
+    public PingResult ping(String host, int port) {
+        try {
+            return observePublic(host, port).result();
+        } catch (UnknownHostException e) {
+            return PingResult.offline(e.getMessage());
+        }
     }
 
-    public InetAddress resolvePublicAddress(String host) throws java.net.UnknownHostException {
-        return addressResolver.resolve(host);
-    }
-
-    public PingResult ping(String host, int port) throws java.net.UnknownHostException {
-        InetAddress address = addressResolver.resolve(host);
-        return ping(host, port, address);
-    }
-
-    public PingResult ping(String host, int port, InetAddress address) {
-        String key = host.toLowerCase() + "/" + address.getHostAddress() + ":" + port;
+    /** Resolve SRV/A once, validate the final bytes, and keep that exact endpoint with the ping. */
+    public PingObservation observePublic(String host, int port) throws UnknownHostException {
+        ResolvedEndpoint endpoint = addressResolver.resolve(host, port, true);
+        String key = endpoint.logicalHost() + "/" + endpoint.address().getHostAddress()
+                + ":" + endpoint.targetPort();
         long now = System.currentTimeMillis();
         if (cache.size() >= MAX_CACHE_ENTRIES && !cache.containsKey(key)) {
             cache.entrySet().removeIf(entry -> entry.getValue().expiresAt() <= now);
-            if (cache.size() >= MAX_CACHE_ENTRIES) return PingResult.offline("ping capacity reached");
+            if (cache.size() >= MAX_CACHE_ENTRIES) {
+                return new PingObservation(PingResult.offline("ping capacity reached"), endpoint);
+            }
         }
         return cache.compute(key, (k, existing) -> {
             if (existing != null && existing.expiresAt() > now) {
                 return existing;
             }
-            return new CacheEntry(doPing(host, port, address), now + CACHE_TTL_MS);
-        }).result();
+            return new CacheEntry(new PingObservation(doPing(endpoint), endpoint), now + CACHE_TTL_MS);
+        }).observation();
     }
 
-    private PingResult doPing(String host, int port, InetAddress address) {
+    private PingResult doPing(ResolvedEndpoint endpoint) {
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(address, port), PING_TIMEOUT_MS);
+            socket.connect(endpoint.socketAddress(), PING_TIMEOUT_MS);
             socket.setSoTimeout(PING_TIMEOUT_MS);
 
             OutputStream out = socket.getOutputStream();
-            writeFrame(out, buildHandshakePacket(host, port));
+            writeFrame(out, buildHandshakePacket(endpoint.logicalHost(), endpoint.targetPort()));
             writeFrame(out, buildStatusRequestPacket());
 
             InputStream in = socket.getInputStream();

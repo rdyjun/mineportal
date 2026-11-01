@@ -15,6 +15,7 @@ repositories {
     mavenCentral()
     // MCProtocolLib is published here (GeyserMC / OpenCollab)
     maven { url 'https://repo.opencollab.dev/main/' }
+    maven { url 'https://repo.opencollab.dev/maven-snapshots/' }
     // MinecraftAuth and its net.lenni0451 dependencies
     maven { url 'https://maven.lenni0451.net/releases' }
     // ViaVersion / ViaBackwards
@@ -22,17 +23,27 @@ repositories {
 }
 
 dependencies {
-    // 서버(../server)와 같은 26.1-SNAPSHOT을 써야 한다 — 예전 1.21.7-1은 오래된 버전
-    // 협상 방식이라 26.x 서버들이 "Outdated client!"로 거부한다 (server/build.gradle 참고).
+    // 서버(../server)와 같은 Java 17-compatible native codec을 사용한다.
     implementation 'org.geysermc.mcprotocollib:protocol:26.1-SNAPSHOT'
     implementation 'net.raphimc:MinecraftAuth:4.1.1'
     implementation 'net.kyori:adventure-text-serializer-plain:4.17.0'
     implementation 'com.google.code.gson:gson:2.11.0'
     implementation 'org.slf4j:slf4j-simple:2.0.16'
     // 26.1이 아닌 서버(예: 1.20.1 모드팩)와 통신하기 위한 버전 번역 — ViaTranslation 참고.
-    implementation 'com.viaversion:viaversion-common:5.12.0'
-    implementation 'com.viaversion:viabackwards-common:5.12.0'
+    implementation 'com.viaversion:viaversion-common:5.12.2'
+    implementation 'com.viaversion:viabackwards-common:5.12.2'
     implementation 'com.google.guava:guava:33.4.8-jre' // ViaVersion 런타임 의존성
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.11.4'
+}
+
+sourceSets {
+    main.java.srcDir '../shared/src/main/java'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
 
 application {

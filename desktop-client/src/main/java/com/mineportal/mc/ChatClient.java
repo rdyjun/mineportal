@@ -2,6 +2,10 @@ package com.mineportal.mc;
 
 import com.google.gson.Gson;
 import com.mineportal.auth.Account;
+import com.mineportal.protocol.ForgeHandshake;
+import com.mineportal.protocol.MinecraftAddressResolver;
+import com.mineportal.protocol.MinecraftStatusProbe;
+import com.mineportal.protocol.ViaTranslation;
 import com.mineportal.util.Text;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.auth.GameProfile;
@@ -13,6 +17,7 @@ import org.geysermc.mcprotocollib.network.event.session.SessionAdapter;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.geysermc.mcprotocollib.protocol.data.game.ArgumentSignature;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundCustomPayloadPacket;
@@ -33,7 +38,6 @@ import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundC
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundCustomQueryAnswerPacket;
 
 import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -89,11 +93,30 @@ public final class ChatClient {
         GameProfile profile = new GameProfile(account.uuid, account.name);
         MinecraftProtocol protocol = new MinecraftProtocol(profile, account.accessToken);
 
-        ClientSession client = ViaTranslation.createSession(new InetSocketAddress(host, port), protocol, serverProtocol);
+        MinecraftAddressResolver.ResolvedEndpoint endpoint;
+        try {
+            endpoint = new MinecraftAddressResolver().resolve(host, port, false);
+        } catch (java.net.UnknownHostException e) {
+            throw new IllegalArgumentException("Cannot resolve Minecraft server address", e);
+        }
+        int selectedProtocol = serverProtocol;
+        int selectedForgeNetVersion = forgeNetVersion;
+        if (selectedProtocol <= 0) {
+            try {
+                MinecraftStatusProbe.Status status = MinecraftStatusProbe.probe(
+                        endpoint, MinecraftCodec.CODEC.getProtocolVersion());
+                if (status.protocol() != null) selectedProtocol = status.protocol();
+                if (status.forgeNetworkVersion() != null) selectedForgeNetVersion = status.forgeNetworkVersion();
+            } catch (java.io.IOException ignored) {
+                // Some servers disable status ping. ProtocolCompatibility will make one native-codec attempt.
+            }
+        }
+        ClientSession client = ViaTranslation.createSession(endpoint.socketAddress(), protocol, selectedProtocol);
         client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
-        if (forgeNetVersion >= 0) {
+        if (selectedForgeNetVersion >= 0) {
             // Modded servers reject clients without the Forge marker; see ForgeHandshake.
-            client.setFlag(MinecraftConstants.CLIENT_HOST, ForgeHandshake.markHost(host, forgeNetVersion, serverProtocol));
+            client.setFlag(MinecraftConstants.CLIENT_HOST,
+                    ForgeHandshake.markHost(host, selectedForgeNetVersion, selectedProtocol));
         }
 
         Account.SigningCert cert = account.signingCert;

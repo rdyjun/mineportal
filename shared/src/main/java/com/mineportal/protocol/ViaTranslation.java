@@ -1,4 +1,4 @@
-package com.mineportal.server.connection;
+package com.mineportal.protocol;
 
 import com.viaversion.viabackwards.ViaBackwardsPlatformImpl;
 import com.viaversion.viaversion.ViaManagerImpl;
@@ -35,7 +35,7 @@ import java.util.logging.Logger;
  * 자기 버전으로 받게 한다. 구성은 ViaProxy(Proxy2ServerChannelInitializer)와 같다.
  * ViaBackwards만 넣었으므로 ViaBackwards가 지원하는 범위(1.9 이상)까지 접속할 수 있다.
  */
-final class ViaTranslation {
+public final class ViaTranslation {
 
     private static final Logger LOGGER = Logger.getLogger("ViaTranslation");
     private static final AttributeKey<ProtocolVersion> TARGET_VERSION = AttributeKey.valueOf("mineportal:target-version");
@@ -48,13 +48,23 @@ final class ViaTranslation {
      * serverProtocol로 말하는 서버에 접속할 세션. 우리와 같은 버전이거나 Via가 모르는 번호면
      * 번역 없이 평범한 세션을 돌려준다.
      */
-    static ClientSession createSession(InetSocketAddress address, MinecraftProtocol protocol, int serverProtocol) {
+    public static ClientSession createSession(InetSocketAddress address, MinecraftProtocol protocol, int serverProtocol) {
         Executor executor = DefaultPacketHandlerExecutor.createExecutor();
-        if (serverProtocol == protocol.getCodec().getProtocolVersion() || !ProtocolVersion.isRegistered(serverProtocol)) {
+        ProtocolCompatibility.Plan plan = ProtocolCompatibility.plan(
+                protocol.getCodec().getProtocolVersion(), serverProtocol);
+        if (!plan.canConnect()) {
+            throw new IllegalArgumentException(plan.reason());
+        }
+        if (plan.mode() != ProtocolCompatibility.Mode.TRANSLATED) {
             return new ClientNetworkSession(address, protocol, executor, null, null);
         }
         init();
         ProtocolVersion target = ProtocolVersion.getProtocol(serverProtocol);
+        ProtocolVersion source = ProtocolVersion.getProtocol(protocol.getCodec().getProtocolVersion());
+        if (Via.getManager().getProtocolManager().getProtocolPath(source, target) == null) {
+            throw new IllegalArgumentException("no ViaVersion translation path from "
+                    + source.getName() + " to " + target.getName());
+        }
         return new ClientNetworkSession(address, protocol, executor, null, null) {
             @Override
             @SuppressWarnings("unchecked")
@@ -78,6 +88,16 @@ final class ViaTranslation {
         loaded = true;
     }
 
+    static boolean hasTranslationPath(int clientProtocol, int serverProtocol) {
+        if (clientProtocol == serverProtocol) return true;
+        if (!ProtocolVersion.isRegistered(clientProtocol) || !ProtocolVersion.isRegistered(serverProtocol)) {
+            return false;
+        }
+        init();
+        return Via.getManager().getProtocolManager().getProtocolPath(
+                ProtocolVersion.getProtocol(clientProtocol), ProtocolVersion.getProtocol(serverProtocol)) != null;
+    }
+
     /**
      * 모드 서버는 Via가 모르는 블록/엔티티/아이템 데이터를 보낼 수 있다. 우리는 채팅/명령어만 쓰므로
      * 번역에 실패한 패킷은 버리고 연결을 유지한다(ViaProxy의 ignore-protocol-translation-errors와 같음).
@@ -91,7 +111,8 @@ final class ViaTranslation {
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             try {
                 super.channelRead(ctx, msg);
-            } catch (Throwable e) {
+            } catch (Exception e) {
+                io.netty.util.ReferenceCountUtil.safeRelease(msg);
                 LOGGER.fine("Dropped untranslatable packet: " + e);
             }
         }

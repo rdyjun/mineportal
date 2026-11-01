@@ -7,13 +7,12 @@ import com.mineportal.server.servers.ServerConfig;
 import com.mineportal.server.servers.ServerRegistry;
 import com.mineportal.server.status.PingResult;
 import com.mineportal.server.status.PingService;
+import com.mineportal.server.status.PingService.PingObservation;
 import com.mineportal.server.ws.EventBroadcaster;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Map;
 
 @RestController
@@ -61,21 +60,17 @@ public class ConnectionController {
         }
         AccountState account = accountSessions.get(sid);
         boolean viaDesktop = desktopConnections.isConnected(ownerId);
-        InetAddress address = null;
+        PingObservation observation = null;
         PingResult ping;
-        try {
-            if (viaDesktop) {
-                // The backend may not be able to resolve a LAN-only address. In that case the
-                // desktop will still receive an unknown protocol and make a native attempt.
-                ping = pingService.ping(server.host, server.port);
-            } else {
-                address = pingService.resolvePublicAddress(server.host);
-                ping = pingService.ping(server.host, server.port, address);
-            }
-        } catch (UnknownHostException e) {
-            if (viaDesktop) {
-                ping = PingResult.offline("address must be resolved by the desktop agent");
-            } else {
+        if (viaDesktop) {
+            // The user's own agent may intentionally reach a LAN address. The public backend
+            // status probe can fail there; the desktop resolves and connects locally.
+            ping = pingService.ping(server.host, server.port);
+        } else {
+            try {
+                observation = pingService.observePublic(server.host, server.port);
+                ping = observation.result();
+            } catch (java.net.UnknownHostException e) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "error", "cannot connect to private/internal or unresolved hosts"));
             }
@@ -95,7 +90,7 @@ public class ConnectionController {
                     "forgeNetVersion", ping.forgeNetVersion() != null ? ping.forgeNetVersion() : -1
             ));
         } else {
-            mcConnections.connect(server, account, ping, address);
+            mcConnections.connect(server, account, ping, observation.endpoint());
         }
         return ResponseEntity.ok(Map.of("ok", true));
     }
