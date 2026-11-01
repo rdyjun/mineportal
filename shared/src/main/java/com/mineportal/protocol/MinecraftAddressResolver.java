@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 import java.util.random.RandomGenerator;
 
 /** Resolves Minecraft's optional DNS SRV endpoint once and pins the selected address bytes. */
@@ -90,11 +91,11 @@ public final class MinecraftAddressResolver {
     private final RandomGenerator random;
 
     public MinecraftAddressResolver() {
-        this(new SystemDnsLookup(), RandomGenerator.getDefault());
+        this(new SystemDnsLookup(), new Random());
     }
 
     MinecraftAddressResolver(DnsLookup dns) {
-        this(dns, RandomGenerator.getDefault());
+        this(dns, new Random());
     }
 
     MinecraftAddressResolver(DnsLookup dns, RandomGenerator random) {
