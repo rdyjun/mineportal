@@ -1,34 +1,44 @@
-# MinePortal Windows background agent
+# MinePortal desktop
 
-This component lets the MinePortal website connect to Minecraft servers from the user's own
-Windows PC and network. It is deliberately headless: it has no window, tray icon, popup,
-settings screen, login form, server list or chat UI.
+Windows and Apple Silicon macOS GUI application. The JavaFX window uses the same
+`https://mineportal.kr/` HTML/CSS as the website, with the `MinePortalDesktop` user
+agent selecting a desktop presentation: Play opens immediately, Home and trial
+mode are hidden. Microsoft login, server lists and chat stay inside the window.
+Minecraft connections run locally through the existing Java connection engine.
+An internet connection to MinePortal is required for authentication and control.
 
-All user interaction happens at [mineportal.kr](https://mineportal.kr):
+Pairing uses the existing short-lived backend code. The web page sends it through
+WebEngine's status event; the app accepts it only from the exact MinePortal
+origin. No privileged Java object is exposed to page scripts. Device credentials
+remain in `~/.mineportal/device.json`; Minecraft credentials stay in memory.
 
-1. The website signs the user in and creates a short-lived pairing code.
-2. A `mineportal://` link starts or reuses the background agent.
-3. The agent maintains an outbound TLS WebSocket to MinePortal.
-4. Connect, disconnect and chat commands arrive over that authenticated channel.
-5. Minecraft traffic goes directly from the user's PC to the selected server.
+## Build and run
 
-The agent does not listen on a local network port. Its only local persistent credential is the
-device token in `%USERPROFILE%\.mineportal\device.json`; Minecraft access tokens and chat-signing
-keys stay in process memory.
+Use JDK 21. JavaFX 21 native libraries are selected for the build machine's OS
+and architecture; build each distribution on its target platform.
 
-## Build
-
-Java 17 or newer is required.
-
-```bat
-gradlew.bat build
+```sh
+bash gradlew test shadowJar spotlessCheck
+java -jar build/libs/mineportal-client.jar
 ```
 
-The fat JAR is written to `build/libs/mineportal-client.jar`. Windows packaging is expected to
-launch it with `javaw` so no console window appears.
+`--headless` preserves the background-agent mode for web pairing and CI smoke
+tests. Windows registers `mineportal://` with the installed launcher. In-app
+pairing on macOS needs no OS protocol registration.
 
-## Updates
+`.github/workflows/desktop-package.yml` builds Windows ZIP and Apple Silicon DMG
+artifacts with their own Java runtime, so users do not install Java separately.
+Mac downloads use `MinePortal-mac-arm64.dmg`; Windows uses `MinePortal-win.zip`.
+The website and installers must be released together: do not deploy the download
+links until the matching release assets are available. Mac Intel is not a
+supported installer target yet; browser user agents cannot reliably distinguish
+Intel Macs from Apple Silicon Macs.
 
-The agent contains no native update UI and does not download executable updates by itself.
-Release and update guidance belongs on the website; users replace the installed package from the
-same web download flow they used initially.
+## Release validation
+
+Run the shared protocol tests, `node --test client/downloads.test.cjs`, launch
+the packaged app, complete Microsoft login and pairing, check server connect,
+received chat, disconnect, close/reopen, and network recovery on both platforms.
+Verify M1 DMG installation and the production asset URLs before release.
+Distributable macOS builds still require Developer ID signing and notarization;
+local unsigned packages are development artifacts.

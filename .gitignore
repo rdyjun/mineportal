@@ -1,5 +1,7 @@
 server/build/
 server/.gradle/
+desktop-client/build/
+desktop-client/.gradle/
 .env
 .omc/
 .idea/

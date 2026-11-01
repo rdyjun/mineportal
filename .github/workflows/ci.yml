@@ -99,7 +99,7 @@ jobs:
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
           cache: gradle
 
       - name: Test and build headless agent JAR
@@ -116,7 +116,7 @@ jobs:
           $stderr = Join-Path $env:RUNNER_TEMP 'mineportal-agent.stderr.log'
           $startArgs = @{
             FilePath = 'java'
-            ArgumentList = @('-jar', $jar.Path)
+            ArgumentList = @('-jar', $jar.Path, '--headless')
             PassThru = $true
             WindowStyle = 'Hidden'
             RedirectStandardOutput = $stdout

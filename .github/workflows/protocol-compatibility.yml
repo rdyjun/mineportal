@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
       - name: Test and package backend
         working-directory: server
         run: |

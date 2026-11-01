@@ -1,0 +1,59 @@
+name: Desktop packages
+
+on:
+  pull_request:
+    paths: ['desktop-client/**', 'shared/**', 'client/**', '.github/workflows/desktop-package.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Build platform-native GUI and connection engine
+        shell: bash
+        run: bash desktop-client/gradlew -p desktop-client test shadowJar spotlessCheck --no-daemon
+      - name: Test website download routing
+        run: node --test client/downloads.test.cjs
+      - name: Package Apple Silicon application and disk image
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          jpackage --type app-image --name MinePortal --app-version 1.1.0 \
+            --input desktop-client/build/libs --main-jar mineportal-client.jar \
+            --main-class com.mineportal.Main --dest desktop-client/build/package \
+            --add-modules java.se,jdk.crypto.ec,jdk.jsobject,jdk.unsupported \
+            --mac-package-identifier kr.mineportal.desktop
+          mkdir -p desktop-client/build/dmg-root desktop-client/build/installers
+          cp -R desktop-client/build/package/MinePortal.app desktop-client/build/dmg-root/
+          ln -s /Applications desktop-client/build/dmg-root/Applications
+          hdiutil create -volname MinePortal -srcfolder desktop-client/build/dmg-root \
+            -ov -format UDZO desktop-client/build/installers/MinePortal-mac-arm64.dmg
+      - name: Package Windows app with bundled Java runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          jpackage --type app-image --name MinePortal --app-version 1.1.0 `
+            --input desktop-client/build/libs --main-jar mineportal-client.jar `
+            --main-class com.mineportal.Main --dest desktop-client/build/package `
+            --add-modules java.se,jdk.crypto.ec,jdk.jsobject,jdk.unsupported
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force desktop-client/build/installers
+          Compress-Archive desktop-client/build/package/MinePortal desktop-client/build/installers/MinePortal-win.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MinePortal-${{ runner.os }}
+          path: desktop-client/build/installers/*

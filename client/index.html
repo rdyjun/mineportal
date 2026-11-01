@@ -2,33 +2,17 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<script>
-  // Defined here (before any button markup) and called right after each download
-  // button in the HTML below, so the label is correct on first paint instead of
-  // flashing generic "다운로드" text and then flipping once the page's main script
-  // runs at the bottom of the body.
-  var IS_WINDOWS = /Win/i.test(navigator.platform || navigator.userAgent || "");
-  var DOWNLOAD_STRINGS = {
-    ko: { windows: "⬇ Download for Windows", other: "🚧 다른 OS는 준비 중이에요" },
-    en: { windows: "⬇ Download for Windows", other: "🚧 Other OS support coming soon" },
-  };
-  function applyDownloadAvailability(el) {
-    var lang = localStorage.getItem("lang") ||
-      ((navigator.language || "").toLowerCase().startsWith("ko") ? "ko" : "en");
-    var s = DOWNLOAD_STRINGS[lang] || DOWNLOAD_STRINGS.ko;
-    if (IS_WINDOWS) {
-      el.textContent = s.windows;
-    } else {
-      el.textContent = s.other;
-      el.classList.add("btn-disabled");
-    }
-  }
-</script>
+<script src="/downloads.js"></script>
 <title data-i18n="appTitle">마인포탈</title>
 <link rel="icon" type="image/png" href="/favicon.png" />
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9706697545903881"
      crossorigin="anonymous"></script>
 <style>
+  .desktop-app #tabHomeBtn, .desktop-app #homeView,
+  .desktop-app #modeToggle, .desktop-app #modeToggleSkeleton,
+  .desktop-app #trialWarning, .desktop-app #tryWebBtn,
+  .desktop-app #appManageBtn, .desktop-app #pairDesktopBtn,
+  .desktop-app footer { display: none !important; }
   :root {
     --accent: #9b5de5; --accent-text: #fff;
     --glass-bg-strong: rgba(255,255,255,0.07);
@@ -1523,6 +1507,11 @@
     }
 
     function openPlayGate() {
+      if (IS_DESKTOP) {
+        pairDesktopModalBackdrop.classList.add("open");
+        pairDesktopRetryBtn.style.display = "";
+        return;
+      }
       playGateBackdrop.classList.add("open");
     }
 
@@ -1623,6 +1612,7 @@
     let currentPlayMode = null;
 
     function showTab(tab) {
+      if (IS_DESKTOP && tab === "home") tab = "list";
       homeView.classList.toggle("active", tab === "home");
       listView.classList.toggle("active", tab === "list");
       serversView.classList.toggle("active", tab === "servers");
@@ -1653,6 +1643,13 @@
     // `recheck`는 false로 넘기면 이미 최신인 desktopAvailable을 그대로 믿고 재조회를 건너뛴다
     // (enterPlayTab이 직전에 이미 refreshDesktopAvailable을 호출해둔 경우 등, 중복 호출 방지용).
     async function setPlayMode(mode, recheck = true) {
+      if (IS_DESKTOP) {
+        mode = "real";
+        if (account.status !== "logged-in") {
+          currentPlayMode = "real";
+          return;
+        }
+      }
       if (mode === "real" && !(recheck ? await refreshDesktopAvailable() : desktopAvailable)) {
         attemptAutoPair();
         return;
@@ -1671,7 +1668,7 @@
       await refreshDesktopAvailable();
       modeToggleSkeleton.style.display = "none";
       modeToggle.style.display = "";
-      await setPlayMode(forcedMode || (desktopAvailable ? "real" : "trial"), false);
+      await setPlayMode(IS_DESKTOP ? "real" : (forcedMode || (desktopAvailable ? "real" : "trial")), false);
     }
 
     tabHomeBtn.addEventListener("click", () => { showTab("home"); loadRecentServers(); });
@@ -2450,7 +2447,9 @@
       // 설치된 데스크톱 앱이 있으면 mineportal:// 스킴을 통해 OS가 그 앱을 실행/포커스하면서
       // 코드를 그대로 넘겨준다 — 사용자가 코드를 직접 타이핑할 필요가 없다. 앱이 없거나 아직
       // 연동에 실패하면 "다시 시도" 버튼을 눌러 새 코드로 재시도할 수 있다.
-      window.location.href = "mineportal://pair?code=" + encodeURIComponent(body.code);
+      const pairUrl = "mineportal://pair?code=" + encodeURIComponent(body.code);
+      if (IS_DESKTOP) window.status = pairUrl;
+      else window.location.href = pairUrl;
       setTimeout(() => { pairDesktopRetryBtn.style.display = ""; }, 4000);
     }
 
@@ -3007,6 +3006,8 @@
             stopAutoPair();
             desktopAvailable = true;
             setPlayMode("real", false);
+          } else if (IS_DESKTOP && account.status === "logged-in" && !account.desktopConnected && !autoPairArmed) {
+            attemptAutoPair();
           }
         } else if (data.type === "servers") {
           servers = data.servers;
@@ -3054,8 +3055,10 @@
       serversLoaded = true;
       renderServers();
       syncWs();
+      if (IS_DESKTOP) await enterPlayTab("real");
     }
 
+    if (IS_DESKTOP) showTab("list");
     initAccountAndServers();
 
     // --- 앱(Capacitor) 전용: 백엔드를 거치지 않고 기기에서 마인크래프트 서버로 직접
