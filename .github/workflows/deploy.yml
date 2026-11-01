@@ -45,5 +45,20 @@ jobs:
 
             if [ "$REBUILD" = "1" ]; then
               docker compose --env-file server/.env up -d --build
+              READY=0
+              for attempt in $(seq 1 30); do
+                if docker logs mineportal 2>&1 | grep -q "Started MineportalServerApplication"; then
+                  READY=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$READY" != "1" ]; then
+                echo "mineportal did not become ready"
+                docker compose --env-file server/.env ps
+                docker logs --tail 200 mineportal
+                exit 1
+              fi
+              docker compose --env-file server/.env ps
               docker image prune -f
             fi
