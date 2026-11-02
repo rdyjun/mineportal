@@ -2,7 +2,8 @@
 
 ## Local build and regression checks
 
-- Server: 31 tests passed; desktop: 22 tests passed; download routing: two tests passed.
+- Server: 36 tests passed (including five desktop event authorization regressions);
+  desktop: 22 tests passed; download routing: two tests passed.
 - Desktop tests include actual loopback TCP handshake/version checks, login readiness,
   owned server transfers, stale events, and cancellation during transfer resolution.
 - Server HTTP tests reject desktop-only connections when the app is offline and never
@@ -67,16 +68,32 @@ intermittent failures are preserved in the JSON records.
 
 ## Outstanding
 
-- The Mac is unlocked, but native computer control is awaiting Accessibility and
-  Screen Recording permission approval. Native GUI layout/interactions, native OAuth
-  and the WebEngine pairing event remain unverified. Do not bypass permissions.
-- The app loads the live website; local frontend changes have not been deployed.
-- The user explicitly approved GitHub push and draft PR creation. Draft PR
-  https://github.com/rdyjun/mineportal/pull/31 is open. Windows/Mac package CI passed;
-  the retired macOS 14 runner was replaced with macOS 15 arm64.
+- After the user confirmed manual unlock, native computer control reported
+  Accessibility/Screen Recording permission approval still pending in the ChatGPT
+  Computer Use window. A retry was rejected by automatic approval review because
+  that prerequisite was unmet. Await the user's confirmation of both permissions
+  before retrying native control. Native GUI layout,
+  native OAuth and the WebEngine pairing event remain unverified. Do not bypass
+  the lock or permissions, or repeat headless checks as a substitute.
+- PR https://github.com/rdyjun/mineportal/pull/31 was merged with user approval after
+  security review. Main commit `86ba589` passed post-merge server/container,
+  Windows agent, protocol/model and formatting CI. Windows/Mac package CI passed
+  on reviewed head `6e53f17`; the macOS runner is macOS 15 arm64.
+- The automatic web deployment completed successfully. The live `downloads.js`
+  was verified identical to the reviewed source. The app loads this live site.
 - Developer ID signing/notarization and production release assets are pending.
+- Public release `1.0.0` has Windows ZIP/JAR assets but no Mac DMG. The Mac download
+  link targets the expected asset name; public Mac downloading cannot be marked
+  complete until a validated matching installer is published and downloaded.
 - Some gateways advertise a broad or missing status protocol but then demand a
   specific version at login. Recorded version failures are not evidence that the
   supported ViaVersion handshake is generally broken; the actual target-767
   loopback handshake test passed. Required client mods/external verification
   cannot be claimed as supported without completing their real requirements.
+
+## Follow-up checkout
+
+The merged source is retained on `codex/restore-desktop-macos`; follow-up validation
+records now use `codex/mac-validation-followup`, based on merged `origin/main`.
+Do not reopen PR #31 or repeat completed engine/packaging checks while native
+interaction remains blocked. See `desktop-security-review.md` for the security fix.
