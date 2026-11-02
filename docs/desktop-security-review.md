@@ -57,3 +57,15 @@ triggers the repository's existing web deployment; it does not publish installer
 
 No remaining merge-blocking issue was identified within this review's scope after
 the ownership fix. Release validation remains tracked in `desktop-validation.md`.
+
+## Native GUI follow-up review (PR #34)
+
+External-page recovery controls navigate the existing WebEngine history, reload
+the current document or load the fixed official HTTPS site. They show only the
+parsed hostname, never OAuth query parameters, and introduce no native JavaScript
+bridge or relaxed pairing origin checks. The frontend now closes the pairing modal
+only after the authenticated account event reports a linked desktop, and allows
+canceling an active login attempt via the same owner-checked disconnect endpoint.
+No new authorization, network destinations or persistent credentials are introduced.
+Focused regression checks execute the production pairing and slot button handlers.
+No additional merge-blocking security finding was identified in these changes.

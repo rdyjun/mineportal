@@ -91,15 +91,35 @@ at `desktop-client/build/gui-recovery/MinePortal.app`; native UI checks verified
 external login controls appeared and Return restored the normal Play screen,
 removing those controls again. The old app was closed before launching this copy.
 
-The revised app awaits the user's completion of its Microsoft login after the
-earlier supplied credential was rejected. GUI-driven pairing and server checks
-remain pending. No new public chat, email code or server connection was sent.
+The user subsequently completed Microsoft login in the revised app. The native
+window returned to the authenticated MinePortal profile and saved server list;
+the status-event pairing created a device grant, and desktop-only GUI connections
+succeeded. The linking modal stayed open even after pairing: it was closed manually
+for this check, and the follow-up now closes it on the successful account event.
+
+Five GUI-driven server checks are recorded in `native-gui-validation.json`:
+Hypernetwork reached Play, received a queue notice and then required its version/
+modpack; mcng reached Play without chat during observation and was disconnected
+using the app; playfarm reached Play, received progress notices and was disconnected
+using the app; PlanetEarth required external Discord verification (not performed);
+picosv stayed connecting for several minutes and was stopped by closing the app.
+The native process was confirmed gone after closure. No public chat was sent.
+
+The picosv check exposed another UI issue: connecting slots disabled their only
+action button. The follow-up enables an explicit localized Cancel connection action
+and routes it through the existing authenticated disconnect path. Two production
+handler regression tests cover cancellation dispatch and successful pairing modal
+closure; all four frontend tests passed. The revised frontend must be deployed
+before its native interaction behavior can be marked verified. Fifteen of the
+prepared 20 servers still need their GUI checks; do not substitute earlier headless
+results or repeat completed native checks without a new reason.
 
 ## Outstanding
 
 - Screen lock and Accessibility/Screen Recording permission blockers were resolved
-  for the evening GUI session. Complete the app's authenticated MinePortal callback,
-  WebEngine pairing, GUI-triggered connect/receive/disconnect and restart checks.
+  for the evening GUI session. Authenticated MinePortal callback, WebEngine pairing
+  and initial GUI connect/receive/disconnect were observed. Complete the remaining
+  15 GUI server checks, revised pairing/cancellation behavior and restart checks.
   Do not bypass any later lock/permission prompt or use headless results as a
   substitute for these remaining interaction checks.
 - PR https://github.com/rdyjun/mineportal/pull/31 was merged with user approval after

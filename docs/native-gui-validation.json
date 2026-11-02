@@ -1,0 +1,52 @@
+{
+  "platform": "macOS arm64",
+  "mode": "actual JavaFX GUI",
+  "date": "2026-11-02",
+  "appImage": "desktop-client/build/gui-recovery/MinePortal.app",
+  "authentication": "User-assisted Microsoft login returned to the authenticated MinePortal UI",
+  "pairing": "Native status-event pairing created a device grant; GUI connect succeeded without public relay fallback",
+  "publicChatSent": false,
+  "notes": "Only sanitized observations are retained; no credentials, codes, profile identifiers or raw chat.",
+  "servers": [
+    {
+      "host": "play.hypernetwork.kr",
+      "observedAt": "2026-11-02T21:50:26+09:00",
+      "playReached": true,
+      "receivedMessagesObserved": true,
+      "result": "Server disconnected after a queue notice: requires Minecraft 1.21.1 and its launcher/modpack; reported current client 26.1.2",
+      "connectionClosed": true
+    },
+    {
+      "host": "mcng.kr",
+      "observedAt": "2026-11-02T21:52:44+09:00",
+      "playReached": true,
+      "receivedMessagesObserved": false,
+      "result": "Play login confirmed; no chat observed during the short check; user disconnect confirmed in GUI",
+      "connectionClosed": true
+    },
+    {
+      "host": "playfarm.kr",
+      "observedAt": "2026-11-02T21:54:05+09:00",
+      "playReached": true,
+      "receivedMessagesObserved": true,
+      "result": "Queue/resource-pack progress notices received; user disconnect confirmed in GUI",
+      "connectionClosed": true
+    },
+    {
+      "host": "play.planetearth.kr",
+      "observedAt": "2026-11-02T21:54:33+09:00",
+      "playReached": false,
+      "receivedMessagesObserved": false,
+      "result": "Server disconnected with external Discord verification requirement; not performed; code not retained",
+      "connectionClosed": true
+    },
+    {
+      "host": "picosv.kr",
+      "observedAt": "2026-11-02T21:55:43+09:00",
+      "playReached": false,
+      "receivedMessagesObserved": false,
+      "result": "Stayed connecting for several minutes; existing UI disabled cancellation; stopped by closing the app and verified native process exited",
+      "connectionClosed": true
+    }
+  ]
+}
