@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.1.0'
+    id 'org.springframework.boot' version '4.1.2'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'com.diffplug.spotless' version '8.10.4'
 }
@@ -29,18 +29,18 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 
-    runtimeOnly 'org.postgresql:postgresql:42.7.4'
+    runtimeOnly 'org.postgresql:postgresql:42.7.14'
 
     // Keep the Java 17-compatible native codec. ViaVersion/ViaBackwards 5.12.2 translates
     // between this 26.1 codec and both older servers and the observed 26.2/26.3 servers.
-    implementation 'org.geysermc.mcprotocollib:protocol:26.1-SNAPSHOT'
+    implementation 'org.geysermc.mcprotocollib:protocol:26.3-2'
     implementation 'net.raphimc:MinecraftAuth:4.1.1'
     implementation 'net.kyori:adventure-text-serializer-plain:4.17.0'
     // 26.1이 아닌 서버(예: 1.20.1 모드팩)와 통신하기 위한 버전 번역 — ViaTranslation 참고.
     implementation 'com.viaversion:viaversion-common:5.12.2'
     implementation 'com.viaversion:viabackwards-common:5.12.2'
-    implementation 'com.google.guava:guava:33.4.8-jre' // ViaVersion 런타임 의존성
-    implementation 'com.google.code.gson:gson:2.11.0' // shared status probe used by the desktop path
+    implementation 'com.google.guava:guava:33.7.2-jre' // ViaVersion 런타임 의존성
+    implementation 'com.google.code.gson:gson:2.15.0' // shared status probe used by the desktop path
 
     // Let Spring Boot's dependency management keep every JUnit Platform module aligned.
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
