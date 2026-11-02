@@ -10,6 +10,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
@@ -65,10 +66,34 @@ public final class DesktopApp extends Application {
         });
     BorderPane root = new BorderPane(view);
     root.setStyle("-fx-background-color: #111111;");
+    // An OAuth provider may display its own error page without any route back to
+    // MinePortal. Keep recovery controls outside remote content on external pages.
+    Button back = new Button("뒤로");
+    back.setOnAction(
+        event -> {
+          if (engine.getHistory().getCurrentIndex() > 0) engine.getHistory().go(-1);
+        });
+    Button reload = new Button("새로고침");
+    reload.setOnAction(event -> engine.reload());
+    Button returnToPortal = new Button("마인포탈로 돌아가기");
+    returnToPortal.setOnAction(event -> engine.load(site.toString()));
+    Label origin = new Label();
+    origin.setStyle("-fx-text-fill: #dddddd;");
+    HBox navigation = new HBox(12, back, reload, returnToPortal, origin);
+    navigation.setStyle("-fx-padding: 10; -fx-alignment: center-left;");
     engine
         .locationProperty()
         .addListener(
             (observable, oldUrl, url) -> {
+              root.setTop(trusted(url) ? null : navigation);
+              try {
+                // Never display OAuth codes, state, or any other query parameters.
+                URI destination = URI.create(url);
+                origin.setText(
+                    "https".equals(destination.getScheme()) ? destination.getHost() : "");
+              } catch (IllegalArgumentException error) {
+                origin.setText("");
+              }
               if (!url.startsWith("mineportal:")) return;
               engine.getLoadWorker().cancel();
               // No Java object is exposed to remote JavaScript. Only the official site's

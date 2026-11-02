@@ -66,15 +66,42 @@ intermittent failures are preserved in the JSON records.
 | mineplanet.kr | No | No | Server requires a different protocol/version |
 | kkulbi.kr | No | No | Transfer destination DNS failure |
 
+## Native Mac GUI checks — 2026-11-02 evening
+
+After the user confirmed unlock and both native-control permissions, the packaged
+M1 application opened successfully. Its actual JavaFX window displayed the live
+MinePortal design, opened Play directly, and showed Play/Server List without Home
+or trial controls. The login modal and in-window Microsoft authentication page
+were exercised using native UI actions.
+
+Microsoft rejected the supplied existing password once; it was not repeatedly
+submitted. The user reported completing authentication inside the app, and the
+native window displayed the keep-signed-in prompt. The user explicitly selected
+keeping the Microsoft sign-in. Subsequent observations included the earlier
+password error and then a Microsoft account generic error page; a successful
+MinePortal callback, paired device and authenticated server list were not observed.
+Do not count this as completed end-to-end OAuth or pairing validation.
+
+That provider error exposed a recovery gap: the original window had no reliable
+route back to MinePortal. A local follow-up adds native Back, Refresh and Return to
+MinePortal controls on external pages only, with a hostname label that omits query
+parameters. No native object is exposed to remote JavaScript. The updated desktop
+tests (22), shadow JAR build and formatting passed. A new arm64 app image was built
+at `desktop-client/build/gui-recovery/MinePortal.app`; native UI checks verified
+external login controls appeared and Return restored the normal Play screen,
+removing those controls again. The old app was closed before launching this copy.
+
+The revised app awaits the user's completion of its Microsoft login after the
+earlier supplied credential was rejected. GUI-driven pairing and server checks
+remain pending. No new public chat, email code or server connection was sent.
+
 ## Outstanding
 
-- After the user confirmed manual unlock, native computer control reported
-  Accessibility/Screen Recording permission approval still pending in the ChatGPT
-  Computer Use window. A retry was rejected by automatic approval review because
-  that prerequisite was unmet. Await the user's confirmation of both permissions
-  before retrying native control. Native GUI layout,
-  native OAuth and the WebEngine pairing event remain unverified. Do not bypass
-  the lock or permissions, or repeat headless checks as a substitute.
+- Screen lock and Accessibility/Screen Recording permission blockers were resolved
+  for the evening GUI session. Complete the app's authenticated MinePortal callback,
+  WebEngine pairing, GUI-triggered connect/receive/disconnect and restart checks.
+  Do not bypass any later lock/permission prompt or use headless results as a
+  substitute for these remaining interaction checks.
 - PR https://github.com/rdyjun/mineportal/pull/31 was merged with user approval after
   security review. Main commit `86ba589` passed post-merge server/container,
   Windows agent, protocol/model and formatting CI. Windows/Mac package CI passed
