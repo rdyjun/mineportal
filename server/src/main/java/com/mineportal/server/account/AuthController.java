@@ -21,8 +21,10 @@ import net.raphimc.minecraftauth.util.MicrosoftConstants;
 import net.raphimc.minecraftauth.util.OAuthEnvironment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -59,9 +61,10 @@ public class AuthController {
   private static final long LOGIN_STATE_TTL_MS = 10 * 60 * 1000;
   private static final int MAX_PENDING_LOGIN_STATES = 10_000;
 
-  private record PendingLogin(String sid, long expiresAt) {}
+  private record PendingLogin(String sid, long expiresAt, String desktopAttempt) {}
 
   private final Map<String, PendingLogin> pendingLoginStates = new ConcurrentHashMap<>();
+  private final DesktopLoginAttempts desktopLogins = new DesktopLoginAttempts();
 
   private final AccountSessionManager accountSessions;
   private final EventBroadcaster broadcaster;
@@ -123,6 +126,92 @@ public class AuthController {
 
   @GetMapping("/api/account/login/microsoft")
   public ResponseEntity<?> loginRedirect(@RequestAttribute("sid") String sid) {
+    return loginRedirect(sid, null);
+  }
+
+  @PostMapping("/api/account/desktop-login")
+  public ResponseEntity<?> startDesktopLogin(@RequestAttribute("sid") String sid) {
+    try {
+      var started = desktopLogins.start(sid);
+      return ResponseEntity.ok()
+          .header("Cache-Control", "no-store")
+          .body(Map.of("id", started.id(), "proof", started.proof()));
+    } catch (IllegalStateException error) {
+      return ResponseEntity.status(429).build();
+    }
+  }
+
+  @GetMapping("/api/account/desktop-login/{id}")
+  public ResponseEntity<?> confirmDesktopLogin(
+      @PathVariable String id, @RequestAttribute("sid") String sid) {
+    try {
+      String confirmation = desktopLogins.prepare(id, sid);
+      // Only generated UUIDs are rendered. No arbitrary redirect URL is accepted.
+      String page =
+          """
+          <!doctype html><html lang="ko"><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>마인포탈 로그인</title>
+          <body style="background:#111;color:#eee;font:18px system-ui;padding:8vh 8vw">
+          <h1>마인포탈 앱에 로그인</h1>
+          <p>직접 실행한 마인포탈 앱의 로그인 요청인지 확인해 주세요.</p>
+          <p>Microsoft 로그인 후 앱으로 돌아가면 자동으로 완료됩니다.</p>
+          <form method="post"><input type="hidden" name="confirmation" value="%s">
+          <button style="padding:14px 24px;font:inherit">Microsoft로 계속</button></form>
+          </body></html>
+          """
+              .formatted(confirmation);
+      return loginPage(page);
+    } catch (IllegalArgumentException error) {
+      return ResponseEntity.status(400).body("로그인 요청이 만료됐어요. 앱에서 다시 시도해 주세요.");
+    }
+  }
+
+  @PostMapping("/api/account/desktop-login/{id}")
+  public ResponseEntity<?> authorizeDesktopLogin(
+      @PathVariable String id,
+      @RequestAttribute("sid") String sid,
+      @RequestParam String confirmation) {
+    try {
+      desktopLogins.authorize(id, sid, confirmation);
+      return loginRedirect(sid, id);
+    } catch (IllegalArgumentException error) {
+      return ResponseEntity.status(400).body("Invalid login confirmation");
+    }
+  }
+
+  record DesktopLoginProof(String proof) {}
+
+  @PostMapping("/api/account/desktop-login/{id}/claim")
+  public ResponseEntity<?> claimDesktopLogin(
+      @PathVariable String id,
+      @RequestAttribute("sid") String sid,
+      @RequestBody DesktopLoginProof proof,
+      HttpServletResponse response) {
+    try {
+      String completedSid = desktopLogins.claim(id, sid, proof.proof());
+      if (completedSid == null) {
+        return ResponseEntity.ok().header("Cache-Control", "no-store").body(Map.of("ready", false));
+      }
+      SidCookieFilter.issueCookie(response, completedSid);
+      return ResponseEntity.ok().header("Cache-Control", "no-store").body(Map.of("ready", true));
+    } catch (IllegalArgumentException error) {
+      return ResponseEntity.status(400).header("Cache-Control", "no-store").build();
+    }
+  }
+
+  private ResponseEntity<?> loginPage(String page) {
+    return ResponseEntity.ok()
+        .header("Content-Type", "text/html;charset=UTF-8")
+        .header("Cache-Control", "no-store")
+        .header("Referrer-Policy", "no-referrer")
+        .header(
+            "Content-Security-Policy",
+            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://login.microsoftonline.com https://login.live.com; frame-ancestors 'none'; base-uri 'none'")
+        .body(page);
+  }
+
+  private ResponseEntity<?> loginRedirect(String sid, String desktopAttempt) {
     if (MS_CLIENT_ID.isEmpty() || MS_CLIENT_SECRET.isEmpty() || MS_REDIRECT_URI.isEmpty()) {
       return ResponseEntity.status(500)
           .body(
@@ -135,7 +224,7 @@ public class AuthController {
       return ResponseEntity.status(429)
           .body("Too many pending login attempts. Please try again shortly.");
     }
-    pendingLoginStates.put(state, new PendingLogin(sid, now + LOGIN_STATE_TTL_MS));
+    pendingLoginStates.put(state, new PendingLogin(sid, now + LOGIN_STATE_TTL_MS, desktopAttempt));
 
     Map<String, String> params = new java.util.HashMap<>(APPLICATION_DETAILS.getOAuthParameters());
     params.put("state", state);
@@ -177,6 +266,16 @@ public class AuthController {
     SidCookieFilter.issueCookie(response, sid);
 
     completeLoginAsync(sid, code);
+    if (pending.desktopAttempt() != null) {
+      try {
+        desktopLogins.complete(pending.desktopAttempt(), sid);
+      } catch (IllegalArgumentException expired) {
+        return loginPage(
+            "<!doctype html><meta charset='utf-8'><p>앱 로그인 요청이 만료됐어요. 앱에서 다시 시도해 주세요.</p>");
+      }
+      return loginPage(
+          "<!doctype html><html lang='ko'><meta charset='utf-8'><title>마인포탈 로그인</title><body style='background:#111;color:#eee;font:18px system-ui;padding:8vh 8vw'><h1>Microsoft 인증을 받았어요</h1><p>마인포탈 앱으로 돌아가 주세요. 계정 확인이 이어집니다.</p></body></html>");
+    }
     return redirectTo("/");
   }
 

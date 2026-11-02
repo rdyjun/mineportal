@@ -729,7 +729,7 @@
       <button type="button" class="modal-close" id="loginModalClose">✕</button>
       <h2 data-i18n="loginBtn">로그인</h2>
       <p class="login-modal-reason" id="loginModalReason" style="display:none"></p>
-      <a class="ms-login-btn" href="/api/account/login/microsoft" data-i18n="msLoginBtn">Microsoft로 로그인</a>
+      <a class="ms-login-btn" id="msLoginBtn" href="/api/account/login/microsoft" data-i18n="msLoginBtn">Microsoft로 로그인</a>
     </div>
   </div>
 
@@ -1484,6 +1484,47 @@
     loginModalBackdrop.addEventListener("click", (e) => {
       if (e.target === loginModalBackdrop) closeLoginModal();
     });
+
+    // New desktop shells delegate Microsoft authentication to the system browser.
+    // The app proof stays in this page's memory, never in a URL or localStorage.
+    let desktopLoginPending = false;
+    async function startDesktopBrowserLogin(e) {
+      if (!/MinePortalDesktop\/1\.[2-9]\b/.test(navigator.userAgent)) return;
+      e.preventDefault();
+      if (desktopLoginPending) return;
+      desktopLoginPending = true;
+      const button = document.getElementById("msLoginBtn");
+      button.setAttribute("aria-disabled", "true");
+      try {
+        const start = await fetch("/api/account/desktop-login", { method: "POST" });
+        if (!start.ok) throw new Error("start");
+        const { id, proof } = await start.json();
+        if (!/^[a-f0-9-]{36}$/.test(id) || typeof proof !== "string") throw new Error("response");
+        window.status = "mineportal:login:" + id;
+        showToast(lang === "ko" ? "브라우저에서 로그인을 완료한 뒤 앱으로 돌아와 주세요." : "Complete sign-in in your browser, then return to the app.");
+        const deadline = Date.now() + 10 * 60 * 1000;
+        while (Date.now() < deadline) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          const claim = await fetch(`/api/account/desktop-login/${id}/claim`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ proof }),
+          });
+          if (!claim.ok) throw new Error("claim");
+          const result = await claim.json();
+          if (result.ready) {
+            window.location.replace("/");
+            return;
+          }
+        }
+        throw new Error("expired");
+      } catch (_) {
+        showToast(lang === "ko" ? "앱 로그인을 완료하지 못했어요. 로그인 버튼으로 다시 시도해 주세요." : "App sign-in did not finish. Please try again.");
+      } finally {
+        desktopLoginPending = false;
+        button.removeAttribute("aria-disabled");
+      }
+    }
+    document.getElementById("msLoginBtn").addEventListener("click", startDesktopBrowserLogin);
 
     // 데스크톱 앱 감지 — 예전에는 앱이 로컬호스트에 띄운 상태 서버를 fetch로 직접
     // 찔러봤지만, 이제 앱은 로컬 포트를 아예 열지 않는다(백엔드로 아웃바운드 WS만 연다).

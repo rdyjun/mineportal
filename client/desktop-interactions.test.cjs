@@ -53,3 +53,55 @@ test('a completed desktop pairing closes its blocking modal and enters real mode
   assert.equal(context.desktopAvailable, true);
   assert.deepEqual(calls, [['remove', 'open'], ['mode', 'real', false]]);
 });
+
+function browserLoginContext(userAgent, replies) {
+  const calls = [];
+  const button = { setAttribute() {}, removeAttribute() {}, addEventListener() {} };
+  const context = {
+    navigator: { userAgent },
+    document: { getElementById: () => button },
+    window: { location: { replace: value => calls.push(['replace', value]) } },
+    lang: 'ko', showToast() {}, setTimeout: resolve => resolve(),
+    fetch: async (url, options) => {
+      calls.push([url, options]);
+      const reply = replies.shift();
+      assert.ok(reply, 'unexpected extra request');
+      return { ok: reply.ok !== false, json: async () => reply };
+    },
+  };
+  const from = source.indexOf('let desktopLoginPending = false;');
+  const end = source.indexOf('document.getElementById("msLoginBtn").addEventListener', from);
+  vm.runInNewContext(source.slice(from, end), context);
+  return { context, calls };
+}
+
+test('browser sign-in proof stays in the app and completion reloads only the portal', async () => {
+  const id = '11111111-1111-1111-1111-111111111111';
+  const { context, calls } = browserLoginContext('MinePortalDesktop/1.2', [
+    { id, proof: 'private-polling-proof' }, { ready: true },
+  ]);
+  let prevented = false;
+  await context.startDesktopBrowserLogin({ preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(context.window.status, 'mineportal:login:' + id);
+  assert.equal(calls[1][0], `/api/account/desktop-login/${id}/claim`);
+  assert.equal(calls[1][1].method, 'POST');
+  assert.deepEqual(JSON.parse(calls[1][1].body), { proof: 'private-polling-proof' });
+  assert.deepEqual(calls[2], ['replace', '/']);
+  assert.ok(calls.every(([url]) => !url.includes('private-polling-proof')));
+});
+
+test('a failed browser handoff does not fall back to the embedded password page', async () => {
+  const { context, calls } = browserLoginContext('MinePortalDesktop/1.2', [{ ok: false }]);
+  let prevented = false;
+  await context.startDesktopBrowserLogin({ preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(calls.length, 1);
+  assert.equal(context.window.status, undefined);
+});
+
+test('ordinary web sign-in keeps its existing navigation', async () => {
+  const { context, calls } = browserLoginContext('Safari', []);
+  await context.startDesktopBrowserLogin({ preventDefault() { assert.fail('web login intercepted'); } });
+  assert.equal(calls.length, 0);
+});

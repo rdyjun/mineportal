@@ -69,3 +69,14 @@ canceling an active login attempt via the same owner-checked disconnect endpoint
 No new authorization, network destinations or persistent credentials are introduced.
 Focused regression checks execute the production pairing and slot button handlers.
 No additional merge-blocking security finding was identified in these changes.
+
+## Desktop browser login handoff (2026-11-02, local follow-up)
+
+Microsoft password-page regression is reported inside JavaFX WebView; the exact provider failure has not been reproduced. New desktop shells delegate OAuth to the system browser, consistent with Microsoft macOS authentication guidance: https://learn.microsoft.com/en-us/entra/msal/objc/customize-webviews . This is a change of authentication transport, not evidence that the account password is invalid.
+
+- Native status handling remains restricted to the exact official HTTPS origin. A fixed browser destination is constructed from a UUID-shaped attempt id; no arbitrary URL or Java bridge is accepted. Older shells retain their existing web path.
+- A separate 244-bit random proof remains only in initiating page memory and POST bodies. It is absent from browser URLs, persistence, completion HTML and logs. Claims require both proof and initiating sid, expire after ten minutes, and are consumed once. New attempts invalidate old attempts from that app session; the map is bounded.
+- Browser authorization requires an explicit confirmation with a one-use nonce bound to its cookie session, before the normal OAuth state flow. Confirmation pages disable framing, caching and referrers; form targets allow only self and fixed Microsoft login hosts (required for the authorization redirect).
+- The existing OAuth callback still rotates sid. Handoff delivers that sid only through the existing HttpOnly/Secure/SameSite cookie policy, never response JSON. Account/Minecraft token exchange and owner checks are unchanged. No Minecraft connection is initiated by these endpoints.
+- Seven new backend regressions cover proof/session isolation, explicit browser confirmation, expiration, duplicate completion/claim, supersession, JSON deserialization, HTTP cookie delivery and confirmation headers. Three frontend regressions cover successful handoff, failure without embedded fallback, and ordinary web navigation.
+- Remaining: real system-browser OAuth and return to the revised Mac app must be validated. App restart persistence remains a separate unresolved issue. No public installer release or new live Minecraft checks have been performed.

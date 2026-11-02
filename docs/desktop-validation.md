@@ -144,3 +144,20 @@ The merged source is retained on `codex/restore-desktop-macos`; follow-up valida
 records now use `codex/mac-validation-followup`, based on merged `origin/main`.
 Do not reopen PR #31 or repeat completed engine/packaging checks while native
 interaction remains blocked. See `desktop-security-review.md` for the security fix.
+
+## User-requested immediate connection stop (2026-11-02)
+- Rendog displayed repeated queue notices. User requested immediate disconnection because of blocking risk. Native app closed; ps confirmed no MinePortal native process remained. Do not relaunch the app or reconnect any external Minecraft server until a new explicit user resume instruction.
+- Eight actual GUI server records now exist, all connections closed. Latest additional checks: playmc.kr (version requirement), nspring.kr (Play/queue notices, GUI disconnected), rendog.kr (Play/queue notices, stopped by app shutdown). No public chat sent.
+- Restart lost authenticated web session; user-assisted login restored it. Pairing modal closure verified. Remaining GUI checks and session persistence are unfinished.
+- Heartbeat prompt updated to prohibit all server connection tests and app auto-launch until explicit resumption. Offline code/build/document work only.
+
+## Login regression reported after stopping server tests
+- User reports successful Microsoft sign-in returning to the password page with an incorrect-password message. Root cause is not yet established; do not classify the supplied password as invalid from this symptom alone.
+- Static review: DesktopApp embeds Microsoft OAuth in JavaFX WebView; there is no application password submission or automatic login redirect after completion. OAuth callback consumes state once, rotates the first-party sid and redirects home. Separate app restart/session loss was already observed, but it is not proven to cause this password-page loop.
+- Requested exact error text and whether it appears on Microsoft or MinePortal. No new sign-in attempts, app launches, or Minecraft connections performed. No speculative authentication change applied pending diagnostic evidence.
+
+## Microsoft password-page loop: browser-login implementation prepared
+- User confirmed the error is on the Microsoft password entry screen. Root provider failure is not established. Replaced the new desktop shell login path with system-browser OAuth plus a short-lived one-use, proof/session-bound handoff. WebView no longer hosts that login in new shells (UA MinePortalDesktop/1.2). Existing website login remains supported.
+- New local app image: desktop-client/build/browser-auth-v1.1.1/MinePortal.app. Do not confuse it with gui-recovery/MinePortal.app, which uses embedded OAuth. Final image uses app version 1.1.1.
+- Added seven backend and three frontend security/behavior regressions. Server, desktop and frontend checks pass before the version-only packaging refresh.
+- Asked for login-only execution approval; no response yet. Keep app closed and all Minecraft server tests stopped. This login fix has not been deployed or validated against actual Microsoft authentication yet.
