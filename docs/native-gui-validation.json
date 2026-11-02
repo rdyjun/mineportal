@@ -47,6 +47,32 @@
       "receivedMessagesObserved": false,
       "result": "Stayed connecting for several minutes; existing UI disabled cancellation; stopped by closing the app and verified native process exited",
       "connectionClosed": true
+    },
+    {
+      "host": "playmc.kr",
+      "observedAt": "2026-11-02T13:17:16.695136+00:00",
+      "playReached": false,
+      "receivedMessagesObserved": false,
+      "result": "Gateway disconnected: target queue requires Minecraft 1.20.1",
+      "connectionClosed": true
+    },
+    {
+      "host": "nspring.kr",
+      "observedAt": "2026-11-02T13:18:46.697007+00:00",
+      "playReached": true,
+      "receivedMessagesObserved": true,
+      "result": "Queue messages received; main server requires 1.21.4 through 1.21.8; GUI disconnect confirmed",
+      "connectionClosed": true
+    },
+    {
+      "host": "rendog.kr",
+      "observedAt": "2026-11-02T13:23:52.404730+00:00",
+      "playReached": true,
+      "receivedMessagesObserved": true,
+      "result": "Repeated queue notices observed; user requested immediate stop. Native app closed and process absence verified. No further server tests permitted without a new user resume instruction.",
+      "connectionClosed": true
     }
-  ]
+  ],
+  "restart": "App restart showed logged-out UI; user-assisted login restored authenticated server list. Device pairing resumed and success modal did not remain open.",
+  "testingStopped": "User requested Rendog disconnect. All further external Minecraft connection tests are suspended until explicit user resumption; app process exit verified."
 }

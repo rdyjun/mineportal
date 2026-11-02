@@ -32,10 +32,19 @@ public final class DesktopApp extends Application {
     WebEngine engine = view.getEngine();
     // This changes presentation only. Account authentication and short-lived pairing are
     // still enforced by the backend, exactly as for the browser.
-    engine.setUserAgent(engine.getUserAgent() + " MinePortalDesktop/1.1");
+    engine.setUserAgent(engine.getUserAgent() + " MinePortalDesktop/1.2");
     engine.setOnStatusChanged(
         event -> {
           if (!trusted(engine.getLocation())) return;
+          String status = event.getData();
+          // The browser launch accepts only a generated attempt id, never an arbitrary
+          // URL or a credential. The app retains the separate polling proof in memory.
+          if (status != null && status.matches("mineportal:login:[a-f0-9-]{36}")) {
+            getHostServices()
+                .showDocument(
+                    site.resolve("/api/account/desktop-login/" + status.substring(17)).toString());
+            return;
+          }
           String code = ProtocolRegistrar.extractPairCode(new String[] {event.getData()});
           if (code != null && code.matches("[A-Z0-9]{4,16}")) backend.pairImmediately(code);
         });

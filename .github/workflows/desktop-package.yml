@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           test "$(uname -m)" = arm64
-          jpackage --type app-image --name MinePortal --app-version 1.1.0 \
+          jpackage --type app-image --name MinePortal --app-version 1.1.1 \
             --input desktop-client/build/libs --main-jar mineportal-client.jar \
             --main-class com.mineportal.Main --dest desktop-client/build/package \
             --add-modules java.se,jdk.crypto.ec,jdk.jsobject,jdk.unsupported,jdk.naming.dns \
@@ -46,7 +46,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          jpackage --type app-image --name MinePortal --app-version 1.1.0 `
+          jpackage --type app-image --name MinePortal --app-version 1.1.1 `
             --input desktop-client/build/libs --main-jar mineportal-client.jar `
             --main-class com.mineportal.Main --dest desktop-client/build/package `
             --add-modules java.se,jdk.crypto.ec,jdk.jsobject,jdk.unsupported,jdk.naming.dns
