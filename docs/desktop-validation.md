@@ -2,7 +2,8 @@
 
 ## Local build and regression checks
 
-- Server: 31 tests passed; desktop: 22 tests passed; download routing: two tests passed.
+- Server: 36 tests passed (including five desktop event authorization regressions);
+  desktop: 22 tests passed; download routing: two tests passed.
 - Desktop tests include actual loopback TCP handshake/version checks, login readiness,
   owned server transfers, stale events, and cancellation during transfer resolution.
 - Server HTTP tests reject desktop-only connections when the app is offline and never
@@ -65,18 +66,81 @@ intermittent failures are preserved in the JSON records.
 | mineplanet.kr | No | No | Server requires a different protocol/version |
 | kkulbi.kr | No | No | Transfer destination DNS failure |
 
+## Native Mac GUI checks — 2026-11-02 evening
+
+After the user confirmed unlock and both native-control permissions, the packaged
+M1 application opened successfully. Its actual JavaFX window displayed the live
+MinePortal design, opened Play directly, and showed Play/Server List without Home
+or trial controls. The login modal and in-window Microsoft authentication page
+were exercised using native UI actions.
+
+Microsoft rejected the supplied existing password once; it was not repeatedly
+submitted. The user reported completing authentication inside the app, and the
+native window displayed the keep-signed-in prompt. The user explicitly selected
+keeping the Microsoft sign-in. Subsequent observations included the earlier
+password error and then a Microsoft account generic error page; a successful
+MinePortal callback, paired device and authenticated server list were not observed.
+Do not count this as completed end-to-end OAuth or pairing validation.
+
+That provider error exposed a recovery gap: the original window had no reliable
+route back to MinePortal. A local follow-up adds native Back, Refresh and Return to
+MinePortal controls on external pages only, with a hostname label that omits query
+parameters. No native object is exposed to remote JavaScript. The updated desktop
+tests (22), shadow JAR build and formatting passed. A new arm64 app image was built
+at `desktop-client/build/gui-recovery/MinePortal.app`; native UI checks verified
+external login controls appeared and Return restored the normal Play screen,
+removing those controls again. The old app was closed before launching this copy.
+
+The user subsequently completed Microsoft login in the revised app. The native
+window returned to the authenticated MinePortal profile and saved server list;
+the status-event pairing created a device grant, and desktop-only GUI connections
+succeeded. The linking modal stayed open even after pairing: it was closed manually
+for this check, and the follow-up now closes it on the successful account event.
+
+Five GUI-driven server checks are recorded in `native-gui-validation.json`:
+Hypernetwork reached Play, received a queue notice and then required its version/
+modpack; mcng reached Play without chat during observation and was disconnected
+using the app; playfarm reached Play, received progress notices and was disconnected
+using the app; PlanetEarth required external Discord verification (not performed);
+picosv stayed connecting for several minutes and was stopped by closing the app.
+The native process was confirmed gone after closure. No public chat was sent.
+
+The picosv check exposed another UI issue: connecting slots disabled their only
+action button. The follow-up enables an explicit localized Cancel connection action
+and routes it through the existing authenticated disconnect path. Two production
+handler regression tests cover cancellation dispatch and successful pairing modal
+closure; all four frontend tests passed. The revised frontend must be deployed
+before its native interaction behavior can be marked verified. Fifteen of the
+prepared 20 servers still need their GUI checks; do not substitute earlier headless
+results or repeat completed native checks without a new reason.
+
 ## Outstanding
 
-- The Mac is unlocked, but native computer control is awaiting Accessibility and
-  Screen Recording permission approval. Native GUI layout/interactions, native OAuth
-  and the WebEngine pairing event remain unverified. Do not bypass permissions.
-- The app loads the live website; local frontend changes have not been deployed.
-- The user explicitly approved GitHub push and draft PR creation. Draft PR
-  https://github.com/rdyjun/mineportal/pull/31 is open. Windows/Mac package CI passed;
-  the retired macOS 14 runner was replaced with macOS 15 arm64.
+- Screen lock and Accessibility/Screen Recording permission blockers were resolved
+  for the evening GUI session. Authenticated MinePortal callback, WebEngine pairing
+  and initial GUI connect/receive/disconnect were observed. Complete the remaining
+  15 GUI server checks, revised pairing/cancellation behavior and restart checks.
+  Do not bypass any later lock/permission prompt or use headless results as a
+  substitute for these remaining interaction checks.
+- PR https://github.com/rdyjun/mineportal/pull/31 was merged with user approval after
+  security review. Main commit `86ba589` passed post-merge server/container,
+  Windows agent, protocol/model and formatting CI. Windows/Mac package CI passed
+  on reviewed head `6e53f17`; the macOS runner is macOS 15 arm64.
+- The automatic web deployment completed successfully. The live `downloads.js`
+  was verified identical to the reviewed source. The app loads this live site.
 - Developer ID signing/notarization and production release assets are pending.
+- Public release `1.0.0` has Windows ZIP/JAR assets but no Mac DMG. The Mac download
+  link targets the expected asset name; public Mac downloading cannot be marked
+  complete until a validated matching installer is published and downloaded.
 - Some gateways advertise a broad or missing status protocol but then demand a
   specific version at login. Recorded version failures are not evidence that the
   supported ViaVersion handshake is generally broken; the actual target-767
   loopback handshake test passed. Required client mods/external verification
   cannot be claimed as supported without completing their real requirements.
+
+## Follow-up checkout
+
+The merged source is retained on `codex/restore-desktop-macos`; follow-up validation
+records now use `codex/mac-validation-followup`, based on merged `origin/main`.
+Do not reopen PR #31 or repeat completed engine/packaging checks while native
+interaction remains blocked. See `desktop-security-review.md` for the security fix.

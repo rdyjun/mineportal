@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: bash desktop-client/gradlew -p desktop-client test shadowJar spotlessCheck --no-daemon
       - name: Test website download routing
-        run: node --test client/downloads.test.cjs
+        run: node --test client/*.test.cjs
       - name: Package Apple Silicon application and disk image
         if: runner.os == 'macOS'
         shell: bash

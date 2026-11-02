@@ -1139,6 +1139,7 @@
         connectBtn: "연결",
         connectedBtn: "연결됨",
         connectingBtn: "연결중",
+        cancelConnectBtn: "연결 취소",
         chatInputPlaceholder: "채팅 입력 (자동 서명됨)",
         sendBtn: "전송",
         selectBtn: "선택",
@@ -1260,6 +1261,7 @@
         connectBtn: "Connect",
         connectedBtn: "Connected",
         connectingBtn: "Connecting",
+        cancelConnectBtn: "Cancel connection",
         chatInputPlaceholder: "Type a chat message (auto-signed)",
         sendBtn: "Send",
         selectBtn: "Select",
@@ -2629,7 +2631,7 @@
         connectBtnEl.addEventListener("click", () => {
           const serverId = slots[i] && slots[i].serverId;
           const s = serverId && servers.find((x) => x.id === serverId);
-          if (s && s.phase === "active" && s.connected) {
+          if (s && s.phase === "active") {
             disconnectServerInSlot(i);
           } else {
             connectServerInSlot(i);
@@ -2725,9 +2727,9 @@
         ref.connectBtnEl.disabled = false;
         ref.connectBtnEl.classList.add("disconnect-mode");
       } else {
-        ref.connectBtnEl.textContent = t("connectingBtn");
-        ref.connectBtnEl.disabled = true;
-        ref.connectBtnEl.classList.remove("disconnect-mode");
+        ref.connectBtnEl.textContent = t("cancelConnectBtn");
+        ref.connectBtnEl.disabled = false;
+        ref.connectBtnEl.classList.add("disconnect-mode");
       }
     }
 
@@ -3015,6 +3017,7 @@
           renderAccount();
           if (autoPairArmed && account.desktopConnected) {
             stopAutoPair();
+            pairDesktopModalBackdrop.classList.remove("open");
             desktopAvailable = true;
             setPlayMode("real", false);
           } else if (IS_DESKTOP && account.status === "logged-in" && !account.desktopConnected && !autoPairArmed) {
