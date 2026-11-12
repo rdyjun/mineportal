@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jdk AS builder
+FROM eclipse-temurin:17.0.21_9-jdk AS builder
 WORKDIR /app
 COPY server/gradlew ./
 COPY server/gradle gradle
@@ -9,7 +9,7 @@ COPY shared/src/main/java /shared/src/main/java
 COPY client /client
 RUN ./gradlew bootJar --no-daemon
 
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:17.0.21_9-jre
 WORKDIR /app
 COPY --from=builder /app/build/libs/app.jar ./app.jar
 

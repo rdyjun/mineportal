@@ -1,9 +1,12 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.1.0'
+    id 'org.springframework.boot' version '4.1.2'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'com.diffplug.spotless' version '8.10.4'
 }
+
+// Boot 4.1.2 manages Netty 4.2.19.Final. 4.2.20.Final is the current 4.2 security patch.
+ext['netty.version'] = '4.2.20.Final'
 
 group = 'com.mineportal'
 version = '1.0.0'
@@ -29,7 +32,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 
-    runtimeOnly 'org.postgresql:postgresql:42.7.4'
+    // Version comes from the Spring Boot BOM (42.7.14 on Boot 4.1.2). An explicit
+    // older pin here overrides that BOM and kept the driver on 42.7.4.
+    runtimeOnly 'org.postgresql:postgresql'
 
     // Keep the Java 17-compatible native codec. ViaVersion/ViaBackwards 5.12.2 translates
     // between this 26.1 codec and both older servers and the observed 26.2/26.3 servers.
