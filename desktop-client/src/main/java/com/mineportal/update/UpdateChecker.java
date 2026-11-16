@@ -19,14 +19,18 @@ public final class UpdateChecker {
   }
 
   public UpdateCheck check() {
-    if (current.isEmpty()) return UpdateCheck.failed();
+    if (current.isEmpty()) {
+      return UpdateCheck.failed();
+    }
     Optional<ReleaseInfo> release;
     try {
       release = source.fetchLatest();
     } catch (RuntimeException ex) {
       return UpdateCheck.failed();
     }
-    if (release == null || release.isEmpty()) return UpdateCheck.failed();
+    if (release == null || release.isEmpty()) {
+      return UpdateCheck.failed();
+    }
     return UpdatePolicy.evaluate(current.get(), release.get(), platform, repo);
   }
 }

@@ -50,9 +50,13 @@ public final class DesktopSettings {
   }
 
   private void read() {
-    if (file == null) return;
+    if (file == null) {
+      return;
+    }
     try {
-      if (!Files.isRegularFile(file) || Files.size(file) > MAX_FILE_BYTES) return;
+      if (!Files.isRegularFile(file) || Files.size(file) > MAX_FILE_BYTES) {
+        return;
+      }
       Properties properties = new Properties();
       try (InputStream in = Files.newInputStream(file)) {
         properties.load(in);
@@ -67,11 +71,15 @@ public final class DesktopSettings {
   }
 
   private void write() {
-    if (file == null) return;
+    if (file == null) {
+      return;
+    }
     Path tmp = null;
     try {
       Path parent = file.toAbsolutePath().getParent();
-      if (parent != null) Files.createDirectories(parent);
+      if (parent != null) {
+        Files.createDirectories(parent);
+      }
       Properties properties = new Properties();
       properties.setProperty("autoCheck", Boolean.toString(autoCheck));
       properties.setProperty("ignoredVersion", ignoredVersion);

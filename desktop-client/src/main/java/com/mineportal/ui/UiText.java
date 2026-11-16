@@ -14,7 +14,9 @@ public final class UiText {
 
   public static UiText system() {
     String override = System.getProperty("mineportal.lang", "");
-    if (!override.isBlank()) return forLanguage(override);
+    if (!override.isBlank()) {
+      return forLanguage(override);
+    }
     return forLanguage(Locale.getDefault().getLanguage());
   }
 
@@ -28,20 +30,29 @@ public final class UiText {
   }
 
   public String updateMessage(String current, String latest) {
-    if (korean) return "새 업데이트가 있습니다 (현재 " + current + " → 최신 " + latest + ")";
+    if (korean) {
+      return "새 업데이트가 있습니다 (현재 " + current + " → 최신 " + latest + ")";
+    }
     return "A new update is available (current " + current + " → latest " + latest + ")";
   }
 
-  public String download() {
-    return korean ? "다운로드" : "Download";
+  public String updateTitle() {
+    return korean ? "새 업데이트가 있습니다" : "A new update is available";
   }
 
-  public String viewRelease() {
-    return korean ? "릴리스 보기" : "View release";
+  public String updateAction() {
+    return korean ? "업데이트" : "Update";
   }
 
   public String ignore() {
-    return korean ? "이 버전 다시 보지 않기" : "Don't show this version again";
+    return korean ? "다시 보지 않기" : "Don't show again";
+  }
+
+  public String ignoreDetail() {
+    if (korean) {
+      return "이 버전의 알림을 다시 보지 않습니다";
+    }
+    return "Don't show the notice for this version again";
   }
 
   public String close() {
@@ -58,6 +69,18 @@ public final class UiText {
 
   public String aboutSubtitle() {
     return korean ? "데스크톱 클라이언트" : "Desktop client";
+  }
+
+  public String sectionUpdate() {
+    return korean ? "업데이트" : "Updates";
+  }
+
+  public String sectionInfo() {
+    return korean ? "정보" : "Information";
+  }
+
+  public String sectionLinks() {
+    return korean ? "링크" : "Links";
   }
 
   public String versionLabel() {
@@ -80,18 +103,28 @@ public final class UiText {
     return korean ? "확인 중…" : "Checking…";
   }
 
+  public String notCheckedYet() {
+    return korean ? "아직 확인하지 않았습니다." : "Not checked yet.";
+  }
+
   public String upToDate(String version) {
-    if (korean) return "현재 최신 버전입니다 (" + version + ").";
+    if (korean) {
+      return "현재 최신 버전입니다 (" + version + ").";
+    }
     return "You're up to date (" + version + ").";
   }
 
   public String checkFailed() {
-    if (korean) return "업데이트를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.";
+    if (korean) {
+      return "업데이트를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.";
+    }
     return "Couldn't check for updates. Try again in a moment.";
   }
 
   public String updateFound(String version) {
-    if (korean) return "최신 버전은 " + version + "입니다.";
+    if (korean) {
+      return "최신 버전은 " + version + "입니다.";
+    }
     return "Version " + version + " is available.";
   }
 

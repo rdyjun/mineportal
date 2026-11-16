@@ -33,9 +33,13 @@ public final class GithubReleaseClient implements ReleaseSource {
 
   public static ReleaseSource create(String repo, String appVersion) {
     Optional<URI> endpoint = latestApi(repo);
-    if (endpoint.isEmpty()) return Optional::empty;
+    if (endpoint.isEmpty()) {
+      return Optional::empty;
+    }
     String token = appVersion == null ? "" : appVersion.trim();
-    if (token.length() > 32 || !token.matches("[A-Za-z0-9._+-]*")) token = "";
+    if (token.length() > 32 || !token.matches("[A-Za-z0-9._+-]*")) {
+      token = "";
+    }
     String agent = token.isEmpty() ? "MinePortalDesktop" : "MinePortalDesktop/" + token;
     HttpClient http =
         HttpClient.newBuilder()
@@ -46,13 +50,17 @@ public final class GithubReleaseClient implements ReleaseSource {
   }
 
   public static Optional<URI> latestApi(String repo) {
-    if (!SafeGithubUrl.validRepo(repo)) return Optional.empty();
+    if (!SafeGithubUrl.validRepo(repo)) {
+      return Optional.empty();
+    }
     return Optional.of(URI.create("https://api.github.com/repos/" + repo + "/releases/latest"));
   }
 
   @Override
   public Optional<ReleaseInfo> fetchLatest() {
-    if (http == null || latestUri == null) return Optional.empty();
+    if (http == null || latestUri == null) {
+      return Optional.empty();
+    }
     HttpRequest request =
         HttpRequest.newBuilder(latestUri)
             .timeout(timeout)
@@ -65,9 +73,13 @@ public final class GithubReleaseClient implements ReleaseSource {
       HttpResponse<InputStream> response =
           http.send(request, HttpResponse.BodyHandlers.ofInputStream());
       try (InputStream body = response.body()) {
-        if (response.statusCode() != 200 || body == null) return Optional.empty();
+        if (response.statusCode() != 200 || body == null) {
+          return Optional.empty();
+        }
         byte[] data = body.readNBytes(MAX_BODY_BYTES + 1);
-        if (data.length == 0 || data.length > MAX_BODY_BYTES) return Optional.empty();
+        if (data.length == 0 || data.length > MAX_BODY_BYTES) {
+          return Optional.empty();
+        }
         return ReleaseInfo.parse(new String(data, StandardCharsets.UTF_8));
       }
     } catch (InterruptedException ex) {

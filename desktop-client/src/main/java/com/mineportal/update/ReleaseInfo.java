@@ -26,28 +26,42 @@ public final class ReleaseInfo {
   }
 
   public static Optional<ReleaseInfo> parse(String json) {
-    if (json == null || json.isBlank()) return Optional.empty();
+    if (json == null || json.isBlank()) {
+      return Optional.empty();
+    }
     try {
       JsonElement root = JsonParser.parseString(json);
-      if (!root.isJsonObject()) return Optional.empty();
+      if (!root.isJsonObject()) {
+        return Optional.empty();
+      }
       JsonObject object = root.getAsJsonObject();
       String tag = string(object, "tag_name");
-      if (tag == null || tag.isBlank()) return Optional.empty();
+      if (tag == null || tag.isBlank()) {
+        return Optional.empty();
+      }
       Boolean draft = optionalBoolean(object, "draft");
       Boolean prerelease = optionalBoolean(object, "prerelease");
-      if (draft == null || prerelease == null) return Optional.empty();
+      if (draft == null || prerelease == null) {
+        return Optional.empty();
+      }
       String page = string(object, "html_url");
       if (!object.has("assets") || object.get("assets").isJsonNull()) {
         return Optional.of(new ReleaseInfo(tag, draft, prerelease, page, List.of()));
       }
-      if (!object.get("assets").isJsonArray()) return Optional.empty();
+      if (!object.get("assets").isJsonArray()) {
+        return Optional.empty();
+      }
       List<Asset> assets = new ArrayList<>();
       for (JsonElement element : object.getAsJsonArray("assets")) {
-        if (!element.isJsonObject()) continue;
+        if (!element.isJsonObject()) {
+          continue;
+        }
         JsonObject asset = element.getAsJsonObject();
         String name = string(asset, "name");
         String download = string(asset, "browser_download_url");
-        if (name == null || name.isBlank() || download == null || download.isBlank()) continue;
+        if (name == null || name.isBlank() || download == null || download.isBlank()) {
+          continue;
+        }
         assets.add(new Asset(name, download));
       }
       return Optional.of(new ReleaseInfo(tag, draft, prerelease, page, List.copyOf(assets)));
@@ -58,16 +72,24 @@ public final class ReleaseInfo {
 
   /** Missing booleans are false. A present non-boolean is rejected by returning null. */
   private static Boolean optionalBoolean(JsonObject object, String name) {
-    if (!object.has(name) || object.get(name).isJsonNull()) return false;
+    if (!object.has(name) || object.get(name).isJsonNull()) {
+      return false;
+    }
     JsonElement value = object.get(name);
-    if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()) return null;
+    if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()) {
+      return null;
+    }
     return value.getAsBoolean();
   }
 
   private static String string(JsonObject object, String name) {
-    if (!object.has(name) || object.get(name).isJsonNull()) return null;
+    if (!object.has(name) || object.get(name).isJsonNull()) {
+      return null;
+    }
     JsonElement value = object.get(name);
-    if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) return null;
+    if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) {
+      return null;
+    }
     return value.getAsString();
   }
 

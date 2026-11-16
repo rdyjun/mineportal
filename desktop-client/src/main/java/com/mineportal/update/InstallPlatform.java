@@ -32,9 +32,11 @@ public final class InstallPlatform {
     String os = osName.toLowerCase(Locale.ROOT);
     String arch = osArch.toLowerCase(Locale.ROOT);
     // "darwin" contains the letters "win", so match the Windows token itself.
-    if (os.contains("windows")) return Optional.of(WINDOWS_ZIP);
+    if (os.contains("windows")) {
+      return Optional.of(WINDOWS_ZIP);
+    }
     if (os.contains("mac") || os.contains("darwin")) {
-      if (arch.contains("aarch64") || arch.equals("arm64") || arch.startsWith("arm")) {
+      if (arch.contains("aarch64") || "arm64".equals(arch) || arch.startsWith("arm")) {
         return Optional.of(MAC_ARM_DMG);
       }
       return Optional.empty();

@@ -15,7 +15,9 @@ public final class UpdateNotice {
       return false;
     }
     AppVersion latest = check.offer().latest();
-    if (sessionDismissed != null && sessionDismissed.compareTo(latest) == 0) return false;
+    if (sessionDismissed != null && sessionDismissed.compareTo(latest) == 0) {
+      return false;
+    }
     return ignored == null || ignored.filter(version -> version.compareTo(latest) == 0).isEmpty();
   }
 }

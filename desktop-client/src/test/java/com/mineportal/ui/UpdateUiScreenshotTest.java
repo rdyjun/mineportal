@@ -59,7 +59,9 @@ class UpdateUiScreenshotTest {
           }
         });
     assertTrue(done.await(40, TimeUnit.SECONDS), "screenshot render timed out");
-    if (failure.get() != null) throw new AssertionError(failure.get());
+    if (failure.get() != null) {
+      throw new AssertionError(failure.get());
+    }
     copyScreenshots(dir);
     assertAccent(dir.resolve("update-banner.png"), true);
     assertAccent(dir.resolve("about-window.png"), false);
@@ -68,7 +70,9 @@ class UpdateUiScreenshotTest {
 
   private static void copyScreenshots(Path dir) throws IOException {
     String output = System.getenv("MINEPORTAL_SCREENSHOT_DIR");
-    if (output == null || output.isBlank()) return;
+    if (output == null || output.isBlank()) {
+      return;
+    }
     Path dest = Path.of(output);
     Files.createDirectories(dest);
     for (String name : new String[] {"update-banner.png", "about-window.png"}) {
@@ -106,6 +110,7 @@ class UpdateUiScreenshotTest {
                 "https://github.com/rdyjun/mineportal/releases/tag/1.2.0",
                 "https://github.com/rdyjun/mineportal/releases/download/1.2.0/MinePortal-win.zip")),
         false);
+    chrome.settleForScreenshot();
     write(scene.snapshot(null), dir.resolve("update-banner.png"));
 
     chrome.apply(checker.check(), true);
@@ -117,14 +122,18 @@ class UpdateUiScreenshotTest {
   }
 
   private static void applyFont(Scene scene, Font font) {
-    if (font == null || scene == null) return;
+    if (font == null || scene == null) {
+      return;
+    }
     String style = scene.getRoot().getStyle() == null ? "" : scene.getRoot().getStyle();
     scene.getRoot().setStyle(style + " -fx-font-family: \"" + font.getFamily() + "\";");
   }
 
   private static Font loadCjk() {
     Path file = Path.of("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc");
-    if (!Files.isRegularFile(file)) return null;
+    if (!Files.isRegularFile(file)) {
+      return null;
+    }
     try (InputStream in = Files.newInputStream(file)) {
       return Font.loadFont(in, 14);
     } catch (IOException ex) {
@@ -167,7 +176,9 @@ class UpdateUiScreenshotTest {
         int red = (argb >> 16) & 0xff;
         int green = (argb >> 8) & 0xff;
         int blue = argb & 0xff;
-        if (red > 120 && green < 170 && blue > 180) purple++;
+        if (red > 120 && green < 170 && blue > 180) {
+          purple++;
+        }
       }
     }
     assertTrue(purple > 30, file + " purple pixels=" + purple);

@@ -9,7 +9,9 @@ public final class SafeGithubUrl {
   private SafeGithubUrl() {}
 
   public static boolean validRepo(String repo) {
-    if (repo == null || !repo.matches("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")) return false;
+    if (repo == null || !repo.matches("[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")) {
+      return false;
+    }
     int slash = repo.indexOf('/');
     String owner = repo.substring(0, slash);
     String name = repo.substring(slash + 1);
@@ -23,7 +25,9 @@ public final class SafeGithubUrl {
 
   public static boolean isRepoReleasePage(String url, String repo) {
     URI uri = base(url, repo);
-    if (uri == null) return false;
+    if (uri == null) {
+      return false;
+    }
     String releases = "/" + repo + "/releases";
     String path = uri.getPath();
     return path.equals(releases) || path.startsWith(releases + "/tag/");
@@ -38,24 +42,34 @@ public final class SafeGithubUrl {
       return false;
     }
     URI uri = base(url, repo);
-    if (uri == null) return false;
+    if (uri == null) {
+      return false;
+    }
     String path = uri.getPath();
     String prefix = "/" + repo + "/releases/download/";
     return path.startsWith(prefix) && path.endsWith("/" + assetName);
   }
 
   private static URI base(String url, String repo) {
-    if (url == null || !validRepo(repo)) return null;
+    if (url == null || !validRepo(repo)) {
+      return null;
+    }
     URI uri;
     try {
       uri = new URI(url.trim());
     } catch (URISyntaxException ex) {
       return null;
     }
-    if (!"https".equalsIgnoreCase(uri.getScheme())) return null;
-    if (uri.getHost() == null || !"github.com".equalsIgnoreCase(uri.getHost())) return null;
+    if (!"https".equalsIgnoreCase(uri.getScheme())) {
+      return null;
+    }
+    if (uri.getHost() == null || !"github.com".equalsIgnoreCase(uri.getHost())) {
+      return null;
+    }
     int port = uri.getPort();
-    if (port != -1 && port != 443) return null;
+    if (port != -1 && port != 443) {
+      return null;
+    }
     if (uri.getUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null) {
       return null;
     }
@@ -64,7 +78,9 @@ public final class SafeGithubUrl {
       return null;
     }
     String prefix = "/" + repo;
-    if (!path.equals(prefix) && !path.startsWith(prefix + "/")) return null;
+    if (!path.equals(prefix) && !path.startsWith(prefix + "/")) {
+      return null;
+    }
     return uri;
   }
 }

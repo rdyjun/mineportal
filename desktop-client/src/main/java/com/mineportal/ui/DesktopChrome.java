@@ -21,6 +21,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -62,19 +63,24 @@ public final class DesktopChrome {
     this.about =
         new AboutWindow(
             owner, this.text, settings, this::openExternal, this::manualCheck, this::onAutoCheck);
-    aboutButton.getStyleClass().add("about-button");
-    aboutButton.setText(this.text.aboutButton());
+    aboutButton.getStyleClass().add("info-button");
+    aboutButton.setText("i");
+    aboutButton.setMnemonicParsing(false);
+    aboutButton.setAccessibleText(this.text.aboutButton());
+    aboutButton.setTooltip(new Tooltip(this.text.aboutButton()));
     aboutButton.setOnAction(event -> about.show());
-    aboutButton.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-    banner.setMaxWidth(460);
+    aboutButton.setMinSize(36, 36);
+    aboutButton.setPrefSize(36, 36);
+    aboutButton.setMaxSize(36, 36);
+    banner.setMaxWidth(400);
     banner.setMaxHeight(Region.USE_PREF_SIZE);
 
     stack.getChildren().addAll(content, aboutButton, banner);
     stack.setStyle("-fx-background-color: #111111;");
     StackPane.setAlignment(aboutButton, Pos.BOTTOM_LEFT);
-    StackPane.setMargin(aboutButton, new Insets(16));
+    StackPane.setMargin(aboutButton, new Insets(20));
     StackPane.setAlignment(banner, Pos.BOTTOM_RIGHT);
-    StackPane.setMargin(banner, new Insets(16));
+    StackPane.setMargin(banner, new Insets(20));
     stack.sceneProperty().addListener((obs, previous, scene) -> ChromeTheme.apply(scene));
   }
 
@@ -95,7 +101,9 @@ public final class DesktopChrome {
   }
 
   public void start() {
-    if (started) return;
+    if (started) {
+      return;
+    }
     started = true;
     ScheduledExecutorService executor = executor();
     executor.schedule(this::auto, UpdateSchedule.INITIAL_DELAY.toSeconds(), TimeUnit.SECONDS);
@@ -107,40 +115,66 @@ public final class DesktopChrome {
   }
 
   public void shutdown() {
-    if (scheduler != null) scheduler.shutdownNow();
+    if (scheduler != null) {
+      scheduler.shutdownNow();
+    }
   }
 
   public void notePageLanguage(String language) {
-    if (language == null || language.length() > 16) return;
+    if (language == null || language.length() > 16) {
+      return;
+    }
     UiText next = UiText.forLanguage(language);
-    if (next.korean() == text.korean()) return;
+    if (next.korean() == text.korean()) {
+      return;
+    }
     text = next;
-    aboutButton.setText(text.aboutButton());
+    aboutButton.setAccessibleText(text.aboutButton());
+    if (aboutButton.getTooltip() != null) {
+      aboutButton.getTooltip().setText(text.aboutButton());
+    }
     about.applyText(text);
-    if (banner.offer() != null) banner.setOffer(banner.offer(), text);
+    if (banner.offer() != null) {
+      banner.setOffer(banner.offer(), text);
+    }
   }
 
   void apply(UpdateCheck check, boolean manual) {
-    if (check == null) check = UpdateCheck.failed();
-    if (manual) about.setChecking(false);
+    if (check == null) {
+      check = UpdateCheck.failed();
+    }
+    if (manual) {
+      about.setChecking(false);
+    }
     switch (check.status()) {
       case UPDATE_AVAILABLE -> showAvailable(check.offer(), manual);
       case UP_TO_DATE -> {
         banner.setShown(false);
-        if (manual) about.setStatus(text.upToDate(BuildInfo.VERSION), "status-ok");
+        if (manual) {
+          about.setStatus(text.upToDate(BuildInfo.VERSION), "status-ok");
+        }
       }
       case CHECK_FAILED -> {
-        if (manual) about.setStatus(text.checkFailed(), "status-muted");
+        if (manual) {
+          about.setStatus(text.checkFailed(), "status-muted");
+        }
+      }
+      default -> {
+        // Every status is named above. This keeps a new value from failing closed.
       }
     }
   }
 
   private void showAvailable(UpdateOffer offer, boolean manual) {
     if (offer == null) {
-      if (manual) about.setStatus(text.checkFailed(), "status-muted");
+      if (manual) {
+        about.setStatus(text.checkFailed(), "status-muted");
+      }
       return;
     }
-    if (manual) about.setStatus(text.updateFound(offer.latest().toString()), "status-warn");
+    if (manual) {
+      about.setStatus(text.updateFound(offer.latest().toString()), "status-warn");
+    }
     if (!manual
         && !UpdateNotice.showAutomatically(
             UpdateCheck.available(offer), sessionDismissed, settings.ignoredVersion())) {
@@ -157,6 +191,10 @@ public final class DesktopChrome {
     return about.stage().getScene();
   }
 
+  void settleForScreenshot() {
+    banner.settle();
+  }
+
   private void manualCheck() {
     about.setChecking(true);
     about.setStatus(text.checking(), "status-muted");
@@ -165,16 +203,22 @@ public final class DesktopChrome {
 
   private void onAutoCheck(boolean enabled) {
     settings.setAutoCheck(enabled);
-    if (enabled) checkAsync(false);
+    if (enabled) {
+      checkAsync(false);
+    }
   }
 
   private void auto() {
     try {
-      if (!settings.autoCheck()) return;
+      if (!settings.autoCheck()) {
+        return;
+      }
       UpdateCheck result = checker.check();
       Platform.runLater(
           () -> {
-            if (!settings.autoCheck()) return;
+            if (!settings.autoCheck()) {
+              return;
+            }
             apply(result, false);
           });
     } catch (Exception ex) {
@@ -202,7 +246,9 @@ public final class DesktopChrome {
   }
 
   private void openExternal(String url) {
-    if (!AllowedLinks.isOpenable(url, repo)) return;
+    if (!AllowedLinks.isOpenable(url, repo)) {
+      return;
+    }
     try {
       openUrl.accept(url);
     } catch (RuntimeException ex) {

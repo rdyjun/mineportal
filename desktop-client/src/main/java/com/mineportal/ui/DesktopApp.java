@@ -159,16 +159,22 @@ public final class DesktopApp extends Application {
     stage.show();
     view.requestFocus();
     engine.load(site.toString());
-    if (chrome != null) chrome.start();
+    if (chrome != null) {
+      chrome.start();
+    }
   }
 
   private void syncPageLanguage(WebEngine engine) {
-    if (chrome == null) return;
+    if (chrome == null) {
+      return;
+    }
     try {
       // Constant script on the official origin only. It reads the site's ko/en choice
       // and does not evaluate code that came from the page.
       Object value = engine.executeScript("localStorage.getItem('lang')");
-      if (value instanceof String language) chrome.notePageLanguage(language);
+      if (value instanceof String language) {
+        chrome.notePageLanguage(language);
+      }
     } catch (RuntimeException ignored) {
       // Storage can be blocked, or the document can navigate away mid-check.
     }
@@ -186,7 +192,9 @@ public final class DesktopApp extends Application {
 
   @Override
   public void stop() {
-    if (chrome != null) chrome.shutdown();
+    if (chrome != null) {
+      chrome.shutdown();
+    }
     // All active Minecraft sockets must be closed when the application window closes.
     System.exit(0);
   }
