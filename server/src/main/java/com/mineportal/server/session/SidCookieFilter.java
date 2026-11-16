@@ -58,9 +58,13 @@ public class SidCookieFilter extends HttpFilter {
 
   private String readCookie(HttpServletRequest req) {
     Cookie[] cookies = req.getCookies();
-    if (cookies == null) return null;
+    if (cookies == null) {
+      return null;
+    }
     for (Cookie cookie : cookies) {
-      if (COOKIE_NAME.equals(cookie.getName())) return cookie.getValue();
+      if (COOKIE_NAME.equals(cookie.getName())) {
+        return cookie.getValue();
+      }
     }
     return null;
   }

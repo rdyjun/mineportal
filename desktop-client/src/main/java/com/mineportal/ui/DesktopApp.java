@@ -35,7 +35,9 @@ public final class DesktopApp extends Application {
     engine.setUserAgent(engine.getUserAgent() + " MinePortalDesktop/1.2");
     engine.setOnStatusChanged(
         event -> {
-          if (!trusted(engine.getLocation())) return;
+          if (!trusted(engine.getLocation())) {
+            return;
+          }
           String status = event.getData();
           // The browser launch accepts only a generated attempt id, never an arbitrary
           // URL or a credential. The app retains the separate polling proof in memory.
@@ -46,7 +48,9 @@ public final class DesktopApp extends Application {
             return;
           }
           String code = ProtocolRegistrar.extractPairCode(new String[] {event.getData()});
-          if (code != null && code.matches("[A-Z0-9]{4,16}")) backend.pairImmediately(code);
+          if (code != null && code.matches("[A-Z0-9]{4,16}")) {
+            backend.pairImmediately(code);
+          }
         });
     engine.setOnAlert(
         event -> new Alert(Alert.AlertType.INFORMATION, event.getData()).showAndWait());
@@ -80,7 +84,9 @@ public final class DesktopApp extends Application {
     Button back = new Button("뒤로");
     back.setOnAction(
         event -> {
-          if (engine.getHistory().getCurrentIndex() > 0) engine.getHistory().go(-1);
+          if (engine.getHistory().getCurrentIndex() > 0) {
+            engine.getHistory().go(-1);
+          }
         });
     Button reload = new Button("새로고침");
     reload.setOnAction(event -> engine.reload());
@@ -103,13 +109,17 @@ public final class DesktopApp extends Application {
               } catch (IllegalArgumentException error) {
                 origin.setText("");
               }
-              if (!url.startsWith("mineportal:")) return;
+              if (!url.startsWith("mineportal:")) {
+                return;
+              }
               engine.getLoadWorker().cancel();
               // No Java object is exposed to remote JavaScript. Only the official site's
               // existing pairing URL is accepted, and no tokens travel in that URL.
               if (trusted(oldUrl)) {
                 String code = ProtocolRegistrar.extractPairCode(new String[] {url});
-                if (code != null && code.matches("[A-Z0-9]{4,16}")) backend.pairImmediately(code);
+                if (code != null && code.matches("[A-Z0-9]{4,16}")) {
+                  backend.pairImmediately(code);
+                }
               }
             });
     engine
@@ -117,7 +127,9 @@ public final class DesktopApp extends Application {
         .stateProperty()
         .addListener(
             (observable, oldState, state) -> {
-              if (state == Worker.State.SUCCEEDED) root.setCenter(view);
+              if (state == Worker.State.SUCCEEDED) {
+                root.setCenter(view);
+              }
               if (state == Worker.State.FAILED && !engine.getLocation().startsWith("mineportal:")) {
                 Button retry = new Button("다시 연결 / Retry");
                 retry.setOnAction(

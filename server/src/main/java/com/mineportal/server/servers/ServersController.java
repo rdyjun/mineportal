@@ -6,7 +6,13 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/servers")
@@ -32,7 +38,9 @@ public class ServersController {
   @GetMapping
   public List<ServerSummary> list(@RequestAttribute("sid") String sid) {
     String ownerId = ownerId(sid);
-    if (ownerId == null) return List.of();
+    if (ownerId == null) {
+      return List.of();
+    }
     return registry.listServers(ownerId).stream().map(ServerSummary::of).toList();
   }
 
@@ -71,8 +79,9 @@ public class ServersController {
   @GetMapping("/{id}")
   public ResponseEntity<?> get(@RequestAttribute("sid") String sid, @PathVariable String id) {
     String ownerId = ownerId(sid);
-    if (ownerId == null)
+    if (ownerId == null) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "server not found"));
+    }
     return registry
         .getServer(id, ownerId)
         .<ResponseEntity<?>>map(s -> ResponseEntity.ok(ServerDetail.of(s)))
@@ -87,12 +96,16 @@ public class ServersController {
   // 분리한다.
   private ParsedAddress parseServerAddress(String address) {
     int idx = address.lastIndexOf(':');
-    if (idx == -1) return new ParsedAddress(address, 25565);
+    if (idx == -1) {
+      return new ParsedAddress(address, 25565);
+    }
     String host = address.substring(0, idx);
     String portStr = address.substring(idx + 1);
     try {
       int port = Integer.parseInt(portStr);
-      if (host.isEmpty() || port <= 0 || port > 65535) return new ParsedAddress(address, 25565);
+      if (host.isEmpty() || port <= 0 || port > 65535) {
+        return new ParsedAddress(address, 25565);
+      }
       return new ParsedAddress(host, port);
     } catch (NumberFormatException e) {
       return new ParsedAddress(address, 25565);

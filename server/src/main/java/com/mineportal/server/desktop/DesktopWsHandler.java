@@ -96,12 +96,16 @@ public class DesktopWsHandler extends TextWebSocketHandler {
   /** 이 계정이 브라우저에서 이미 로그인돼있으면(앱이 붙기 전에 로그인이 끝났던 경우) 즉시 토큰을 밀어준다. */
   private void pushTokenIfLoggedIn(String ownerId) {
     AccountState state = accountSessions.findByOwnerId(ownerId);
-    if (state != null) desktopConnections.pushTokenIfConnected(state);
+    if (state != null) {
+      desktopConnections.pushTokenIfConnected(state);
+    }
   }
 
   private void handleConnected(WebSocketSession session, String serverId, long attemptId) {
     ServerConfig server = serverOf(session, serverId);
-    if (server == null) return;
+    if (server == null) {
+      return;
+    }
     if (server.markConnected(attemptId)) {
       broadcaster.setStatus(server, "connected", true);
     }
@@ -110,7 +114,9 @@ public class DesktopWsHandler extends TextWebSocketHandler {
   private void handleDisconnected(
       WebSocketSession session, String serverId, long attemptId, String reason) {
     ServerConfig server = serverOf(session, serverId);
-    if (server == null) return;
+    if (server == null) {
+      return;
+    }
     desktopConnections.unmarkRouted(serverId, attemptId);
     if (server.markClosed(attemptId)) {
       broadcaster.setStatus(server, "disconnected: " + reason, true);
@@ -120,15 +126,21 @@ public class DesktopWsHandler extends TextWebSocketHandler {
   private void handleChat(
       WebSocketSession session, String serverId, String username, String message) {
     ServerConfig server = serverOf(session, serverId);
-    if (server == null) return;
+    if (server == null) {
+      return;
+    }
     broadcaster.chatReceived(
         server, new ChatMessage(username, message, System.currentTimeMillis()));
   }
 
   private ServerConfig serverOf(WebSocketSession session, String serverId) {
-    if (!desktopConnections.isCurrentSession(session)) return null;
+    if (!desktopConnections.isCurrentSession(session)) {
+      return null;
+    }
     String ownerId = desktopConnections.ownerIdOf(session);
-    if (ownerId == null || serverId == null) return null;
+    if (ownerId == null || serverId == null) {
+      return null;
+    }
     return registry.getServer(serverId, ownerId).orElse(null);
   }
 
@@ -136,11 +148,15 @@ public class DesktopWsHandler extends TextWebSocketHandler {
   public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
     String ownerId = desktopConnections.ownerIdOf(session);
     boolean wasCurrentSession = desktopConnections.unregister(session);
-    if (ownerId == null) return;
+    if (ownerId == null) {
+      return;
+    }
     if (wasCurrentSession) {
       for (ServerConfig server : registry.listServers(ownerId)) {
         long attemptId = desktopConnections.routedAttempt(server.id);
-        if (attemptId == 0) continue;
+        if (attemptId == 0) {
+          continue;
+        }
         desktopConnections.unmarkRouted(server.id, attemptId);
         if (server.markFailed(attemptId)) {
           broadcaster.setStatus(server, "desktop app disconnected", true);

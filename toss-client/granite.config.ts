@@ -1,20 +1,20 @@
-import { defineConfig } from '@apps-in-toss/web-framework/config';
+import { defineConfig } from "@apps-in-toss/web-framework/config";
 
 export default defineConfig({
-  appName: 'mineportal',
+  appName: "mineportal",
   brand: {
-    displayName: '마인포탈',
-    primaryColor: '#9b5de5',
-    icon: 'https://mineportal.kr/logo.png',
+    displayName: "마인포탈",
+    primaryColor: "#9b5de5",
+    icon: "https://mineportal.kr/logo.png",
   },
   web: {
-    host: 'localhost',
+    host: "localhost",
     port: 5173,
     commands: {
-      dev: 'vite',
-      build: 'vite build',
+      dev: "vite",
+      build: "vite build",
     },
   },
   permissions: [],
-  outdir: 'dist',
+  outdir: "dist",
 });

@@ -81,7 +81,7 @@ public final class ViaTranslation {
     }
 
     private static synchronized void init() {
-        if (loaded) return;
+        if (loaded) { return; }
         File dataFolder = new File(System.getProperty("java.io.tmpdir"), "mineportal-via");
         ViaManagerImpl.initAndLoad(new Platform(dataFolder), new Injector(), new ViaCommandHandler(false),
                 new Loader(), ViaBackwardsPlatformImpl::new);
@@ -89,7 +89,7 @@ public final class ViaTranslation {
     }
 
     static boolean hasTranslationPath(int clientProtocol, int serverProtocol) {
-        if (clientProtocol == serverProtocol) return true;
+        if (clientProtocol == serverProtocol) { return true; }
         if (!ProtocolVersion.isRegistered(clientProtocol) || !ProtocolVersion.isRegistered(serverProtocol)) {
             return false;
         }

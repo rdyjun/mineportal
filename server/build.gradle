@@ -3,6 +3,7 @@ plugins {
     id 'org.springframework.boot' version '4.1.2'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'com.diffplug.spotless' version '8.10.4'
+    id 'checkstyle'
 }
 
 // Boot 4.1.2 manages Netty 4.2.19.Final. 4.2.20.Final is the current 4.2 security patch.
@@ -67,6 +68,23 @@ spotless {
         googleJavaFormat('1.28.0')
         formatAnnotations()
     }
+}
+
+// Shared sources are part of this source set, so checkstyleMain/Test cover them too.
+// Layout stays with Spotless; Checkstyle is semantic and fails the build on any hit.
+checkstyle {
+    toolVersion = '10.24.0'
+    ignoreFailures = false
+    maxWarnings = 0
+    maxErrors = 0
+    configFile = rootProject.file('../config/checkstyle/checkstyle.xml')
+    configDirectory.set(rootProject.layout.projectDirectory.dir('../config/checkstyle'))
+    enableExternalDtdLoad = true
+}
+
+tasks.withType(Checkstyle).configureEach {
+    maxWarnings = 0
+    maxErrors = 0
 }
 
 tasks.named('bootJar') {

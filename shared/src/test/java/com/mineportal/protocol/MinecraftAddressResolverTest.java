@@ -8,7 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MinecraftAddressResolverTest {
 
@@ -74,7 +77,7 @@ class MinecraftAddressResolverTest {
                     SrvRecordSelector.order(List.of(fallbackPriority, lowPriority, highWeight), random);
             assertEquals(0, ordered.get(0).priority());
             assertEquals(1, ordered.get(2).priority());
-            if (ordered.get(0).equals(highWeight)) highWeightSelections++;
+            if (ordered.get(0).equals(highWeight)) { highWeightSelections++; }
         }
 
         assertTrue(highWeightSelections > 7_000 && highWeightSelections < 8_000,
@@ -100,7 +103,7 @@ class MinecraftAddressResolverTest {
         @Override
         public InetAddress[] addresses(String host) throws UnknownHostException {
             String[] values = addresses.get(host);
-            if (values == null) throw new UnknownHostException(host);
+            if (values == null) { throw new UnknownHostException(host); }
             InetAddress[] result = new InetAddress[values.length];
             for (int i = 0; i < values.length; i++) {
                 result[i] = InetAddress.getByName(values[i]);

@@ -17,10 +17,13 @@ public final class ProtocolRegistrar {
   private static final String SCHEME = "mineportal";
 
   public static void registerIfNeeded() {
-    if (!System.getProperty("os.name", "").startsWith("Windows")) return;
+    if (!System.getProperty("os.name", "").startsWith("Windows")) {
+      return;
+    }
     Path exe = launcherExe();
-    if (exe == null || !Files.isRegularFile(exe))
-      return; // dev/IDE run, or jar-only layout after a self-update — nothing to point the scheme
+    if (exe == null || !Files.isRegularFile(exe)) {
+      return;
+    } // dev/IDE run, or jar-only layout after a self-update — nothing to point the scheme
     // at
     try {
       importRegFile(buildRegFile(exe));
@@ -72,12 +75,18 @@ public final class ProtocolRegistrar {
 
   /** Extracts the pairing code from a launch argument like mineportal://pair?code=ABC123. */
   public static String extractPairCode(String[] args) {
-    if (args.length == 0 || args[0] == null) return null;
+    if (args.length == 0 || args[0] == null) {
+      return null;
+    }
     try {
       URI uri = URI.create(args[0]);
-      if (!SCHEME.equalsIgnoreCase(uri.getScheme())) return null;
+      if (!SCHEME.equalsIgnoreCase(uri.getScheme())) {
+        return null;
+      }
       String query = uri.getQuery();
-      if (query == null) return null;
+      if (query == null) {
+        return null;
+      }
       for (String pair : query.split("&")) {
         int eq = pair.indexOf('=');
         if (eq > 0 && "code".equals(pair.substring(0, eq))) {
@@ -97,7 +106,9 @@ public final class ProtocolRegistrar {
     try {
       URI uri = ProtocolRegistrar.class.getProtectionDomain().getCodeSource().getLocation().toURI();
       Path jar = Paths.get(uri);
-      if (!jar.toString().toLowerCase().endsWith(".jar")) return null;
+      if (!jar.toString().toLowerCase().endsWith(".jar")) {
+        return null;
+      }
       Path appImageRoot = jar.getParent().getParent();
       String exeName = appImageRoot.getFileName().toString() + ".exe";
       return appImageRoot.resolve(exeName);

@@ -99,7 +99,9 @@ public class McConnectionManager {
     removeAuxiliary(server.id, attemptId);
     if (server.markFailed(attemptId)) {
       String reason = failure.getMessage();
-      if (reason == null || reason.isBlank()) reason = failure.getClass().getSimpleName();
+      if (reason == null || reason.isBlank()) {
+        reason = failure.getClass().getSimpleName();
+      }
       broadcaster.setStatus(server, "connection failed: " + reason, true);
     }
   }
@@ -119,7 +121,9 @@ public class McConnectionManager {
     int serverProtocol = ping.protocol() != null ? ping.protocol() : 0;
     ClientSession client =
         ViaTranslation.createSession(endpoint.socketAddress(), protocol, serverProtocol);
-    if (!server.isCurrentAttempt(attemptId)) return;
+    if (!server.isCurrentAttempt(attemptId)) {
+      return;
+    }
     client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, new SessionService());
     client.setFlag(MinecraftConstants.CLIENT_HOST, endpoint.logicalHost());
     client.setFlag(MinecraftConstants.CLIENT_PORT, endpoint.requestedPort());
@@ -222,11 +226,17 @@ public class McConnectionManager {
           }
         });
 
-    if (!server.isCurrentAttempt(attemptId)) return;
+    if (!server.isCurrentAttempt(attemptId)) {
+      return;
+    }
     ActiveSession previous = sessions.get(server.id);
-    if (previous != null && previous.attemptId() > attemptId) return;
+    if (previous != null && previous.attemptId() > attemptId) {
+      return;
+    }
     sessions.put(server.id, new ActiveSession(attemptId, client));
-    if (previous != null) previous.session().disconnect("superseded by a newer connection attempt");
+    if (previous != null) {
+      previous.session().disconnect("superseded by a newer connection attempt");
+    }
     client.connect();
   }
 
@@ -244,7 +254,9 @@ public class McConnectionManager {
   public void sendChat(String serverId, String message) {
     ActiveSession active = sessions.get(serverId);
     ClientSession session = active != null ? active.session() : null;
-    if (session == null || !session.isConnected()) throw new NotConnectedException();
+    if (session == null || !session.isConnected()) {
+      throw new NotConnectedException();
+    }
 
     // "/"로 시작하면 일반 채팅이 아니라 명령어다 — ServerboundChatPacket으로 보내면
     // 서버가 그냥 평문 채팅으로 취급해서 명령어가 실행되지 않는다.
@@ -334,7 +346,9 @@ public class McConnectionManager {
   private static SignableArgument findSignableArgument(CommandTree tree, String command) {
     CommandNode[] nodes = tree.nodes();
     String[] tokens = command.split(" ");
-    if (tokens.length == 0 || nodes.length == 0) return null;
+    if (tokens.length == 0 || nodes.length == 0) {
+      return null;
+    }
 
     int nodeIndex = tree.rootIndex();
     int consumed = 0;
@@ -362,7 +376,9 @@ public class McConnectionManager {
           break;
         }
       }
-      if (argumentMatch == -1) return null; // 더 내려갈 곳이 없다
+      if (argumentMatch == -1) {
+        return null;
+      } // 더 내려갈 곳이 없다
 
       CommandNode argument = nodes[argumentMatch];
       if (argument.getParser() == CommandParser.MESSAGE) {
@@ -435,7 +451,9 @@ public class McConnectionManager {
         own = String.format(pattern, args);
       } catch (Exception e) {
         StringBuilder fallback = new StringBuilder(pattern);
-        for (Object arg : args) fallback.append(' ').append(arg);
+        for (Object arg : args) {
+          fallback.append(' ').append(arg);
+        }
         own = fallback.toString();
       }
     } else if (c instanceof net.kyori.adventure.text.TextComponent tx) {
@@ -474,7 +492,9 @@ public class McConnectionManager {
     for (CommandNode node : nodes) {
       if (node.getType() == CommandType.LITERAL) {
         for (int c : node.getChildIndices()) {
-          if (c == childIndex) return node.getName();
+          if (c == childIndex) {
+            return node.getName();
+          }
         }
       }
     }
