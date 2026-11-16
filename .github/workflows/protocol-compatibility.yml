@@ -28,12 +28,11 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew test shadowJar --no-daemon
-      - name: Model-check connection lifecycle
+      - name: Model-check protocol, pairing, and sessions
         shell: bash
         run: |
           curl --fail --location --silent --show-error \
             --output "$RUNNER_TEMP/tla2tools.jar" \
             https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar
           echo "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88  $RUNNER_TEMP/tla2tools.jar" | sha256sum --check --strict
-          java -jar "$RUNNER_TEMP/tla2tools.jar" -workers auto \
-            -config formal/ProtocolConnection.cfg formal/ProtocolConnection.tla
+          TLA_TOOLS_JAR="$RUNNER_TEMP/tla2tools.jar" formal/check.sh
