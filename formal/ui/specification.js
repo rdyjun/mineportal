@@ -57,7 +57,8 @@ const ui = extract((state) => {
       text: el ? el.textContent || "" : "",
     };
   });
-  const platform = typeof win.downloadPlatform === "function" ? win.downloadPlatform(win.navigator) : null;
+  const platform =
+    typeof win.downloadPlatform === "function" ? win.downloadPlatform(win.navigator) : null;
   return {
     shell: true,
     lang: doc.documentElement.lang,
@@ -65,11 +66,17 @@ const ui = extract((state) => {
     serversActive: doc.getElementById("serversView").classList.contains("active"),
     skeleton: Boolean(doc.querySelector("#serverList .server-list-skeleton-item")),
     listHosts: [...doc.querySelectorAll("#serverList .server-meta")].map((el) => el.textContent),
-    cardHosts: [...doc.querySelectorAll("#serverGridView .server-card .name")].map((el) => el.textContent),
+    cardHosts: [...doc.querySelectorAll("#serverGridView .server-card .name")].map(
+      (el) => el.textContent,
+    ),
     layout: Number(grid.dataset.layout),
     slotCount: slots.length,
-    slotsOk: slots.every((slot) =>
-      slot.querySelector(".slot-log") && slot.querySelector("form") && slot.querySelector(".slot-connect-btn")),
+    slotsOk: slots.every(
+      (slot) =>
+        slot.querySelector(".slot-log") &&
+        slot.querySelector("form") &&
+        slot.querySelector(".slot-connect-btn"),
+    ),
     platform,
     downloads,
     msHref: doc.getElementById("msLoginBtn").getAttribute("href"),
@@ -82,9 +89,11 @@ const ui = extract((state) => {
 export const login_gate = always(() => {
   const view = ui.current;
   if (!view.shell || !view.loggedOut) return true;
-  return !view.serversActive
-    && view.msHref === "/api/account/login/microsoft"
-    && (view.skeleton || view.listHosts.length === 0);
+  return (
+    !view.serversActive &&
+    view.msHref === "/api/account/login/microsoft" &&
+    (view.skeleton || view.listHosts.length === 0)
+  );
 });
 
 export const server_list_matches_grid = always(() => {
@@ -105,43 +114,55 @@ export const server_list_has_no_duplicates = always(() => {
 export const chat_grid_matches_layout = always(() => {
   const view = ui.current;
   if (!view.shell) return true;
-  return (view.layout === 1 || view.layout === 2 || view.layout === 4)
-    && view.slotCount === view.layout
-    && view.slotsOk;
+  return (
+    (view.layout === 1 || view.layout === 2 || view.layout === 4) &&
+    view.slotCount === view.layout &&
+    view.slotsOk
+  );
 });
 
 export const language_matches_visible_copy = always(() => {
   const view = ui.current;
   if (!view.shell) return true;
   const row = copy[view.lang];
-  return Boolean(row)
-    && view.title === row.title
-    && view.playText === row.play
-    && view.loginText === row.login;
+  return (
+    Boolean(row) &&
+    view.title === row.title &&
+    view.playText === row.play &&
+    view.loginText === row.login
+  );
 });
 
 export const download_buttons_follow_platform = always(() => {
   const view = ui.current;
   if (!view.shell) return true;
   const row = copy[view.lang];
-  const file = view.platform === "windows"
-    ? "MinePortal-win.zip"
-    : view.platform === "mac"
-      ? "MinePortal-mac-arm64.dmg"
-      : null;
-  return view.downloads.length === 2 && view.downloads.every((button) => {
-    if (!file) {
-      return button.disabled === "true"
-        && button.blocked
-        && (button.href == null || button.href === "")
-        && Boolean(row)
-        && button.text.includes(row.unsupported);
-    }
-    return button.disabled === "false"
-      && !button.blocked
-      && typeof button.href === "string"
-      && button.href.endsWith("/" + file);
-  });
+  const file =
+    view.platform === "windows"
+      ? "MinePortal-win.zip"
+      : view.platform === "mac"
+        ? "MinePortal-mac-arm64.dmg"
+        : null;
+  return (
+    view.downloads.length === 2 &&
+    view.downloads.every((button) => {
+      if (!file) {
+        return (
+          button.disabled === "true" &&
+          button.blocked &&
+          (button.href == null || button.href === "") &&
+          Boolean(row) &&
+          button.text.includes(row.unsupported)
+        );
+      }
+      return (
+        button.disabled === "false" &&
+        !button.blocked &&
+        typeof button.href === "string" &&
+        button.href.endsWith("/" + file)
+      );
+    })
+  );
 });
 
 const startLogin = registerCustomAction("startLogin", async (document, window) => {

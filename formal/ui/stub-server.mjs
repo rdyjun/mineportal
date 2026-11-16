@@ -40,7 +40,8 @@ function session(req) {
 function send(res, status, body, extra = {}) {
   const payload = typeof body === "string" ? body : JSON.stringify(body);
   res.writeHead(status, {
-    "content-type": typeof body === "string" ? "text/html; charset=utf-8" : "application/json; charset=utf-8",
+    "content-type":
+      typeof body === "string" ? "text/html; charset=utf-8" : "application/json; charset=utf-8",
     "cache-control": "no-store",
     ...extra,
   });
@@ -122,9 +123,14 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && pathname === "/api/account/logout") {
     const id = sessionId(req);
     if (id) sessions.delete(id);
-    return send(res, 200, { ok: true }, {
-      "set-cookie": "mp=; Path=/; Max-Age=0",
-    });
+    return send(
+      res,
+      200,
+      { ok: true },
+      {
+        "set-cookie": "mp=; Path=/; Max-Age=0",
+      },
+    );
   }
 
   if (req.method === "POST" && pathname === "/api/desktop/pair") {
@@ -161,7 +167,12 @@ const server = http.createServer(async (req, res) => {
       return send(res, 400, { error: "host and version are required" });
     }
     const parsed = parseAddress(hostText);
-    if (current.servers.some((item) => item.host.toLowerCase() === parsed.host.toLowerCase() && item.port === parsed.port)) {
+    if (
+      current.servers.some(
+        (item) =>
+          item.host.toLowerCase() === parsed.host.toLowerCase() && item.port === parsed.port,
+      )
+    ) {
       return send(res, 400, { error: "이미 등록된 서버 주소예요" });
     }
     const created = {
@@ -205,7 +216,8 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true });
     }
     if (req.method === "POST" && action === "chat") {
-      if (!found.connected) return send(res, 409, { error: "not connected", code: "not-connected" });
+      if (!found.connected)
+        return send(res, 409, { error: "not connected", code: "not-connected" });
       let body;
       try {
         body = await readBody(req);
@@ -229,10 +241,12 @@ const server = http.createServer(async (req, res) => {
   if (!file) return send(res, 404, "not found");
   const type = types[path.extname(file)] || "application/octet-stream";
   if (file.endsWith(`${path.sep}index.html`) || file.endsWith("/index.html")) {
-    const html = fs.readFileSync(file, "utf8").replace(
-      "<head>",
-      "<head><script>window.alert=function(){};window.confirm=function(){return true;}</script>",
-    );
+    const html = fs
+      .readFileSync(file, "utf8")
+      .replace(
+        "<head>",
+        "<head><script>window.alert=function(){};window.confirm=function(){return true;}</script>",
+      );
     res.writeHead(200, { "content-type": type, "cache-control": "no-store" });
     res.end(html);
     return;
