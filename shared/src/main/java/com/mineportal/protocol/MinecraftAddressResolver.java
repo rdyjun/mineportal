@@ -54,11 +54,11 @@ public final class MinecraftAddressResolver {
                 context = new InitialDirContext(env);
                 Attributes attributes = context.getAttributes("_minecraft._tcp." + host, new String[]{"SRV"});
                 Attribute values = attributes.get("SRV");
-                if (values == null) return List.of();
+                if (values == null) { return List.of(); }
                 NamingEnumeration<?> all = values.getAll();
                 while (all.hasMore()) {
                     String[] parts = String.valueOf(all.next()).trim().split("\\s+");
-                    if (parts.length != 4) continue;
+                    if (parts.length != 4) { continue; }
                     int priority = Integer.parseInt(parts[0]);
                     int weight = Integer.parseInt(parts[1]);
                     int port = Integer.parseInt(parts[2]);
@@ -105,7 +105,7 @@ public final class MinecraftAddressResolver {
 
     public ResolvedEndpoint resolve(String rawHost, int port, boolean requirePublic) throws UnknownHostException {
         String logicalHost = normalizeHost(rawHost);
-        if (!validPort(port)) throw new UnknownHostException("invalid port");
+        if (!validPort(port)) { throw new UnknownHostException("invalid port"); }
 
         List<SrvRecord> candidates = port == DEFAULT_PORT && !isIpLiteral(logicalHost)
                 ? SrvRecordSelector.order(dns.srv(logicalHost), random) : List.of();
@@ -120,7 +120,7 @@ public final class MinecraftAddressResolver {
         try {
             return resolveTarget(logicalHost, port, logicalHost, port, false, requirePublic);
         } catch (UnknownHostException directFailure) {
-            if (lastFailure != null) directFailure.addSuppressed(lastFailure);
+            if (lastFailure != null) { directFailure.addSuppressed(lastFailure); }
             throw directFailure;
         }
     }
@@ -129,7 +129,7 @@ public final class MinecraftAddressResolver {
                                            int targetPort, boolean fromSrv, boolean requirePublic)
             throws UnknownHostException {
         InetAddress[] addresses = dns.addresses(targetHost);
-        if (addresses.length == 0) throw new UnknownHostException(targetHost);
+        if (addresses.length == 0) { throw new UnknownHostException(targetHost); }
         if (requirePublic) {
             for (InetAddress candidate : addresses) {
                 if (!isPublic(candidate)) {
@@ -146,24 +146,24 @@ public final class MinecraftAddressResolver {
     public static boolean isPublic(InetAddress address) {
         if (address.isAnyLocalAddress() || address.isLoopbackAddress()
                 || address.isLinkLocalAddress() || address.isSiteLocalAddress()
-                || address.isMulticastAddress()) return false;
+                || address.isMulticastAddress()) { return false; }
 
         byte[] bytes = address.getAddress();
         if (address instanceof Inet4Address) {
             int first = bytes[0] & 0xff;
             int second = bytes[1] & 0xff;
             int third = bytes[2] & 0xff;
-            if (first == 0 || (first == 100 && second >= 64 && second <= 127)) return false;
-            if (first == 192 && second == 0 && (third == 0 || third == 2)) return false;
-            if (first == 192 && second == 88 && third == 99) return false;
-            if (first == 198 && (second == 18 || second == 19)) return false;
-            if (first == 198 && second == 51 && third == 100) return false;
-            if (first == 203 && second == 0 && third == 113) return false;
+            if (first == 0 || (first == 100 && second >= 64 && second <= 127)) { return false; }
+            if (first == 192 && second == 0 && (third == 0 || third == 2)) { return false; }
+            if (first == 192 && second == 88 && third == 99) { return false; }
+            if (first == 198 && (second == 18 || second == 19)) { return false; }
+            if (first == 198 && second == 51 && third == 100) { return false; }
+            if (first == 203 && second == 0 && third == 113) { return false; }
             return first < 224 && first != 255;
         }
         if (address instanceof Inet6Address) {
             int first = bytes[0] & 0xff;
-            if ((first & 0xfe) == 0xfc) return false;
+            if ((first & 0xfe) == 0xfc) { return false; }
             return !(first == 0x20 && (bytes[1] & 0xff) == 0x01
                     && (bytes[2] & 0xff) == 0x0d && (bytes[3] & 0xff) == 0xb8);
         }
@@ -171,9 +171,9 @@ public final class MinecraftAddressResolver {
     }
 
     static String normalizeHost(String rawHost) throws UnknownHostException {
-        if (rawHost == null) throw new UnknownHostException("host is required");
+        if (rawHost == null) { throw new UnknownHostException("host is required"); }
         String host = rawHost.trim().toLowerCase(Locale.ROOT);
-        if (host.startsWith("[") && host.endsWith("]")) host = host.substring(1, host.length() - 1);
+        if (host.startsWith("[") && host.endsWith("]")) { host = host.substring(1, host.length() - 1); }
         host = stripTrailingDot(host);
         if (host.isBlank() || host.length() > 253 || host.indexOf('\0') >= 0) {
             throw new UnknownHostException("invalid host");

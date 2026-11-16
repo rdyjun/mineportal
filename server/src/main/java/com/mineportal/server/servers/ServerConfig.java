@@ -40,32 +40,42 @@ public class ServerConfig {
 
   /** 동시에 들어온 요청 중 하나만 새 연결 시도를 시작하게 한다. */
   public synchronized long beginConnection() {
-    if (connectionState.active()) return 0;
+    if (connectionState.active()) {
+      return 0;
+    }
     connectionState = ConnectionState.CONNECTING;
     return ++lastAttemptId;
   }
 
   /** 늦게 도착한 connected 이벤트가 이미 닫힌 연결을 되살리지 못하게 한다. */
   public synchronized boolean markConnected(long attemptId) {
-    if (attemptId != lastAttemptId || connectionState != ConnectionState.CONNECTING) return false;
+    if (attemptId != lastAttemptId || connectionState != ConnectionState.CONNECTING) {
+      return false;
+    }
     connectionState = ConnectionState.CONNECTED;
     return true;
   }
 
   public synchronized boolean markFailed(long attemptId) {
-    if (attemptId != lastAttemptId || !connectionState.active()) return false;
+    if (attemptId != lastAttemptId || !connectionState.active()) {
+      return false;
+    }
     connectionState = ConnectionState.FAILED;
     return true;
   }
 
   public synchronized boolean markClosed(long attemptId) {
-    if (attemptId != lastAttemptId || connectionState == ConnectionState.CLOSED) return false;
+    if (attemptId != lastAttemptId || connectionState == ConnectionState.CLOSED) {
+      return false;
+    }
     connectionState = ConnectionState.CLOSED;
     return true;
   }
 
   public synchronized boolean markClosed() {
-    if (connectionState == ConnectionState.CLOSED) return false;
+    if (connectionState == ConnectionState.CLOSED) {
+      return false;
+    }
     connectionState = ConnectionState.CLOSED;
     return true;
   }
@@ -96,12 +106,16 @@ public class ServerConfig {
 
   public void pushStatusHistory(StatusEntry entry) {
     statusHistory.add(entry);
-    if (statusHistory.size() > MAX_HISTORY) statusHistory.remove(0);
+    if (statusHistory.size() > MAX_HISTORY) {
+      statusHistory.remove(0);
+    }
   }
 
   public void pushMessage(ChatMessage message) {
     messages.add(message);
-    if (messages.size() > MAX_HISTORY) messages.remove(0);
+    if (messages.size() > MAX_HISTORY) {
+      messages.remove(0);
+    }
   }
 
   public List<StatusEntry> getStatusHistory() {

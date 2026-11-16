@@ -1,8 +1,17 @@
 package com.mineportal.mc;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.mineportal.auth.Account;
 import java.util.UUID;
@@ -80,11 +89,14 @@ class ChatClientTest {
             account,
             events,
             (h, p, v, f, transferring) -> {
-              if (!transferring) return first;
+              if (!transferring) {
+                return first;
+              }
               resolving.countDown();
               try {
-                if (!release.await(2, TimeUnit.SECONDS))
+                if (!release.await(2, TimeUnit.SECONDS)) {
                   throw new IllegalStateException("test release timeout");
+                }
               } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException(interrupted);
@@ -136,7 +148,9 @@ class ChatClientTest {
             account,
             events,
             (h, p, v, f, transferring) -> {
-              if (transferring) throw new IllegalArgumentException("unresolvable target");
+              if (transferring) {
+                throw new IllegalArgumentException("unresolvable target");
+              }
               return first;
             });
     client.connect("first.test", 25565, 0, -1);

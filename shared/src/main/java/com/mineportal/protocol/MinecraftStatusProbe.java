@@ -38,7 +38,7 @@ public final class MinecraftStatusProbe {
                 throw new IOException("invalid status response size");
             }
             byte[] frame = in.readNBytes(frameLength);
-            if (frame.length != frameLength) throw new EOFException("incomplete status response");
+            if (frame.length != frameLength) { throw new EOFException("incomplete status response"); }
 
             return parseStatusFrame(frame);
         }
@@ -47,7 +47,7 @@ public final class MinecraftStatusProbe {
     static Status parseStatusFrame(byte[] frame) throws IOException {
         try {
             Cursor cursor = new Cursor(frame);
-            if (cursor.readVarInt() != 0) throw new IOException("unexpected status packet");
+            if (cursor.readVarInt() != 0) { throw new IOException("unexpected status packet"); }
             JsonObject root = JsonParser.parseString(cursor.readString()).getAsJsonObject();
             Integer protocol = integer(root, "version", "protocol");
             Integer forge = integer(root, "forgeData", "fmlNetworkVersion");
@@ -58,9 +58,9 @@ public final class MinecraftStatusProbe {
     }
 
     private static Integer integer(JsonObject root, String objectName, String fieldName) {
-        if (!root.has(objectName) || !root.get(objectName).isJsonObject()) return null;
+        if (!root.has(objectName) || !root.get(objectName).isJsonObject()) { return null; }
         JsonObject object = root.getAsJsonObject(objectName);
-        if (!object.has(fieldName) || !object.get(fieldName).isJsonPrimitive()) return null;
+        if (!object.has(fieldName) || !object.get(fieldName).isJsonPrimitive()) { return null; }
         try {
             return object.get(fieldName).getAsInt();
         } catch (RuntimeException ignored) {
@@ -103,9 +103,9 @@ public final class MinecraftStatusProbe {
         int value = 0;
         for (int shift = 0; shift < 32; shift += 7) {
             int next = in.read();
-            if (next < 0) throw new EOFException("incomplete VarInt");
+            if (next < 0) { throw new EOFException("incomplete VarInt"); }
             value |= (next & 0x7f) << shift;
-            if ((next & 0x80) == 0) return value;
+            if ((next & 0x80) == 0) { return value; }
         }
         throw new IOException("VarInt too large");
     }
@@ -121,17 +121,17 @@ public final class MinecraftStatusProbe {
         private int readVarInt() throws IOException {
             int value = 0;
             for (int shift = 0; shift < 32; shift += 7) {
-                if (offset >= data.length) throw new EOFException("incomplete VarInt");
+                if (offset >= data.length) { throw new EOFException("incomplete VarInt"); }
                 int next = data[offset++] & 0xff;
                 value |= (next & 0x7f) << shift;
-                if ((next & 0x80) == 0) return value;
+                if ((next & 0x80) == 0) { return value; }
             }
             throw new IOException("VarInt too large");
         }
 
         private String readString() throws IOException {
             int length = readVarInt();
-            if (length < 0 || length > data.length - offset) throw new EOFException("invalid string length");
+            if (length < 0 || length > data.length - offset) { throw new EOFException("invalid string length"); }
             String value = new String(data, offset, length, StandardCharsets.UTF_8);
             offset += length;
             return value;

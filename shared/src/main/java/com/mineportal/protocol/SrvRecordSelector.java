@@ -35,14 +35,14 @@ final class SrvRecordSelector {
 
   private static int selectWeighted(List<SrvRecord> records, RandomGenerator random) {
     long totalWeight = 0;
-    for (SrvRecord record : records) totalWeight += Math.max(0, record.weight());
-    if (totalWeight == 0) return random.nextInt(records.size());
+    for (SrvRecord record : records) { totalWeight += Math.max(0, record.weight()); }
+    if (totalWeight == 0) { return random.nextInt(records.size()); }
 
     long choice = random.nextLong(totalWeight);
     long cumulative = 0;
     for (int i = 0; i < records.size(); i++) {
       cumulative += Math.max(0, records.get(i).weight());
-      if (choice < cumulative) return i;
+      if (choice < cumulative) { return i; }
     }
     throw new IllegalStateException("weighted SRV selection did not select a record");
   }

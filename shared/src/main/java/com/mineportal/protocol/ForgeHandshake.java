@@ -95,15 +95,15 @@ public final class ForgeHandshake {
      * forgeData.fmlNetworkVersion(1.20.1 이하는 2/3), serverProtocol은 서버의 프로토콜 번호.
      */
     public static String markHost(String host, int fmlNetworkVersion, int serverProtocol) {
-        if (serverProtocol >= PROTOCOL_1_20_2) return host + "\0FORGE"; // NetworkContext.enhanceHostName
+        if (serverProtocol >= PROTOCOL_1_20_2) { return host + "\0FORGE"; } // NetworkContext.enhanceHostName
         return host + "\0FML" + fmlNetworkVersion + "\0";             // NetworkConstants.NETVERSION
     }
 
     /** 1.20.2+ forge:handshake 요청을 응답, 무시 또는 명시적 거부로 분류한다. */
     public static Result<ServerboundCustomPayloadPacket> handle(ClientboundCustomPayloadPacket packet) {
-        if (!CHANNEL.equals(packet.getChannel())) return Result.ignored();
+        if (!CHANNEL.equals(packet.getChannel())) { return Result.ignored(); }
         byte[] data = packet.getData();
-        if (data == null || data.length == 0 || data.length > MAX_HANDSHAKE_PAYLOAD_BYTES) return Result.ignored();
+        if (data == null || data.length == 0 || data.length > MAX_HANDSHAKE_PAYLOAD_BYTES) { return Result.ignored(); }
         try {
             ByteBuf in = Unpooled.wrappedBuffer(data);
             int id = MinecraftTypes.readVarInt(in);
@@ -149,9 +149,9 @@ public final class ForgeHandshake {
             switch (in.readUnsignedByte()) {
                 case FML_MOD_LIST -> {
                     int mods = boundedCount(MinecraftTypes.readVarInt(in));
-                    for (int i = 0; i < mods; i++) MinecraftTypes.readString(in);
+                    for (int i = 0; i < mods; i++) { MinecraftTypes.readString(in); }
                     int channels = boundedCount(MinecraftTypes.readVarInt(in));
-                    for (int i = 0; i < channels * 2; i++) MinecraftTypes.readString(in);
+                    for (int i = 0; i < channels * 2; i++) { MinecraftTypes.readString(in); }
                     out.writeByte(FML_MOD_LIST_REPLY);
                     MinecraftTypes.writeVarInt(out, 0);
                     MinecraftTypes.writeVarInt(out, 0);
@@ -176,7 +176,7 @@ public final class ForgeHandshake {
     }
 
     private static int boundedCount(int count) {
-        if (count < 0 || count > 65535) throw new IllegalArgumentException("invalid handshake count");
+        if (count < 0 || count > 65535) { throw new IllegalArgumentException("invalid handshake count"); }
         return count;
     }
 
