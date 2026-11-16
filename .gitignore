@@ -5,6 +5,7 @@ desktop-client/.gradle/
 .env
 .omc/
 .idea/
+node_modules/
 # Legacy authentication cache; never mount this into the current server.
 nmp-cache/
 *.log
