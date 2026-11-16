@@ -136,9 +136,12 @@ public final class ChatClient {
       try {
         MinecraftStatusProbe.Status status =
             MinecraftStatusProbe.probe(endpoint, MinecraftCodec.CODEC.getProtocolVersion());
-        if (status.protocol() != null) selectedProtocol = status.protocol();
-        if (status.forgeNetworkVersion() != null)
+        if (status.protocol() != null) {
+          selectedProtocol = status.protocol();
+        }
+        if (status.forgeNetworkVersion() != null) {
           selectedForgeNetVersion = status.forgeNetworkVersion();
+        }
       } catch (java.io.IOException ignored) {
         // Some servers disable status ping. ProtocolCompatibility will make one native-codec
         // attempt.
@@ -175,7 +178,9 @@ public final class ChatClient {
           @Override
           public void packetReceived(Session s, Packet packet) {
             synchronized (lifecycle) {
-              if (stopped || session != s) return;
+              if (stopped || session != s) {
+                return;
+              }
             }
             if (packet instanceof ClientboundTransferPacket transfer) {
               transferTo(client, transfer);
@@ -207,7 +212,9 @@ public final class ChatClient {
                 announce = !joinAnnounced;
                 joinAnnounced = true;
               }
-              if (announce) listener.onConnected();
+              if (announce) {
+                listener.onConnected();
+              }
               // Register our signing key with the server before any chat is sent, same as
               // McConnectionManager does for the trial-mode relay.
               ChatSigner signer = chatSigner;
@@ -232,7 +239,9 @@ public final class ChatClient {
           @Override
           public void disconnected(DisconnectedEvent event) {
             synchronized (lifecycle) {
-              if (stopped || session != event.getSession()) return;
+              if (stopped || session != event.getSession()) {
+                return;
+              }
               stopped = true;
               session = null;
               chatSigner = null;
@@ -256,7 +265,9 @@ public final class ChatClient {
   private void transferTo(ClientSession source, ClientboundTransferPacket transfer) {
     long attempt;
     synchronized (lifecycle) {
-      if (stopped || session != source) return;
+      if (stopped || session != source) {
+        return;
+      }
       if (++transferCount > 8
           || transfer.getHost() == null
           || transfer.getHost().isBlank()
@@ -279,7 +290,9 @@ public final class ChatClient {
                 connectSession(transfer.getHost(), transfer.getPort(), 0, -1, true, attempt);
               } catch (Exception error) {
                 synchronized (lifecycle) {
-                  if (stopped || generation != attempt) return;
+                  if (stopped || generation != attempt) {
+                    return;
+                  }
                   stopped = true;
                   session = null;
                 }
@@ -350,7 +363,9 @@ public final class ChatClient {
       chatSigner = null;
       commandTree = null;
     }
-    if (s != null) s.disconnect(Component.text("Disconnected by user"));
+    if (s != null) {
+      s.disconnect(Component.text("Disconnected by user"));
+    }
   }
 
   private record SignableArgument(String name, String text) {}
@@ -360,7 +375,9 @@ public final class ChatClient {
   private static SignableArgument findSignableArgument(CommandTree tree, String command) {
     CommandNode[] nodes = tree.nodes();
     String[] tokens = command.split(" ");
-    if (tokens.length == 0 || nodes.length == 0) return null;
+    if (tokens.length == 0 || nodes.length == 0) {
+      return null;
+    }
 
     int nodeIndex = tree.rootIndex();
     int consumed = 0;
@@ -388,7 +405,9 @@ public final class ChatClient {
           break;
         }
       }
-      if (argumentMatch == -1) return null;
+      if (argumentMatch == -1) {
+        return null;
+      }
 
       CommandNode argument = nodes[argumentMatch];
       if (argument.getParser() == CommandParser.MESSAGE) {
@@ -403,7 +422,9 @@ public final class ChatClient {
 
   private static Map<String, String> loadLang() {
     try (var in = ChatClient.class.getResourceAsStream("/lang/ko_kr.json")) {
-      if (in == null) return Map.of();
+      if (in == null) {
+        return Map.of();
+      }
       return new Gson().fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), Map.class);
     } catch (Exception e) {
       return Map.of();
@@ -443,7 +464,9 @@ public final class ChatClient {
         own = String.format(pattern, args);
       } catch (Exception e) {
         StringBuilder fallback = new StringBuilder(pattern);
-        for (Object arg : args) fallback.append(' ').append(arg);
+        for (Object arg : args) {
+          fallback.append(' ').append(arg);
+        }
         own = fallback.toString();
       }
     } else if (c instanceof net.kyori.adventure.text.TextComponent tx) {

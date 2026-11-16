@@ -49,7 +49,9 @@ public final class SingleInstance {
   /** Polled by the running instance to see if a newer launch handed off a code. */
   public static String consumePendingPairCode() {
     Path file = AppPaths.dir().resolve("pending-pair.txt");
-    if (!Files.isRegularFile(file)) return null;
+    if (!Files.isRegularFile(file)) {
+      return null;
+    }
     try {
       String code = Files.readString(file, StandardCharsets.UTF_8).trim();
       Files.deleteIfExists(file);

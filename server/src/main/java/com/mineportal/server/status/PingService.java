@@ -132,8 +132,12 @@ public class PingService {
   }
 
   private String extractMotd(JsonNode description) {
-    if (description.isTextual()) return description.asText();
-    if (description.has("text")) return description.get("text").asText();
+    if (description.isTextual()) {
+      return description.asText();
+    }
+    if (description.has("text")) {
+      return description.get("text").asText();
+    }
     return null;
   }
 
@@ -184,11 +188,17 @@ public class PingService {
     int position = 0;
     while (true) {
       int currentByte = in.read();
-      if (currentByte == -1) throw new EOFException("stream closed while reading VarInt");
+      if (currentByte == -1) {
+        throw new EOFException("stream closed while reading VarInt");
+      }
       value |= (currentByte & 0x7F) << position;
-      if ((currentByte & 0x80) == 0) break;
+      if ((currentByte & 0x80) == 0) {
+        break;
+      }
       position += 7;
-      if (position >= 32) throw new IOException("VarInt too big");
+      if (position >= 32) {
+        throw new IOException("VarInt too big");
+      }
     }
     return value;
   }
@@ -206,20 +216,27 @@ public class PingService {
       int value = 0;
       int position = 0;
       while (true) {
-        if (pos >= data.length) throw new EOFException("ran out of bytes reading VarInt");
+        if (pos >= data.length) {
+          throw new EOFException("ran out of bytes reading VarInt");
+        }
         int currentByte = data[pos++] & 0xFF;
         value |= (currentByte & 0x7F) << position;
-        if ((currentByte & 0x80) == 0) break;
+        if ((currentByte & 0x80) == 0) {
+          break;
+        }
         position += 7;
-        if (position >= 32) throw new IOException("VarInt too big");
+        if (position >= 32) {
+          throw new IOException("VarInt too big");
+        }
       }
       return value;
     }
 
     String readString() throws IOException {
       int length = readVarInt();
-      if (length < 0 || length > data.length - pos)
+      if (length < 0 || length > data.length - pos) {
         throw new EOFException("string length exceeds remaining bytes");
+      }
       String s = new String(data, pos, length, StandardCharsets.UTF_8);
       pos += length;
       return s;

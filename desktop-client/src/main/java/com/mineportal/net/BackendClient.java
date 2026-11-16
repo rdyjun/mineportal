@@ -74,19 +74,25 @@ public final class BackendClient {
 
   /** mineportal:// 링크로 앱이 (재)실행됐을 때 호출된다 — 다이얼로그 없이 바로 페어링한다. */
   public void pairImmediately(String code) {
-    if (code == null || code.isBlank()) return;
+    if (code == null || code.isBlank()) {
+      return;
+    }
     pendingPairCode = code.trim().toUpperCase();
     trySendPendingPair();
   }
 
   private void checkPendingPairHandoff() {
     String code = SingleInstance.consumePendingPairCode();
-    if (code != null) pairImmediately(code);
+    if (code != null) {
+      pairImmediately(code);
+    }
   }
 
   private void trySendPendingPair() {
     String code = pendingPairCode;
-    if (code == null || webSocket == null) return;
+    if (code == null || webSocket == null) {
+      return;
+    }
     send(Map.of("type", "pair", "code", code));
     pendingPairCode = null;
   }
@@ -110,7 +116,9 @@ public final class BackendClient {
 
   private void send(Map<String, Object> payload) {
     WebSocket ws = webSocket;
-    if (ws == null) return;
+    if (ws == null) {
+      return;
+    }
     ws.sendText(gson.toJson(payload), true);
   }
 
@@ -205,7 +213,9 @@ public final class BackendClient {
    * 강제하는 서버는 조용히 거부한다(McConnectionManager와 동일한 동작).
    */
   private Account.SigningCert parseSigningCert(JsonObject obj) {
-    if (!obj.has("certPrivateKey") || !obj.has("certPublicKey")) return null;
+    if (!obj.has("certPrivateKey") || !obj.has("certPublicKey")) {
+      return null;
+    }
     try {
       KeyFactory rsa = KeyFactory.getInstance("RSA");
       PrivateKey privateKey =
@@ -233,10 +243,14 @@ public final class BackendClient {
       int serverProtocol,
       int forgeNetVersion) {
     Account acc = account;
-    if (acc == null) return; // 토큰이 아직 안 왔으면(로그인 전) 할 수 있는 게 없다
+    if (acc == null) {
+      return;
+    } // 토큰이 아직 안 왔으면(로그인 전) 할 수 있는 게 없다
     ActiveClient previous = activeClients.get(serverId);
     if (previous != null) {
-      if (previous.attemptId() == attemptId) return;
+      if (previous.attemptId() == attemptId) {
+        return;
+      }
       previous.client().disconnect();
     }
 
@@ -298,7 +312,9 @@ public final class BackendClient {
 
   private void handleDisconnect(String serverId) {
     ActiveClient active = activeClients.remove(serverId);
-    if (active != null) active.client().disconnect();
+    if (active != null) {
+      active.client().disconnect();
+    }
   }
 
   private void clearAccount() {
@@ -317,7 +333,9 @@ public final class BackendClient {
 
   private void handleSendChat(String serverId, String message) {
     ActiveClient active = activeClients.get(serverId);
-    if (active != null) active.client().sendChat(message);
+    if (active != null) {
+      active.client().sendChat(message);
+    }
   }
 
   private void removeAttempt(String serverId, long attemptId) {

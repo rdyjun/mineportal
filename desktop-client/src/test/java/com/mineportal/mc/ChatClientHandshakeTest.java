@@ -1,6 +1,8 @@
 package com.mineportal.mc;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.mineportal.auth.Account;
 import java.io.ByteArrayInputStream;
@@ -58,9 +60,13 @@ class ChatClientHandshakeTest {
     int result = 0;
     for (int i = 0; i < 5; i++) {
       int value = in.read();
-      if (value < 0) throw new java.io.EOFException();
+      if (value < 0) {
+        throw new java.io.EOFException();
+      }
       result |= (value & 0x7f) << (i * 7);
-      if ((value & 0x80) == 0) return result;
+      if ((value & 0x80) == 0) {
+        return result;
+      }
     }
     throw new java.io.IOException("oversized VarInt");
   }

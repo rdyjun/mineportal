@@ -66,23 +66,31 @@ public class DesktopConnectionManager {
   /** 코드를 소비하고 연결된 ownerId를 반환한다 — 만료/미존재면 null (1회용이라 성공/실패 상관없이 제거됨). */
   public String consumePairingCode(String code) {
     PendingCode pending = pendingCodes.remove(code);
-    if (pending == null || pending.expiresAt() < System.currentTimeMillis()) return null;
+    if (pending == null || pending.expiresAt() < System.currentTimeMillis()) {
+      return null;
+    }
     return pending.ownerId();
   }
 
   public String issueDeviceToken(String ownerId) {
     String token = randomToken();
     String previous = ownerDeviceTokens.put(ownerId, token);
-    if (previous != null) deviceTokens.remove(previous);
+    if (previous != null) {
+      deviceTokens.remove(previous);
+    }
     deviceTokens.put(
         token, new DeviceGrant(ownerId, System.currentTimeMillis() + deviceTokenTtlMs));
     return token;
   }
 
   public String ownerForDeviceToken(String token) {
-    if (token == null) return null;
+    if (token == null) {
+      return null;
+    }
     DeviceGrant grant = deviceTokens.get(token);
-    if (grant == null) return null;
+    if (grant == null) {
+      return null;
+    }
     if (grant.expiresAt() <= System.currentTimeMillis()) {
       deviceTokens.remove(token, grant);
       ownerDeviceTokens.remove(grant.ownerId(), token);
@@ -156,9 +164,13 @@ public class DesktopConnectionManager {
   public void unpair(String ownerId) {
     pendingCodes.entrySet().removeIf(entry -> entry.getValue().ownerId().equals(ownerId));
     String token = ownerDeviceTokens.remove(ownerId);
-    if (token != null) deviceTokens.remove(token);
+    if (token != null) {
+      deviceTokens.remove(token);
+    }
     WebSocketSession session = appSessions.remove(ownerId);
-    if (session == null) return;
+    if (session == null) {
+      return;
+    }
     try {
       session.sendMessage(
           new TextMessage(objectMapper.writeValueAsString(Map.of("type", "unpaired"))));
@@ -173,9 +185,13 @@ public class DesktopConnectionManager {
    * McConnectionManager와 동일하게 enforce-secure-profile 서버용 채팅/명령어 서명을 직접 할 수 있게 한다.
    */
   public void pushTokenIfConnected(AccountState state) {
-    if (state.profile == null || state.fullSession == null) return;
+    if (state.profile == null || state.fullSession == null) {
+      return;
+    }
     String ownerId = state.profile.id();
-    if (!isConnected(ownerId)) return;
+    if (!isConnected(ownerId)) {
+      return;
+    }
     StepMCProfile.MCProfile mcProfile = state.fullSession.getMcProfile();
     StepMCToken.MCToken token = mcProfile.getMcToken();
 
@@ -201,7 +217,9 @@ public class DesktopConnectionManager {
 
   public boolean send(String ownerId, Map<String, Object> payload) {
     WebSocketSession session = appSessions.get(ownerId);
-    if (session == null || !session.isOpen()) return false;
+    if (session == null || !session.isOpen()) {
+      return false;
+    }
     try {
       session.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
       return true;
@@ -223,7 +241,9 @@ public class DesktopConnectionManager {
     byte[] bytes = new byte[32];
     RANDOM.nextBytes(bytes);
     StringBuilder sb = new StringBuilder(bytes.length * 2);
-    for (byte b : bytes) sb.append(String.format("%02x", b));
+    for (byte b : bytes) {
+      sb.append(String.format("%02x", b));
+    }
     return sb.toString();
   }
 }

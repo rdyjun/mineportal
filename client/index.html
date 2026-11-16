@@ -1370,7 +1370,6 @@
       ko: { label: "한국어" },
       en: { label: "English" },
     };
-    const langPicker = document.getElementById("langPicker");
     const langBtn = document.getElementById("langBtn");
     const langFlag = document.getElementById("langFlag");
     const langMenu = document.getElementById("langMenu");
@@ -1648,7 +1647,6 @@
     let account = { status: "logged-out" };
     let servers = [];
     let serversLoaded = false; // 서버 목록을 아직 한 번도 못 받아왔으면(HTTP/WS 둘 다) true로 안 바뀜 — 그동안은 스켈레톤을 보여준다
-    let layout = 1;
     let slots = [{ serverId: null }]; // one entry per visible chat-grid slot
     let slotRefs = []; // DOM refs parallel to `slots`, rebuilt whenever the layout changes
     let desktopAvailable = false;
@@ -1672,7 +1670,7 @@
         const res = await fetch("/api/account");
         account = await res.json();
         renderAccount();
-      } catch (e) {
+      } catch (_) {
         // 네트워크 오류면 마지막으로 알려진 값을 그대로 쓴다.
       }
       desktopAvailable = !!account.desktopConnected;
@@ -2626,7 +2624,6 @@
     }
 
     function setLayout(n) {
-      layout = n;
       const prev = slots;
       slots = [];
       for (let i = 0; i < n; i++) slots.push(prev[i] || { serverId: null });
@@ -3187,7 +3184,7 @@
     async function nativeDisconnect(serverId) {
       try {
         await McNative.disconnect({ serverId });
-      } catch (e) {
+      } catch (_) {
         // 이미 끊어져 있었을 수도 있음 — 조용히 무시.
       }
     }
@@ -3214,7 +3211,7 @@
           nativeAccount.name = restored.name;
           return true;
         }
-      } catch (e) { /* 무시하고 새 로그인으로 진행 */ }
+      } catch (_) { /* 무시하고 새 로그인으로 진행 */ }
 
       let removeListener = null;
       try {
@@ -3229,7 +3226,7 @@
         nativeAccount.loggedIn = true;
         nativeAccount.name = result.name;
         return true;
-      } catch (e) {
+      } catch (_) {
         alert(t("alertLoginFirst"));
         return false;
       } finally {

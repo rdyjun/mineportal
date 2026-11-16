@@ -1,0 +1,42 @@
+name: JavaScript style
+
+on:
+  pull_request:
+    paths:
+      - 'client/**'
+      - 'toss-client/**'
+      - 'formal/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'eslint.config.mjs'
+      - 'prettier.config.mjs'
+      - '.prettierignore'
+      - '.editorconfig'
+      - 'docs/code-style.md'
+      - '.github/workflows/js-style.yml'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: js-style-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eslint-prettier:
+    name: ESLint and Prettier
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Check JavaScript and TypeScript
+        run: |
+          npm ci
+          npm run check

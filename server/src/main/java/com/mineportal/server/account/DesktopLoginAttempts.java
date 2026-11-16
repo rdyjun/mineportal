@@ -41,7 +41,9 @@ final class DesktopLoginAttempts {
 
   synchronized Started start(String appSid) {
     attempts.values().removeIf(a -> a.expiresAt <= clock.millis() || a.appSid.equals(appSid));
-    if (attempts.size() >= 1000) throw new IllegalStateException("Too many login attempts");
+    if (attempts.size() >= 1000) {
+      throw new IllegalStateException("Too many login attempts");
+    }
     String id = UUID.randomUUID().toString();
     String proof = UUID.randomUUID().toString() + UUID.randomUUID();
     attempts.put(id, new Attempt(appSid, proof, clock.millis() + TTL_MS));
@@ -50,7 +52,9 @@ final class DesktopLoginAttempts {
 
   synchronized String prepare(String id, String browserSid) {
     Attempt attempt = active(id);
-    if (attempt.authorized) throw new IllegalArgumentException("Already started");
+    if (attempt.authorized) {
+      throw new IllegalArgumentException("Already started");
+    }
     attempt.browserSid = browserSid;
     attempt.confirmation = UUID.randomUUID().toString();
     return attempt.confirmation;
@@ -81,7 +85,9 @@ final class DesktopLoginAttempts {
     if (!attempt.appSid.equals(appSid) || !matches(attempt.proof, proof)) {
       throw new IllegalArgumentException("Invalid proof");
     }
-    if (attempt.completedSid == null) return null;
+    if (attempt.completedSid == null) {
+      return null;
+    }
     attempts.remove(id);
     return attempt.completedSid;
   }
