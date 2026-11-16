@@ -284,7 +284,9 @@ public class AuthController {
   // 예전 Node 백엔드의 fire-and-forget completeMicrosoftLogin()과 동일한 방식.
   private void completeLoginAsync(String sid, String code) {
     AccountState state = accountSessions.get(sid);
-    if ("logging-in".equals(state.status)) return;
+    if ("logging-in".equals(state.status)) {
+      return;
+    }
     state.status = "logging-in";
     state.error = null;
     broadcaster.refreshAccountFor(sid);

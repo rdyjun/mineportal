@@ -43,10 +43,14 @@ public class ServerWsHandler extends TextWebSocketHandler {
   public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
     String sid = (String) session.getAttributes().get("sid");
     broadcaster.unregister(session);
-    if (sid == null || broadcaster.hasSessionFor(sid)) return; // 아직 같은 계정의 다른 탭이 열려있으면 유지
+    if (sid == null || broadcaster.hasSessionFor(sid)) {
+      return;
+    } // 아직 같은 계정의 다른 탭이 열려있으면 유지
 
     var profile = accountSessions.get(sid).profile;
-    if (profile == null) return;
+    if (profile == null) {
+      return;
+    }
     String ownerId = profile.id();
     for (var server : registry.listServers(ownerId)) {
       if (server.isActive()) {

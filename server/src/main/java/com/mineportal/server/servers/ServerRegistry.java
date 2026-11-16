@@ -52,7 +52,9 @@ public class ServerRegistry {
   }
 
   public Optional<ServerConfig> getServer(String id, String userId) {
-    if (!repository.isServerOwnedByUser(id, userId)) return Optional.empty();
+    if (!repository.isServerOwnedByUser(id, userId)) {
+      return Optional.empty();
+    }
     return Optional.ofNullable(servers.get(id));
   }
 

@@ -31,7 +31,9 @@ public class AccountSessionExpiryListener {
     Profile profile = expired.state().profile;
     if (profile != null) {
       for (var server : registry.listServers(profile.id())) {
-        if (!server.isActive()) continue;
+        if (!server.isActive()) {
+          continue;
+        }
         long attemptId = server.currentAttemptId();
         if (server.markClosed(attemptId)) {
           broadcaster.setStatus(server, "account session expired", true);

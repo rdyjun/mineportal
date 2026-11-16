@@ -1,0 +1,17 @@
+node_modules
+**/build
+**/dist
+**/.gradle
+package-lock.json
+**/package-lock.json
+*.html
+*.java
+*.md
+*.yml
+*.yaml
+*.json
+*.tla
+*.cfg
+*.gradle
+*.png
+*.jar

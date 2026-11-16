@@ -3,6 +3,7 @@ plugins {
     id 'com.gradleup.shadow' version '9.1.0'
     id 'com.diffplug.spotless' version '8.10.4'
     id 'org.openjfx.javafxplugin' version '0.1.0'
+    id 'checkstyle'
 }
 
 group = 'com.mineportal'
@@ -65,6 +66,22 @@ spotless {
         googleJavaFormat('1.28.0')
         formatAnnotations()
     }
+}
+
+// Shared sources are part of this source set, so checkstyleMain/Test cover them too.
+checkstyle {
+    toolVersion = '10.24.0'
+    ignoreFailures = false
+    maxWarnings = 0
+    maxErrors = 0
+    configFile = rootProject.file('../config/checkstyle/checkstyle.xml')
+    configDirectory.set(rootProject.layout.projectDirectory.dir('../config/checkstyle'))
+    enableExternalDtdLoad = true
+}
+
+tasks.withType(Checkstyle).configureEach {
+    maxWarnings = 0
+    maxErrors = 0
 }
 
 // The version string the running app reports (used for update checks).

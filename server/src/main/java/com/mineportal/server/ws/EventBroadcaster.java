@@ -51,7 +51,9 @@ public class EventBroadcaster {
   /** 주어진 sid를 소유한 WS 세션이 (다른 탭 등으로) 아직 남아있는지 확인한다 — 마지막 탭이 닫혔을 때만 좀비 마인크래프트 연결을 정리하기 위해 사용된다. */
   public boolean hasSessionFor(String sid) {
     for (WebSocketSession session : sessions) {
-      if (sid.equals(sidOf(session))) return true;
+      if (sid.equals(sidOf(session))) {
+        return true;
+      }
     }
     return false;
   }
@@ -67,7 +69,9 @@ public class EventBroadcaster {
    */
   private String ownerIdOf(WebSocketSession session) {
     String sid = sidOf(session);
-    if (sid == null) return null;
+    if (sid == null) {
+      return null;
+    }
     var profile = accountSessions.get(sid).profile;
     return profile != null ? profile.id() : null;
   }
@@ -87,14 +91,18 @@ public class EventBroadcaster {
   /** 이 세션 자신의 계정 상태를 다시 전송한다 — 로그인 시도가 끝난 직후에 사용된다. */
   public void refreshAccountFor(String sid) {
     for (WebSocketSession session : sessions) {
-      if (sid.equals(sidOf(session))) sendAccountSnapshot(session);
+      if (sid.equals(sidOf(session))) {
+        sendAccountSnapshot(session);
+      }
     }
   }
 
   /** 데스크톱 앱이 방금 페어링/재접속되거나 끊겼을 때, 이 계정을 보고 있는 모든 브라우저 탭에 최신 desktopConnected 값을 다시 밀어준다. */
   public void refreshAccountForOwner(String ownerId) {
     for (WebSocketSession session : sessions) {
-      if (ownerId.equals(ownerIdOf(session))) sendAccountSnapshot(session);
+      if (ownerId.equals(ownerIdOf(session))) {
+        sendAccountSnapshot(session);
+      }
     }
   }
 
@@ -111,7 +119,9 @@ public class EventBroadcaster {
   public void broadcastServerEvent(String serverId, Map<String, Object> payload) {
     for (WebSocketSession session : sessions) {
       String ownerId = ownerIdOf(session);
-      if (ownerId == null || !registry.isOwnedByUser(serverId, ownerId)) continue;
+      if (ownerId == null || !registry.isOwnedByUser(serverId, ownerId)) {
+        continue;
+      }
       send(session, Map.of("type", "server-event", "serverId", serverId, "payload", payload));
     }
   }
@@ -119,13 +129,15 @@ public class EventBroadcaster {
   /** 이 세션 자신의 서버 목록을 다시 전송한다 — 변경 작업(추가/연결) 이후에 사용되어, 이 브라우저 탭이 다음 전체 페이지 로드를 기다리지 않고도 갱신되게 한다. */
   public void refreshServersFor(String sid) {
     for (WebSocketSession session : sessions) {
-      if (sid.equals(sidOf(session))) sendServersSnapshot(session);
+      if (sid.equals(sidOf(session))) {
+        sendServersSnapshot(session);
+      }
     }
   }
 
   /**
-   * 서버의 상태를 갱신하고, 이력에 기록하고, 변경 사항을 브로드캐스트한다 — 임시 connect 스텁(현재 단계)이든 실제 MCProtocolLib 리스너(이후 단계)든,
-   * 모든 상태 전환이 반드시 거쳐가는 유일한 관문이다. src/servers.ts의 setStatus()를 포팅한 것.
+   * 서버의 상태를 갱신하고, 이력에 기록하고, 변경 사항을 브로드캐스트한다. 모든 상태 전환이 반드시 거쳐가는 유일한 관문이다. src/servers.ts의
+   * setStatus()를 포팅한 것.
    */
   public void setStatus(ServerConfig server, String status, boolean logged) {
     server.status = status;
@@ -154,7 +166,9 @@ public class EventBroadcaster {
   }
 
   private void send(WebSocketSession session, Object message) {
-    if (!session.isOpen()) return;
+    if (!session.isOpen()) {
+      return;
+    }
     try {
       session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
     } catch (Exception e) {

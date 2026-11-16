@@ -41,7 +41,5 @@ public class SidHandshakeInterceptor implements HandshakeInterceptor {
       ServerHttpRequest request,
       ServerHttpResponse response,
       WebSocketHandler wsHandler,
-      Exception exception) {
-    // 아무 동작도 하지 않음
-  }
+      Exception exception) {}
 }

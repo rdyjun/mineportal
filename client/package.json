@@ -1,0 +1,11 @@
+{
+  "name": "mineportal-client",
+  "private": true,
+  "scripts": {
+    "test": "node --test *.test.cjs",
+    "test:ui": "bash ../formal/ui/run.sh"
+  },
+  "devDependencies": {
+    "@antithesishq/bombadil": "0.7.10"
+  }
+}
