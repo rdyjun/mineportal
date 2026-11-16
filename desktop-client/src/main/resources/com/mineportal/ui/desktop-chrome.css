@@ -1,0 +1,139 @@
+.button.about-button {
+  -fx-background-color: rgba(20, 20, 26, 0.92);
+  -fx-text-fill: #f0f0f3;
+  -fx-border-color: rgba(255, 255, 255, 0.32);
+  -fx-border-radius: 999;
+  -fx-background-radius: 999;
+  -fx-padding: 7 14 7 14;
+  -fx-font-size: 12px;
+  -fx-cursor: hand;
+}
+.button.about-button:hover {
+  -fx-background-color: #9b5de5;
+  -fx-border-color: transparent;
+  -fx-text-fill: white;
+}
+
+.update-banner {
+  -fx-background-color: rgba(28, 28, 36, 0.96);
+  -fx-background-radius: 14;
+  -fx-border-color: rgba(255, 255, 255, 0.28);
+  -fx-border-radius: 14;
+  -fx-border-width: 1;
+  -fx-padding: 14 14 12 16;
+  -fx-spacing: 10;
+  -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 28, 0.18, 0, 10);
+}
+.update-banner .label {
+  -fx-text-fill: #f4f4f8;
+}
+.update-message {
+  -fx-font-size: 13px;
+}
+.button.banner-open {
+  -fx-background-color: #9b5de5;
+  -fx-text-fill: white;
+  -fx-background-radius: 8;
+  -fx-padding: 7 14 7 14;
+  -fx-font-size: 12px;
+  -fx-cursor: hand;
+}
+.button.banner-open:hover {
+  -fx-background-color: #b07df0;
+}
+.button.banner-close {
+  -fx-background-color: transparent;
+  -fx-text-fill: #c8c8d4;
+  -fx-font-size: 16px;
+  -fx-padding: 0 4 0 4;
+  -fx-min-width: 28px;
+  -fx-min-height: 28px;
+  -fx-background-radius: 8;
+  -fx-cursor: hand;
+}
+.button.banner-close:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.08);
+  -fx-text-fill: white;
+}
+.button.banner-ignore {
+  -fx-background-color: transparent;
+  -fx-text-fill: #b9b9c8;
+  -fx-padding: 6 2 6 2;
+  -fx-font-size: 12px;
+  -fx-underline: true;
+  -fx-cursor: hand;
+}
+.button.banner-ignore:hover {
+  -fx-text-fill: white;
+}
+
+.about-root {
+  -fx-background-color: #16161c;
+  -fx-padding: 22 24 20 24;
+  -fx-spacing: 12;
+}
+.about-root .label {
+  -fx-text-fill: #f0f0f3;
+  -fx-font-size: 13px;
+}
+.about-title {
+  -fx-font-size: 22px;
+  -fx-font-weight: bold;
+}
+.about-muted {
+  -fx-text-fill: #a3a3b2;
+  -fx-font-size: 12px;
+}
+.about-value {
+  -fx-font-size: 13px;
+}
+.status-ok {
+  -fx-text-fill: #86efac;
+}
+.status-warn {
+  -fx-text-fill: #e9d5ff;
+}
+.status-muted {
+  -fx-text-fill: #c4c4d0;
+}
+.button.about-check {
+  -fx-background-color: #9b5de5;
+  -fx-text-fill: white;
+  -fx-background-radius: 8;
+  -fx-padding: 8 14 8 14;
+  -fx-font-size: 13px;
+  -fx-cursor: hand;
+}
+.button.about-check:hover {
+  -fx-background-color: #b07df0;
+}
+.about-root .check-box {
+  -fx-text-fill: #e4e4ec;
+  -fx-font-size: 13px;
+}
+.about-root .check-box .box {
+  -fx-background-color: rgba(255, 255, 255, 0.05);
+  -fx-border-color: rgba(255, 255, 255, 0.4);
+  -fx-border-radius: 3;
+  -fx-background-radius: 3;
+}
+.about-root .check-box:selected .box {
+  -fx-background-color: #9b5de5;
+  -fx-border-color: #9b5de5;
+}
+.about-root .check-box:selected .mark {
+  -fx-background-color: white;
+}
+.about-root .hyperlink,
+.about-root .hyperlink:visited,
+.about-root .hyperlink:hover {
+  -fx-text-fill: #d7c0fb;
+  -fx-border-color: transparent;
+  -fx-padding: 0;
+  -fx-underline: true;
+  -fx-focus-color: #9b5de5;
+}
+.about-root .separator .line {
+  -fx-border-color: rgba(255, 255, 255, 0.12);
+  -fx-border-width: 1 0 0 0;
+}

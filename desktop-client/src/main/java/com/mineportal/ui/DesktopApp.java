@@ -20,6 +20,7 @@ import javafx.stage.Stage;
 public final class DesktopApp extends Application {
   private static BackendClient backend;
   private final URI site = URI.create("https://mineportal.kr/");
+  private DesktopChrome chrome;
 
   public static void open(BackendClient client) {
     backend = client;
@@ -117,7 +118,10 @@ public final class DesktopApp extends Application {
         .stateProperty()
         .addListener(
             (observable, oldState, state) -> {
-              if (state == Worker.State.SUCCEEDED) root.setCenter(view);
+              if (state == Worker.State.SUCCEEDED) {
+                root.setCenter(view);
+                if (trusted(engine.getLocation())) syncPageLanguage(engine);
+              }
               if (state == Worker.State.FAILED && !engine.getLocation().startsWith("mineportal:")) {
                 Button retry = new Button("다시 연결 / Retry");
                 retry.setOnAction(
@@ -133,9 +137,29 @@ public final class DesktopApp extends Application {
     stage.setTitle("마인포탈 · MinePortal");
     stage.setMinWidth(900);
     stage.setMinHeight(600);
-    stage.setScene(new Scene(root, 1280, 820));
+    try {
+      chrome = DesktopChrome.install(root, stage, getHostServices()::showDocument);
+    } catch (RuntimeException ignored) {
+      // The site still has to open when the update chrome cannot be built.
+      chrome = null;
+    }
+    stage.setScene(new Scene(chrome == null ? root : chrome.root(), 1280, 820));
     stage.show();
+    view.requestFocus();
     engine.load(site.toString());
+    if (chrome != null) chrome.start();
+  }
+
+  private void syncPageLanguage(WebEngine engine) {
+    if (chrome == null) return;
+    try {
+      // Constant script on the official origin only. It reads the site's ko/en choice
+      // and does not evaluate code that came from the page.
+      Object value = engine.executeScript("localStorage.getItem('lang')");
+      if (value instanceof String language) chrome.notePageLanguage(language);
+    } catch (RuntimeException ignored) {
+      // Storage can be blocked, or the document can navigate away mid-check.
+    }
   }
 
   private boolean trusted(String url) {
@@ -150,6 +174,7 @@ public final class DesktopApp extends Application {
 
   @Override
   public void stop() {
+    if (chrome != null) chrome.shutdown();
     // All active Minecraft sockets must be closed when the application window closes.
     System.exit(0);
   }
