@@ -124,8 +124,8 @@ public class EventBroadcaster {
   }
 
   /**
-   * 서버의 상태를 갱신하고, 이력에 기록하고, 변경 사항을 브로드캐스트한다 — 임시 connect 스텁(현재 단계)이든 실제 MCProtocolLib 리스너(이후 단계)든,
-   * 모든 상태 전환이 반드시 거쳐가는 유일한 관문이다. src/servers.ts의 setStatus()를 포팅한 것.
+   * 서버의 상태를 갱신하고, 이력에 기록하고, 변경 사항을 브로드캐스트한다. 모든 상태 전환이 반드시 거쳐가는 유일한 관문이다. src/servers.ts의
+   * setStatus()를 포팅한 것.
    */
   public void setStatus(ServerConfig server, String status, boolean logged) {
     server.status = status;

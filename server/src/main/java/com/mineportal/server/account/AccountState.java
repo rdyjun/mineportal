@@ -13,9 +13,6 @@ public class AccountState {
   public volatile Profile profile;
   public volatile String error;
 
-  /**
-   * MinecraftAuth의 전체 세션(액세스 토큰, 채팅 서명용 인증서) — 서버 측에만 보관하며 클라이언트로는 절대 전송하지 않는다. (향후) 프로토콜 커넥터에서 사용될
-   * 예정.
-   */
+  /** MinecraftAuth의 전체 세션(액세스 토큰, 채팅 서명용 인증서) — 서버 측에만 보관하며 클라이언트로는 절대 전송하지 않는다. */
   public volatile StepFullJavaSession.FullJavaSession fullSession;
 }
