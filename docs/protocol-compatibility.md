@@ -49,6 +49,7 @@ network version.
 
 `shared/src/test` covers the observed protocol matrix, DNS SRV selection and address pinning,
 private-address rejection, local status parsing, and malformed Forge payloads. The TLA+ model in
-`formal/ProtocolConnection.tla` checks the connection lifecycle invariants, including rejection of
+`formal/ProtocolConnection.tla` checks the protocol boundary, including rejection of
 unknown protocols, no activation before required mod negotiation, public address pinning on the
-backend route, and cleanup on close.
+backend route, and cleanup on close. Pairing, Play-login announcement, per-server attempts, and
+in-memory Microsoft tokens are checked by the other models in `formal/`; see `formal/README.md`.

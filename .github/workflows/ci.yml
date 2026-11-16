@@ -135,3 +135,41 @@ jobs:
               Stop-Process -Id $process.Id -Force
             }
           }
+
+  client:
+    name: Website unit and Bombadil checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client test dependency
+        working-directory: client
+        run: npm ci
+
+      - name: Ensure Chrome
+        run: |
+          set -euo pipefail
+          if command -v google-chrome >/dev/null; then
+            echo "CHROME=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          elif command -v google-chrome-stable >/dev/null; then
+            echo "CHROME=$(command -v google-chrome-stable)" >> "$GITHUB_ENV"
+          else
+            dir="$RUNNER_TEMP/chrome"
+            mkdir -p "$dir"
+            npx --yes @puppeteer/browsers install chrome@stable --path "$dir"
+            bin="$(find "$dir" -type f -path '*/chrome-linux64/chrome' | head -n 1)"
+            test -n "$bin"
+            echo "CHROME=$bin" >> "$GITHUB_ENV"
+          fi
+
+      - name: Run unit tests and Bombadil
+        run: formal/ui/run.sh
