@@ -17,10 +17,12 @@ import org.springframework.stereotype.Component;
 public class ServerRegistry {
 
   private final ServerRepository repository;
+  private final TrialServerAllowlist trialAllowlist;
   private final Map<String, ServerConfig> servers = new ConcurrentHashMap<>();
 
-  public ServerRegistry(ServerRepository repository) {
+  public ServerRegistry(ServerRepository repository, TrialServerAllowlist trialAllowlist) {
     this.repository = repository;
+    this.trialAllowlist = trialAllowlist;
   }
 
   @PostConstruct
@@ -30,8 +32,17 @@ public class ServerRegistry {
     }
   }
 
-  /** userId가 소유하는 서버를 저장 목록에 추가한다. 실제로 연결하지는 않는다. */
-  public ServerConfig addServer(String host, int port, String version, String userId) {
+  /**
+   * userId가 소유하는 서버를 저장 목록에 추가한다. 실제로 연결하지는 않는다.
+   *
+   * @param enforceTrialAllowlist 웹 체험 모드로 추가할 때 true. 데스크톱 앱이 붙어 있어 사용자 PC에서 직접 접속할 서버를 추가할 때는
+   *     false. true인데 allowlist에 없으면 행을 만들지 않는다.
+   */
+  public ServerConfig addServer(
+      String host, int port, String version, String userId, boolean enforceTrialAllowlist) {
+    if (enforceTrialAllowlist && !trialAllowlist.isAllowed(host, port)) {
+      throw new TrialServerNotAllowedException();
+    }
     String id = UUID.randomUUID().toString();
     repository.insertServerRow(id, host, port, version);
     if (!repository.linkUserServer(userId, id, host, port)) {

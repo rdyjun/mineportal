@@ -2,6 +2,7 @@ package com.mineportal.server.servers;
 
 import com.mineportal.server.account.AccountSessionManager;
 import com.mineportal.server.db.RecentServerEntry;
+import com.mineportal.server.desktop.DesktopConnectionManager;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -20,10 +21,15 @@ public class ServersController {
 
   private final ServerRegistry registry;
   private final AccountSessionManager accountSessions;
+  private final DesktopConnectionManager desktopConnections;
 
-  public ServersController(ServerRegistry registry, AccountSessionManager accountSessions) {
+  public ServersController(
+      ServerRegistry registry,
+      AccountSessionManager accountSessions,
+      DesktopConnectionManager desktopConnections) {
     this.registry = registry;
     this.accountSessions = accountSessions;
+    this.desktopConnections = desktopConnections;
   }
 
   /**
@@ -61,10 +67,16 @@ public class ServersController {
       return ResponseEntity.badRequest().body(Map.of("error", "host and version are required"));
     }
     ParsedAddress parsed = parseServerAddress(body.host().trim());
+    // 데스크톱 앱이 붙어 있으면 이 주소는 사용자 PC에서 직접 접속할 수 있으므로 allowlist를 적용하지 않는다.
+    // 앱이 없으면 체험 모드 릴레이만 가능하므로, 추가 시점에도 서버에서 거부한다.
+    boolean enforceTrialAllowlist = !desktopConnections.isConnected(ownerId);
     try {
       ServerConfig server =
-          registry.addServer(parsed.host(), parsed.port(), body.version(), ownerId);
+          registry.addServer(
+              parsed.host(), parsed.port(), body.version(), ownerId, enforceTrialAllowlist);
       return ResponseEntity.status(HttpStatus.CREATED).body(ServerSummary.of(server));
+    } catch (TrialServerNotAllowedException e) {
+      return TrialServerDenial.response();
     } catch (DuplicateServerException e) {
       return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
     }

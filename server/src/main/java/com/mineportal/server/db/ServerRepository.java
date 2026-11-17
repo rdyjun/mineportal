@@ -70,6 +70,22 @@ public class ServerRepository {
                   created_at BIGINT NOT NULL
                 )
                 """);
+    // 웹 체험 모드(백엔드 릴레이)에서 추가·접속을 허용할 주소. 행이 없으면 어떤 서버도
+    // 허용하지 않는다. 기존 사용자/서버 데이터는 건드리지 않고, 시드 데이터도 넣지 않는다.
+    jdbc.execute(
+        """
+                CREATE TABLE IF NOT EXISTS trial_allowed_servers (
+                  id BIGSERIAL PRIMARY KEY,
+                  host TEXT NOT NULL,
+                  port INTEGER NOT NULL,
+                  created_at BIGINT NOT NULL DEFAULT (FLOOR(EXTRACT(EPOCH FROM NOW()) * 1000))::bigint
+                )
+                """);
+    jdbc.execute(
+        """
+                CREATE UNIQUE INDEX IF NOT EXISTS trial_allowed_servers_addr_uq
+                ON trial_allowed_servers (LOWER(host), port)
+                """);
   }
 
   public void upsertUser(String userId) {
@@ -124,6 +140,13 @@ public class ServerRepository {
                 rs.getInt("port"),
                 rs.getString("version")),
         userId);
+  }
+
+  /** 체험 모드 allowlist 전체. 비어 있으면 릴레이로는 어떤 주소도 허용되지 않는다. */
+  public List<AllowedServerAddress> listTrialAllowedServers() {
+    return jdbc.query(
+        "SELECT host, port FROM trial_allowed_servers",
+        (rs, rowNum) -> new AllowedServerAddress(rs.getString("host"), rs.getInt("port")));
   }
 
   public List<ServerRow> listAllServerRows() {
