@@ -1,5 +1,7 @@
 server/build/
 server/.gradle/
+demo-server/build/
+demo-server/.gradle/
 desktop-client/build/
 desktop-client/.gradle/
 .env

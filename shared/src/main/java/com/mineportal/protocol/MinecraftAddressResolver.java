@@ -170,7 +170,7 @@ public final class MinecraftAddressResolver {
         return false;
     }
 
-    static String normalizeHost(String rawHost) throws UnknownHostException {
+    public static String normalizeHost(String rawHost) throws UnknownHostException {
         if (rawHost == null) { throw new UnknownHostException("host is required"); }
         String host = rawHost.trim().toLowerCase(Locale.ROOT);
         if (host.startsWith("[") && host.endsWith("]")) { host = host.substring(1, host.length() - 1); }

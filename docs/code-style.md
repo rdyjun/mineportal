@@ -51,6 +51,13 @@ Check the same gates locally:
 (cd desktop-client && ./gradlew spotlessCheck checkstyleMain checkstyleTest --no-daemon)
 ```
 
+`demo-server/` is its own Gradle build. Spotless and Checkstyle cover only
+`demo-server/src/**/*.java`. That build does not compile or format `shared/`.
+
+```bash
+(cd demo-server && chmod +x gradlew && ./gradlew spotlessCheck checkstyleMain checkstyleTest --no-daemon)
+```
+
 ### Checkstyle rules that are on
 
 File:

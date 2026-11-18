@@ -35,7 +35,7 @@ jobs:
             elif [ "$OLD_SHA" = "$NEW_SHA" ]; then
               echo "No new commits — nothing to do"
               REBUILD=0
-            elif git diff --name-only "$OLD_SHA" "$NEW_SHA" | grep -qE '^(server/|docker-compose\.yml$)'; then
+            elif git diff --name-only "$OLD_SHA" "$NEW_SHA" | grep -qE '^(server/|demo-server/|docker-compose\.yml$)'; then
               echo "Backend/build files changed — rebuilding"
               REBUILD=1
             else
