@@ -5,6 +5,8 @@ import com.mineportal.server.account.AccountState;
 import com.mineportal.server.desktop.DesktopConnectionManager;
 import com.mineportal.server.servers.ServerConfig;
 import com.mineportal.server.servers.ServerRegistry;
+import com.mineportal.server.servers.TrialServerAllowlist;
+import com.mineportal.server.servers.TrialServerDenial;
 import com.mineportal.server.status.PingResult;
 import com.mineportal.server.status.PingService;
 import com.mineportal.server.status.PingService.PingObservation;
@@ -30,6 +32,7 @@ public class ConnectionController {
   private final McConnectionManager mcConnections;
   private final PingService pingService;
   private final DesktopConnectionManager desktopConnections;
+  private final TrialServerAllowlist trialAllowlist;
 
   public ConnectionController(
       ServerRegistry registry,
@@ -37,13 +40,15 @@ public class ConnectionController {
       AccountSessionManager accountSessions,
       McConnectionManager mcConnections,
       PingService pingService,
-      DesktopConnectionManager desktopConnections) {
+      DesktopConnectionManager desktopConnections,
+      TrialServerAllowlist trialAllowlist) {
     this.registry = registry;
     this.broadcaster = broadcaster;
     this.accountSessions = accountSessions;
     this.mcConnections = mcConnections;
     this.pingService = pingService;
     this.desktopConnections = desktopConnections;
+    this.trialAllowlist = trialAllowlist;
   }
 
   /**
@@ -80,6 +85,11 @@ public class ConnectionController {
     if (desktopOnly && !viaDesktop) {
       return ResponseEntity.status(HttpStatus.CONFLICT)
           .body(Map.of("error", "desktop app is not connected", "code", "desktop-offline"));
+    }
+    // 릴레이(체험 모드)만 allowlist를 본다. 비교 대상은 사용자가 입력해 저장한 host/port다.
+    // SRV로 풀린 대상 호스트·포트는 여기서 보지 않는다. 데스크톱 앱이 직접 접속할 때는 제한하지 않는다.
+    if (!viaDesktop && !trialAllowlist.isAllowed(server.host, server.port)) {
+      return TrialServerDenial.response();
     }
     if (server.isActive()) {
       if (desktopOnly && !desktopConnections.isRouted(server.id)) {

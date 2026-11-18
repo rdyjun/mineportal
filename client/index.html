@@ -307,6 +307,10 @@
   button:disabled { background: #4a4a52; color: #999; cursor: not-allowed; filter: none; }
   #addServerForm { display: flex; flex-direction: column; gap: 0.8rem; }
   #addServerForm button[type="submit"] { margin-top: 0.5rem; padding: 0.75rem 0.9rem; }
+  #addServerError {
+    display: none; margin: 0; color: #f87171; font-size: 0.82rem; line-height: 1.45;
+  }
+  #addServerError.show { display: block; }
   .slot-picker-list { display: flex; flex-direction: column; gap: 0.5rem; }
   .slot-pick-btn { width: 100%; text-align: left; font-weight: normal; }
   .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
@@ -756,6 +760,7 @@
         <input name="host" placeholder="서버 주소 (예: domain.com:25565)" data-i18n-placeholder="hostPlaceholder" required />
         <label class="field-label" data-i18n="versionLabel">버전</label>
         <input name="version" placeholder="버전 (예: 26.1.2 또는 775)" data-i18n-placeholder="versionPlaceholder" required />
+        <p id="addServerError" role="alert"></p>
         <button type="submit" data-i18n="addBtn">추가</button>
       </form>
     </div>
@@ -1161,6 +1166,7 @@
         alertLoginFirst: "먼저 로그인 해주세요.",
         alertConnectFailed: "연결 실패: {error}",
         alertAddServerFailed: "서버 추가 실패: {error}",
+        trialServerNotAllowed: "웹 체험 모드에서는 허용된 서버에만 접속할 수 있어요. 다른 서버는 데스크톱 앱으로 접속해 주세요.",
         sysTag: "마인포탈",
       },
       en: {
@@ -1283,6 +1289,7 @@
         alertLoginFirst: "Please log in first.",
         alertConnectFailed: "Connect failed: {error}",
         alertAddServerFailed: "Failed to add server: {error}",
+        trialServerNotAllowed: "웹 체험 모드에서는 허용된 서버에만 접속할 수 있어요. 다른 서버는 데스크톱 앱으로 접속해 주세요.",
         sysTag: "MinePortal",
       },
     };
@@ -1322,6 +1329,7 @@
     const accountMenu = document.getElementById("accountMenu");
     const logoutBtn = document.getElementById("logoutBtn");
     const addServerForm = document.getElementById("addServerForm");
+    const addServerError = document.getElementById("addServerError");
     const serverListEl = document.getElementById("serverList");
     const layoutSwitcher = document.getElementById("layoutSwitcher");
     const chatGrid = document.getElementById("chatGrid");
@@ -1407,7 +1415,23 @@
       }, 2500);
     }
 
+    function clearAddServerError() {
+      addServerError.textContent = "";
+      addServerError.classList.remove("show");
+    }
+
+    function showAddServerError(message) {
+      addServerError.textContent = message;
+      addServerError.classList.add("show");
+    }
+
+    function trialDeniedReason(body) {
+      if (!body || body.code !== "trial-server-not-allowed") return null;
+      return body.error || t("trialServerNotAllowed");
+    }
+
     function openAddServerModal() {
+      clearAddServerError();
       addServerModalBackdrop.classList.add("open");
     }
 
@@ -2782,11 +2806,13 @@
       const res = await fetch(connectionUrl(serverId), { method: "POST" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }));
+        const denied = trialDeniedReason(body);
         if (body.code === "not-logged-in") {
           alert(t("alertLoginFirst"));
           openLoginModal();
         } else {
-          alert(t("alertConnectFailed", { error: body.error }));
+          if (denied && slotRefs[i]) addLineTo(slotRefs[i].logEl, denied, Date.now(), true);
+          alert(t("alertConnectFailed", { error: denied || body.error }));
         }
         return;
       }
@@ -2959,11 +2985,12 @@
       const res = await fetch(connectionUrl(id), { method: "POST" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }));
+        const denied = trialDeniedReason(body);
         if (body.code === "not-logged-in") {
           alert(t("alertLoginFirst"));
           openLoginModal();
         } else {
-          alert(t("alertConnectFailed", { error: body.error }));
+          alert(t("alertConnectFailed", { error: denied || body.error }));
         }
         return;
       }
@@ -2989,6 +3016,7 @@
 
     addServerForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      clearAddServerError();
       const data = Object.fromEntries(new FormData(addServerForm).entries());
       const res = await fetch("/api/servers", {
         method: "POST",
@@ -2997,7 +3025,10 @@
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }));
-        alert(t("alertAddServerFailed", { error: body.error }));
+        const denied = trialDeniedReason(body);
+        const reason = denied || body.error || res.statusText;
+        if (denied) showAddServerError(denied);
+        alert(t("alertAddServerFailed", { error: reason }));
         return;
       }
       // Adding a server need not have a WebSocket open yet. Reflect the HTTP result
