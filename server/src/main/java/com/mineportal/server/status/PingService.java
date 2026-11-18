@@ -10,8 +10,11 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -38,6 +41,41 @@ public class PingService {
   private static final long CACHE_TTL_MS = 15_000;
   private static final int MAX_CACHE_ENTRIES = 4096;
   private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
+  private final Set<String> relayInternalHosts;
+
+  @Autowired
+  public PingService() {
+    this(parseRelayInternalHosts(System.getenv("MINEPORTAL_INTERNAL_HOSTS")));
+  }
+
+  PingService(Set<String> relayInternalHosts) {
+    this.relayInternalHosts =
+        relayInternalHosts == null ? Set.of() : Set.copyOf(relayInternalHosts);
+  }
+
+  static Set<String> parseRelayInternalHosts(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return Set.of();
+    }
+    LinkedHashSet<String> hosts = new LinkedHashSet<>();
+    for (String part : raw.split(",")) {
+      if (part.isBlank()) {
+        continue;
+      }
+      String host;
+      try {
+        host = MinecraftAddressResolver.normalizeHost(part);
+      } catch (UnknownHostException e) {
+        throw new IllegalStateException("MINEPORTAL_INTERNAL_HOSTS has an invalid host", e);
+      }
+      if (host.indexOf(':') >= 0 || host.matches("^\\d{1,3}(\\.\\d{1,3}){3}$")) {
+        throw new IllegalStateException(
+            "MINEPORTAL_INTERNAL_HOSTS cannot list an IP address: " + host);
+      }
+      hosts.add(host);
+    }
+    return Set.copyOf(hosts);
+  }
 
   public record PingObservation(PingResult result, ResolvedEndpoint endpoint) {}
 
@@ -56,7 +94,9 @@ public class PingService {
 
   /** Resolve SRV/A once, validate the final bytes, and keep that exact endpoint with the ping. */
   public PingObservation observePublic(String host, int port) throws UnknownHostException {
-    ResolvedEndpoint endpoint = addressResolver.resolve(host, port, true);
+    String normalized = MinecraftAddressResolver.normalizeHost(host);
+    boolean requirePublic = !relayInternalHosts.contains(normalized);
+    ResolvedEndpoint endpoint = addressResolver.resolve(host, port, requirePublic);
     String key =
         endpoint.logicalHost()
             + "/"

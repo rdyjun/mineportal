@@ -11,5 +11,7 @@ data
 desktop-client
 server/build
 server/.gradle
+demo-server/build
+demo-server/.gradle
 server/.omc
 server/data

@@ -25,11 +25,33 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
+      MINEPORTAL_INTERNAL_HOSTS: demo-mc
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./client:/client-static:ro
+
+  demo-mc:
+    build:
+      context: .
+      dockerfile: demo-server/Dockerfile
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
+    environment:
+      DEMO_SERVERS: "광장:25565,생존:25566,야생:25567,미니게임:25568"
+      DEMO_MAX_PLAYERS: "16"
+      DEMO_MAX_MESSAGE_CHARS: "256"
+      DEMO_MESSAGE_LIMIT: "5"
+      DEMO_MESSAGE_WINDOW_SECONDS: "10"
+      DEMO_IDLE_TIMEOUT_SECONDS: "600"
+      DEMO_BOT_ENABLED: "true"
+      DEMO_BOT_INTERVAL_SECONDS: "60"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   pgdata:

@@ -87,6 +87,26 @@ jobs:
           echo "Production container did not serve its web and API endpoints"
           exit 1
 
+  demo-server:
+    name: Demo chat server
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up Java 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17.0.21'
+          cache: gradle
+
+      - name: Test and build demo server
+        run: |
+          chmod +x demo-server/gradlew
+          ./demo-server/gradlew -p demo-server clean test spotlessCheck checkstyleMain checkstyleTest shadowJar --no-daemon
+
   windows-agent:
     name: Windows background agent package
     runs-on: windows-latest

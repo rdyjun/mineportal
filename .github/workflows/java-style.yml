@@ -5,6 +5,7 @@ on:
     paths:
       - 'server/**'
       - 'desktop-client/**'
+      - 'demo-server/**'
       - 'shared/**'
       - 'config/checkstyle/**'
       - '.github/workflows/java-style.yml'
@@ -36,6 +37,11 @@ jobs:
           ./gradlew spotlessCheck checkstyleMain checkstyleTest --no-daemon
       - name: Check headless agent Java style
         working-directory: desktop-client
+        run: |
+          chmod +x gradlew
+          ./gradlew spotlessCheck checkstyleMain checkstyleTest --no-daemon
+      - name: Check demo server Java style
+        working-directory: demo-server
         run: |
           chmod +x gradlew
           ./gradlew spotlessCheck checkstyleMain checkstyleTest --no-daemon

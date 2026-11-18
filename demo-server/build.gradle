@@ -1,0 +1,102 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.gradleup.shadow' version '9.1.0'
+    id 'com.diffplug.spotless' version '8.10.4'
+    id 'checkstyle'
+}
+
+group = 'com.mineportal'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.opencollab.dev/main/' }
+    maven { url 'https://repo.opencollab.dev/maven-snapshots/' }
+}
+
+configurations.configureEach {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'io.netty') {
+            details.useVersion '4.2.20.Final'
+            details.because 'Netty 4.2.20.Final security patch'
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.geysermc.mcprotocollib:protocol:26.1-SNAPSHOT'
+    implementation 'io.netty:netty-all:4.2.20.Final'
+    implementation 'org.slf4j:slf4j-simple:2.0.16'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.11.4'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+application {
+    mainClass = 'com.mineportal.demo.DemoServerMain'
+}
+
+tasks.named('shadowJar') {
+    archiveBaseName.set('demo-server')
+    archiveClassifier.set('')
+    archiveVersion.set('')
+    mergeServiceFiles()
+    manifest {
+        attributes 'Main-Class': 'com.mineportal.demo.DemoServerMain'
+    }
+}
+
+tasks.named('build') {
+    dependsOn 'shadowJar'
+}
+
+tasks.register('usageProbe', JavaExec) {
+    group = 'application'
+    description = 'Measure idle and chat resource use of four in-process demo instances.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.mineportal.demo.UsageProbe'
+    dependsOn tasks.named('testClasses')
+    jvmArgs '-Xms32m', '-Xmx128m', '-XX:MaxMetaspaceSize=64m', '-XX:MaxDirectMemorySize=64m',
+            '-XX:+UseSerialGC', '-XX:+ExitOnOutOfMemoryError', '-Xss256k'
+    if (project.hasProperty('probeJava')) {
+        executable = project.property('probeJava').toString()
+    }
+}
+
+spotless {
+    java {
+        target 'src/**/*.java'
+        googleJavaFormat('1.28.0')
+        formatAnnotations()
+    }
+}
+
+checkstyle {
+    toolVersion = '10.24.0'
+    ignoreFailures = false
+    maxWarnings = 0
+    maxErrors = 0
+    configFile = rootProject.file('../config/checkstyle/checkstyle.xml')
+    configDirectory.set(rootProject.layout.projectDirectory.dir('../config/checkstyle'))
+    enableExternalDtdLoad = true
+}
+
+tasks.withType(Checkstyle).configureEach {
+    maxWarnings = 0
+    maxErrors = 0
+}
