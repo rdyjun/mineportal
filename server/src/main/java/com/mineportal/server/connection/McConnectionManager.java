@@ -5,6 +5,8 @@ import com.mineportal.protocol.MinecraftAddressResolver.ResolvedEndpoint;
 import com.mineportal.protocol.ViaTranslation;
 import com.mineportal.server.account.AccountState;
 import com.mineportal.server.servers.ServerConfig;
+import com.mineportal.server.servers.TrialServerAllowlist;
+import com.mineportal.server.servers.TrialServerNotAllowedException;
 import com.mineportal.server.status.PingResult;
 import com.mineportal.server.ws.EventBroadcaster;
 import java.nio.ByteBuffer;
@@ -63,6 +65,7 @@ public class McConnectionManager {
       PlainTextComponentSerializer.plainText();
 
   private final EventBroadcaster broadcaster;
+  private final TrialServerAllowlist trialAllowlist;
   private final Map<String, ActiveSession> sessions = new ConcurrentHashMap<>();
   private final Map<String, AttemptValue<ChatSigner>> chatSigners = new ConcurrentHashMap<>();
   private final Map<String, AttemptValue<CommandTree>> commandTrees = new ConcurrentHashMap<>();
@@ -71,8 +74,9 @@ public class McConnectionManager {
     ForgeHandshake.install();
   }
 
-  public McConnectionManager(EventBroadcaster broadcaster) {
+  public McConnectionManager(EventBroadcaster broadcaster, TrialServerAllowlist trialAllowlist) {
     this.broadcaster = broadcaster;
+    this.trialAllowlist = trialAllowlist;
   }
 
   /** ping은 접속 직전 서버 상태 — 서버 버전(번역 필요 여부)과 Forge 여부를 여기서 판단한다. */
@@ -82,6 +86,12 @@ public class McConnectionManager {
       PingResult ping,
       ResolvedEndpoint endpoint,
       long attemptId) {
+    // 컨트롤러를 거치지 않는 호출도 릴레이를 열지 못하게 한다. 허용 여부는 사용자가 입력한
+    // host/port만 본다. endpoint.targetHost()는 SRV로 풀린 주소라 비교에 쓰지 않는다.
+    if (!trialAllowlist.isAllowed(server.host, server.port)) {
+      failConnection(server, attemptId, new TrialServerNotAllowedException());
+      return;
+    }
     new Thread(
             () -> {
               try {
