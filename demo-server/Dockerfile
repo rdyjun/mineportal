@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17.0.21_9-jdk AS build
+FROM eclipse-temurin:24.0.2_12-jdk AS build
 WORKDIR /src
 COPY demo-server/gradlew demo-server/gradlew
 COPY demo-server/gradle demo-server/gradle
@@ -7,7 +7,7 @@ COPY demo-server/src/main demo-server/src/main
 WORKDIR /src/demo-server
 RUN chmod +x gradlew && ./gradlew shadowJar --no-daemon
 
-FROM eclipse-temurin:17.0.21_9-jre
+FROM eclipse-temurin:24.0.2_12-jre
 ENV JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError -Xms32m -Xmx128m -XX:MaxMetaspaceSize=64m -XX:MaxDirectMemorySize=64m -Xss256k"
 WORKDIR /app
 COPY --from=build /src/demo-server/build/libs/demo-server.jar demo-server.jar
