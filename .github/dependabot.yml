@@ -73,6 +73,15 @@ updates:
       timezone: "Asia/Seoul"
     open-pull-requests-limit: 3
 
+  - package-ecosystem: "docker"
+    directory: "/demo-server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:35"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 3
+
   - package-ecosystem: "docker-compose"
     directory: "/"
     schedule:

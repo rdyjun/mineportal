@@ -1,0 +1,124 @@
+name: Docker image versions
+
+on:
+  pull_request:
+    paths:
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+      - "**/*.Dockerfile"
+      - "**/docker-compose*.yml"
+      - "**/docker-compose*.yaml"
+      - "**/compose*.yml"
+      - "**/compose*.yaml"
+      - ".github/workflows/**"
+      - "docs/docker-versions.md"
+      - "scripts/generate-docker-versions.mjs"
+      - "scripts/generate-docker-versions.test.mjs"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: docker-versions-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Regenerate versions document
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out pull request head
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Test the generator
+        run: node --test scripts/generate-docker-versions.test.mjs
+
+      - name: Regenerate and push the versions document
+        shell: bash
+        env:
+          BASE_REPO: ${{ github.repository }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PUSH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          print_push_failure() {
+            echo "$1"
+            echo
+            echo "Could not update docs/docker-versions.md on this pull request."
+            echo "Run this on the branch and commit the file:"
+            echo "  node scripts/generate-docker-versions.mjs"
+            echo
+            echo "Dependabot pull requests receive a read-only GITHUB_TOKEN unless the repository"
+            echo "allows the workflow permissions key to raise it. A fork branch cannot be updated"
+            echo "from this workflow either."
+          }
+
+          pin_status=0
+          node scripts/generate-docker-versions.mjs || pin_status=$?
+          if [ "$pin_status" -ne 0 ] && [ "$pin_status" -ne 2 ]; then
+            echo "The versions generator failed (exit ${pin_status})."
+            exit "$pin_status"
+          fi
+
+          status="$(git status --porcelain -- docs/docker-versions.md)"
+          if [ "$pin_status" -eq 2 ]; then
+            echo "One or more images are not pinned to an exact version."
+            echo "Pin them in the Dockerfile, Compose file, or workflow, then run:"
+            echo "  node scripts/generate-docker-versions.mjs"
+            if [ -n "$status" ]; then
+              echo "docs/docker-versions.md was regenerated in this job and was not pushed."
+              git diff -- docs/docker-versions.md || true
+            fi
+            exit 1
+          fi
+
+          if [ -z "$status" ]; then
+            echo "docs/docker-versions.md is up to date."
+            exit 0
+          fi
+
+          echo "docs/docker-versions.md does not match the image references."
+          git diff -- docs/docker-versions.md || true
+          if [ "$HEAD_REPO" != "$BASE_REPO" ]; then
+            print_push_failure "The pull request branch is in ${HEAD_REPO}, which this workflow cannot update."
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- docs/docker-versions.md
+          git commit -m "Update generated Docker image versions"
+
+          askpass="$(mktemp)"
+          trap 'rm -f "$askpass"' EXIT
+          printf '%s\n' \
+            '#!/bin/sh' \
+            'case "$1" in' \
+            '  *Username*) printf "%s\n" "x-access-token" ;;' \
+            '  *) printf "%s\n" "$PUSH_TOKEN" ;;' \
+            'esac' \
+            > "$askpass"
+          chmod 700 "$askpass"
+          if GIT_ASKPASS="$askpass" GIT_TERMINAL_PROMPT=0 \
+            git -c credential.helper= \
+            push "https://github.com/${BASE_REPO}.git" "HEAD:refs/heads/${HEAD_REF}"; then
+            echo "Pushed docs/docker-versions.md to ${HEAD_REF}."
+            echo "A GITHUB_TOKEN push does not start other workflows. If this pull request requires status checks on the new commit, approve the waiting runs or re-run them."
+            exit 0
+          fi
+
+          print_push_failure "git push to ${HEAD_REPO}@${HEAD_REF} was rejected."
+          git diff HEAD~1 -- docs/docker-versions.md || true
+          exit 1
