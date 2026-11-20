@@ -82,6 +82,12 @@ public class ServersController {
     }
   }
 
+  /** 체험하기 프리셋. trial_allowed_servers에서 최대 4개. 사용자 저장 목록과는 별개다. */
+  @GetMapping("/trial")
+  public List<TrialServerView> trial(@RequestAttribute("sid") String sid) {
+    return registry.listTrialServers(ownerId(sid));
+  }
+
   @GetMapping("/recent")
   public List<RecentServerEntry> recent(@RequestAttribute("sid") String sid) {
     String ownerId = ownerId(sid);

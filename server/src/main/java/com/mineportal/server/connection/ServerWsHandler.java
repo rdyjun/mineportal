@@ -52,7 +52,7 @@ public class ServerWsHandler extends TextWebSocketHandler {
       return;
     }
     String ownerId = profile.id();
-    for (var server : registry.listServers(ownerId)) {
+    for (var server : registry.listRuntimeServers(ownerId)) {
       if (server.isActive()) {
         long attemptId = server.currentAttemptId();
         if (server.markClosed(attemptId)) {
