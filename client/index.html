@@ -17,7 +17,9 @@
   /* 웹 탐색에는 정식 모드를 두지 않는다. 데스크톱 셸과 네이티브 앱은 web-client가 아니라서 그대로 둔다. */
   html.web-client #modeRealBtn,
   html.web-client #modeToggle,
-  html.web-client #modeToggleSkeleton { display: none !important; }
+  html.web-client #modeToggleSkeleton,
+  html.web-client #trialWarning,
+  html.web-client #banWarningBackdrop { display: none !important; }
   :root {
     --accent: #9b5de5; --accent-text: #fff;
     --glass-bg-strong: rgba(255,255,255,0.07);
@@ -1012,7 +1014,7 @@
       <div class="hero-buttons">
         <a class="btn-download" id="downloadBtn" href="https://github.com/rdyjun/mineportal/releases/latest/download/MinePortal-win.zip">⬇ 다운로드</a>
         <script>applyDownloadAvailability(document.getElementById("downloadBtn"));</script>
-        <button type="button" class="btn-try" id="tryWebBtn" data-i18n="tryWebBtn">🎮 플레이</button>
+        <button type="button" class="btn-try" id="tryWebBtn" data-i18n="tryWebBtn">체험하기</button>
       </div>
       <div class="hero-note" id="desktopStatusNote" data-i18n="desktopNoteDefault">데스크톱 프로그램은 내 PC에서 직접 접속해 IP 제한이 있는 서버에서도 안정적으로 동작해요.</div>
 
@@ -1262,7 +1264,7 @@
         heroBadge: "🎮 실제 마인크래프트 프로토콜로 동작해요",
         heroHeadline: "복잡한 설정 없이, 편하게 마크 채팅",
         heroDesc: "내 계정으로 직접 접속해서 채팅을 보고 보내세요. 데스크톱에서도, 브라우저에서도.",
-        tryWebBtn: "🎮 플레이",
+        tryWebBtn: "체험하기",
         featureTab1: "멀티 서버 동시 접속",
         featureTab2: "실시간 채팅 확인",
         featureTab3: "명령어 서명 지원",
@@ -1386,7 +1388,7 @@
         heroBadge: "🎮 Runs on the real Minecraft protocol",
         heroHeadline: "No complicated setup — just comfortable Minecraft chat",
         heroDesc: "Connect with your own account and view/send chat — from desktop or right in the browser.",
-        tryWebBtn: "🎮 Play",
+        tryWebBtn: "Try it",
         featureTab1: "Multiple servers at once",
         featureTab2: "Live chat feed",
         featureTab3: "Signed command support",
@@ -1487,6 +1489,15 @@
         sysTag: "MinePortal",
       },
     };
+
+    // 웹 체험하기는 제공된 데모 서버만 접속한다. 밴 위험과 정식 모드를 설명하는 문구는
+    // 네이티브 앱이 그대로 쓰므로, 브라우저에서만 덮어쓴다.
+    if (WEB_CLIENT) {
+      translations.ko.faqQ3 = "브라우저 체험하기에서는 어떤 서버에 접속하나요?";
+      translations.ko.faqA3 = "체험하기는 마인포탈이 제공하는 데모 서버에만 접속해요. 그 외 서버는 데스크톱 클라이언트로 접속해 주세요.";
+      translations.en.faqQ3 = "Which servers does Try it connect to?";
+      translations.en.faqA3 = "Try it in the browser only connects to the demo servers MinePortal provides. Use the desktop client for any other server.";
+    }
 
     let lang = localStorage.getItem("lang") ||
       ((navigator.language || "").toLowerCase().startsWith("ko") ? "ko" : "en");
@@ -1785,8 +1796,8 @@
       if (e.target === playGateBackdrop) closePlayGate();
     });
 
-    // Confirmation modal shown before connecting to a server while in 체험모드 (trial mode),
-    // since the relay-based connection can get the player's real IP banned on official servers.
+    // Native trial mode still relays to arbitrary servers, so it asks before connecting.
+    // The web client only reaches the demo allowlist and skips this dialog.
     const banWarningBackdrop = document.getElementById("banWarningBackdrop");
     const banWarningCloseBtn = document.getElementById("banWarningCloseBtn");
     const banWarningCancelBtn = document.getElementById("banWarningCancelBtn");
@@ -1803,7 +1814,7 @@
     }
 
     function confirmTrialConnect() {
-      if (currentPlayMode !== "trial") return Promise.resolve(true);
+      if (WEB_CLIENT || currentPlayMode !== "trial") return Promise.resolve(true);
       banWarningBackdrop.classList.add("open");
       return new Promise((resolve) => { banWarningResolve = resolve; });
     }
@@ -1917,7 +1928,7 @@
       currentPlayMode = mode;
       modeRealBtn.classList.toggle("active", mode === "real");
       modeTrialBtn.classList.toggle("active", mode === "trial");
-      trialWarning.classList.toggle("show", mode === "trial");
+      trialWarning.classList.toggle("show", mode === "trial" && !WEB_CLIENT);
     }
 
     async function enterPlayTab(forcedMode) {
@@ -2329,14 +2340,25 @@
         animate: runHomeDemoSignChat,
       },
       trial: {
-        html: homeDemoSidebarHtml +
-          '<div class="chat-slot home-demo-slot">' +
-          '<div class="mode-toggle" style="margin-bottom:0">' +
-          '<button type="button" class="mode-toggle-btn active" tabindex="-1">체험모드</button>' +
-          '</div>' +
-          '<div class="trial-warning show" style="margin:0">⚠ 지금은 <b>웹 체험 모드</b>예요 — 프로그램 설치 없이 브라우저에서 바로 서버에 접속해볼 수 있어요.</div>' +
-          '<div class="slot-log"><div class="line line-system"><b class="sys-tag">시스템</b> 체험 모드로 play.hypixel.net에 연결되었습니다.</div></div>' +
-          '</div>',
+        html: WEB_CLIENT
+          ? '<div class="home-demo-sidebar-col">' +
+            '<div class="home-demo-sidebar-title">서버 목록</div>' +
+            '<ul class="home-demo-sidebar">' +
+            '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">데모 서버</span><div class="server-status">연결됨</div></div></li>' +
+            '</ul></div>' +
+            '<div class="chat-slot home-demo-slot">' +
+            '<div class="slot-header"><span class="slot-status-dot connected"></span>' +
+            '<button type="button" class="slot-server-btn" tabindex="-1">데모 서버</button></div>' +
+            '<div class="slot-log"><div class="line line-system"><b class="sys-tag">시스템</b> 제공하는 데모 서버에 연결되었습니다.</div></div>' +
+            '</div>'
+          : homeDemoSidebarHtml +
+            '<div class="chat-slot home-demo-slot">' +
+            '<div class="mode-toggle" style="margin-bottom:0">' +
+            '<button type="button" class="mode-toggle-btn active" tabindex="-1">체험모드</button>' +
+            '</div>' +
+            '<div class="trial-warning show" style="margin:0">⚠ 지금은 <b>웹 체험 모드</b>예요 — 프로그램 설치 없이 브라우저에서 바로 서버에 접속해볼 수 있어요.</div>' +
+            '<div class="slot-log"><div class="line line-system"><b class="sys-tag">시스템</b> 체험 모드로 play.hypixel.net에 연결되었습니다.</div></div>' +
+            '</div>',
       },
       anywhere: {
         html: homeDemoSidebarHtml +
