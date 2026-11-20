@@ -30,7 +30,7 @@ public class AccountSessionExpiryListener {
   public void onExpired(ExpiredAccountSession expired) {
     Profile profile = expired.state().profile;
     if (profile != null) {
-      for (var server : registry.listServers(profile.id())) {
+      for (var server : registry.listRuntimeServers(profile.id())) {
         if (!server.isActive()) {
           continue;
         }
@@ -46,6 +46,7 @@ public class AccountSessionExpiryListener {
           mcConnections.disconnect(server.id);
         }
       }
+      registry.releaseTrialServers(profile.id());
       desktopConnections.send(profile.id(), Map.of("type", "clear-account"));
     }
     broadcaster.refreshAccountFor(expired.sid());

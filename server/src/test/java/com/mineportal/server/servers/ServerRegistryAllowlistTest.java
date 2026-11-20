@@ -18,11 +18,12 @@ class ServerRegistryAllowlistTest {
 
   private final ServerRepository repository = mock(ServerRepository.class);
   private final TrialServerAllowlist allowlist = mock(TrialServerAllowlist.class);
+  private final TrialServerCatalog trialCatalog = mock(TrialServerCatalog.class);
   private ServerRegistry registry;
 
   @BeforeEach
   void setup() {
-    registry = new ServerRegistry(repository, allowlist);
+    registry = new ServerRegistry(repository, allowlist, trialCatalog);
   }
 
   @Test

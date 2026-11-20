@@ -350,6 +350,10 @@
     display: flex; align-items: center; gap: 0.9rem;
   }
   #serverList li.selected, .home-demo-sidebar li.selected { border-color: var(--accent); background: rgba(155,93,229,0.14); }
+  #serverList li.empty-trial {
+    display: block; cursor: default; color: #b7b7c4; background: transparent; border: none;
+    box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; line-height: 1.5;
+  }
   .server-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.3rem; }
   .server-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .server-status { color: #9ad; font-size: 0.75rem; }
@@ -941,6 +945,15 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="trialAddNoticeBackdrop">
+    <div class="modal">
+      <button type="button" class="modal-close" id="trialAddNoticeClose">✕</button>
+      <h2 data-i18n="addServerModalTitle">서버 추가</h2>
+      <p class="modal-subtext" data-i18n="trialAddNotice">웹 체험하기에서는 서버를 추가할 수 없어요. 다른 서버는 데스크톱 앱으로 접속해 주세요.</p>
+      <button type="button" id="trialAddNoticeOk" data-i18n="trialAddNoticeOk">확인</button>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="slotPickerBackdrop">
     <div class="modal">
       <button type="button" class="modal-close" id="slotPickerClose">✕</button>
@@ -1215,6 +1228,17 @@
     const WEB_CLIENT = !IS_DESKTOP && !isNativeApp();
     if (WEB_CLIENT) document.documentElement.classList.add("web-client");
 
+    // 웹은 항상, 네이티브 앱은 체험 모드일 때만 제공 서버 목록을 쓴다. 데스크톱 정식 모드는 저장 목록 그대로다.
+    function usesTrialCatalog() {
+      if (IS_DESKTOP) return false;
+      if (WEB_CLIENT) return true;
+      return currentPlayMode === "trial";
+    }
+
+    function directNativePlay() {
+      return isNativeApp() && !usesTrialCatalog();
+    }
+
     const translations = {
       ko: {
         appTitle: "마인포탈",
@@ -1312,6 +1336,9 @@
         sendBtn: "전송",
         selectBtn: "선택",
         slotMenuEmpty: "등록된 서버가 없습니다.",
+        trialEmpty: "현재 이용 가능한 체험 서버가 없어요",
+        trialAddNotice: "웹 체험하기에서는 서버를 추가할 수 없어요. 다른 서버는 데스크톱 앱으로 접속해 주세요.",
+        trialAddNoticeOk: "확인",
         statusLegendTitle: "연결 상태",
         statusLegendIdle: "미연결",
         statusLegendConnecting: "연결 중",
@@ -1431,6 +1458,9 @@
         sendBtn: "Send",
         selectBtn: "Select",
         slotMenuEmpty: "No servers registered.",
+        trialEmpty: "No trial servers are available right now.",
+        trialAddNotice: "You can't add a server in web Try it. Use the desktop app to connect to other servers.",
+        trialAddNoticeOk: "OK",
         statusLegendTitle: "Connection Status",
         statusLegendIdle: "Not connected",
         statusLegendConnecting: "Connecting",
@@ -1535,6 +1565,9 @@
     const loginModalClose = document.getElementById("loginModalClose");
     const addServerModalBackdrop = document.getElementById("addServerModalBackdrop");
     const addServerModalClose = document.getElementById("addServerModalClose");
+    const trialAddNoticeBackdrop = document.getElementById("trialAddNoticeBackdrop");
+    const trialAddNoticeClose = document.getElementById("trialAddNoticeClose");
+    const trialAddNoticeOk = document.getElementById("trialAddNoticeOk");
     const slotPickerBackdrop = document.getElementById("slotPickerBackdrop");
     const slotPickerClose = document.getElementById("slotPickerClose");
     const slotPickerList = document.getElementById("slotPickerList");
@@ -1603,7 +1636,19 @@
       return body.error || t("trialServerNotAllowed");
     }
 
+    function openTrialAddNotice() {
+      trialAddNoticeBackdrop.classList.add("open");
+    }
+
+    function closeTrialAddNotice() {
+      trialAddNoticeBackdrop.classList.remove("open");
+    }
+
     function openAddServerModal() {
+      if (usesTrialCatalog()) {
+        openTrialAddNotice();
+        return;
+      }
       clearAddServerError();
       addServerModalBackdrop.classList.add("open");
     }
@@ -1617,6 +1662,11 @@
     addServerModalClose.addEventListener("click", closeAddServerModal);
     addServerModalBackdrop.addEventListener("click", (e) => {
       if (e.target === addServerModalBackdrop) closeAddServerModal();
+    });
+    trialAddNoticeClose.addEventListener("click", closeTrialAddNotice);
+    trialAddNoticeOk.addEventListener("click", closeTrialAddNotice);
+    trialAddNoticeBackdrop.addEventListener("click", (e) => {
+      if (e.target === trialAddNoticeBackdrop) closeTrialAddNotice();
     });
 
     // Lets the user pick which open chat window a server lands in, instead of always
@@ -1863,6 +1913,7 @@
       currentPlayMode = mode;
       modeRealBtn.classList.toggle("active", mode === "real");
       modeTrialBtn.classList.toggle("active", mode === "trial");
+      await loadServerList();
     }
 
     async function enterPlayTab(forcedMode) {
@@ -1898,7 +1949,20 @@
       showTab("servers");
     });
 
-    function pingBadgeHtml(host, port) {
+    function serverLabel(s) {
+      return s.displayName || (s.host + ":" + s.port);
+    }
+
+    function pingBadgeHtml(host, port, preset) {
+      if (preset && typeof preset.online === "boolean") {
+        if (preset.online) {
+          return '<span class="ping-badge online">' + escapeHtml(t("pingOnline", {
+            online: preset.playersOnline ?? "?",
+            max: preset.playersMax ?? "?",
+          })) + '</span>';
+        }
+        return '<span class="ping-badge offline">' + escapeHtml(t("pingOffline")) + '</span>';
+      }
       return '<span class="ping-badge" data-host="' + escapeHtml(host) + '" data-port="' + port + '">' + t("pingChecking") + '</span>';
     }
 
@@ -1908,6 +1972,8 @@
       (root || document).querySelectorAll(".ping-badge").forEach(async (badge) => {
         const host = badge.dataset.host;
         const port = badge.dataset.port;
+        // 체험 목록은 카탈로그 응답의 인원수를 이미 그려 둔다. 로그인 전 /api/ping은 401이라 그걸로 덮으면 오프라인이 된다.
+        if (!host) return;
         badge.classList.remove("online", "offline");
         badge.textContent = t("pingChecking");
         try {
@@ -1972,13 +2038,13 @@
             const canConnect = s.phase !== "active";
             const label = connectLabel(s);
             return '<div class="server-card" data-id="' + s.id + '">' +
-              '<div class="name">' + escapeHtml(s.host) + ':' + s.port + '</div>' +
+              '<div class="name">' + escapeHtml(serverLabel(s)) + '</div>' +
               '<div class="status">' + escapeHtml(s.status) + '</div>' +
-              pingBadgeHtml(s.host, s.port) +
+              pingBadgeHtml(s.host, s.port, s) +
               '<button type="button" ' + (canConnect ? "" : "disabled") + '>' + label + '</button>' +
               '</div>';
           }).join("")
-        : '<div class="empty">' + t("serverGridEmpty") + '</div>';
+        : '<div class="empty">' + escapeHtml(usesTrialCatalog() ? t("trialEmpty") : t("serverGridEmpty")) + '</div>';
       serverGridView.querySelectorAll(".server-card").forEach((card) => {
         card.querySelector("button").onclick = () => connectServer(card.dataset.id);
       });
@@ -2755,6 +2821,14 @@
         refreshSlotMenus();
         return;
       }
+      if (!servers.length) {
+        serverListEl.innerHTML = usesTrialCatalog()
+          ? '<li class="empty-trial">' + escapeHtml(t("trialEmpty")) + '</li>'
+          : "";
+        refreshSlotMenus();
+        renderServerGridView();
+        return;
+      }
       servers.forEach((s) => {
         const li = document.createElement("li");
         li.className = slots.some((slot) => slot.serverId === s.id) ? "selected" : "";
@@ -2762,8 +2836,8 @@
         li.innerHTML =
           '<span class="drag-handle" aria-hidden="true"></span>' +
           '<div class="server-info">' +
-          '<span class="server-meta">' + escapeHtml(s.host) + ':' + s.port + '</span>' +
-          '<div class="server-ping">' + pingBadgeHtml(s.host, s.port) + '</div>' +
+          '<span class="server-meta">' + escapeHtml(serverLabel(s)) + '</span>' +
+          '<div class="server-ping">' + pingBadgeHtml(s.host, s.port, s) + '</div>' +
           '<div class="server-status">' + escapeHtml(s.status) + '</div>' +
           '</div>' +
           '<button type="button" class="select-slot-btn">' + t("selectBtn") + '</button>';
@@ -2890,7 +2964,7 @@
           }
           const message = inputEl.value.trim();
           if (!message) return;
-          if (isNativeApp()) {
+          if (directNativePlay()) {
             const ok = await nativeSendChat(serverId, message);
             if (!ok) return;
             inputEl.value = "";
@@ -2948,7 +3022,7 @@
     async function connectServerInSlot(i) {
       const serverId = slots[i] && slots[i].serverId;
       if (!serverId) return;
-      if (isNativeApp()) {
+      if (directNativePlay()) {
         const ok = await nativeConnect(serverId);
         if (ok) { renderServers(); loadSlotDetail(i); }
         return;
@@ -2975,7 +3049,7 @@
       const serverId = slots[i] && slots[i].serverId;
       if (!serverId) return;
       if (!(await confirmDisconnect())) return;
-      if (isNativeApp()) {
+      if (directNativePlay()) {
         await nativeDisconnect(serverId);
         renderServers();
         loadSlotDetail(i);
@@ -3012,14 +3086,14 @@
         }
         const current = slots[i].serverId;
         const currentServer = servers.find((s) => s.id === current);
-        ref.btnEl.textContent = currentServer ? currentServer.host + ':' + currentServer.port : t("serverSelectPlaceholder");
+        ref.btnEl.textContent = currentServer ? serverLabel(currentServer) : t("serverSelectPlaceholder");
         updateSlotConnectBtn(i);
         ref.menuEl.innerHTML = servers.length
           ? servers.map((s) =>
               '<div class="item' + (s.id === current ? ' selected' : '') + '" data-id="' + s.id + '">' +
-              escapeHtml(s.host) + ':' + s.port + '</div>'
+              escapeHtml(serverLabel(s)) + '</div>'
             ).join("")
-          : '<div class="empty">' + t("slotMenuEmpty") + '</div>';
+          : '<div class="empty">' + escapeHtml(usesTrialCatalog() ? t("trialEmpty") : t("slotMenuEmpty")) + '</div>';
         ref.menuEl.querySelectorAll(".item").forEach((item) => {
           item.addEventListener("click", () => {
             slots[i].serverId = item.dataset.id;
@@ -3040,7 +3114,7 @@
         ref.logEl.innerHTML = "";
         return;
       }
-      if (isNativeApp()) {
+      if (directNativePlay()) {
         const s = servers.find((x) => x.id === serverId);
         setSlotStatusDot(ref.statusDotEl, s ? s.status : null);
         ref.logEl.innerHTML = "";
@@ -3191,8 +3265,21 @@
     setLayout(1);
     renderServers(); // 첫 fetch가 끝나기 전(serversLoaded=false)에도 사이드바/슬롯 select가 바로 스켈레톤을 보여주도록
 
+    async function loadServerList() {
+      const res = await fetch(usesTrialCatalog() ? "/api/servers/trial" : "/api/servers");
+      if (!res.ok) return;
+      servers = await res.json();
+      serversLoaded = true;
+      renderServers();
+    }
+
     addServerForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (usesTrialCatalog()) {
+        closeAddServerModal();
+        openTrialAddNotice();
+        return;
+      }
       clearAddServerError();
       const data = Object.fromEntries(new FormData(addServerForm).entries());
       const res = await fetch("/api/servers", {
@@ -3268,6 +3355,8 @@
             attemptAutoPair();
           }
         } else if (data.type === "servers") {
+          // 체험 목록은 저장 서버 스냅샷으로 덮지 않는다. 데스크톱 정식 모드는 이 스냅샷을 그대로 쓴다.
+          if (usesTrialCatalog()) return;
           servers = data.servers;
           serversLoaded = true;
           renderServers();
@@ -3308,10 +3397,7 @@
       const accountRes = await fetch("/api/account");
       account = await accountRes.json();
       renderAccount();
-      const serversRes = await fetch("/api/servers");
-      servers = await serversRes.json();
-      serversLoaded = true;
-      renderServers();
+      await loadServerList();
       syncWs();
       if (IS_DESKTOP) await enterPlayTab("real");
     }

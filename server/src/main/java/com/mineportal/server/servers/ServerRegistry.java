@@ -4,6 +4,7 @@ import com.mineportal.server.db.RecentServerEntry;
 import com.mineportal.server.db.ServerRepository;
 import com.mineportal.server.db.ServerRow;
 import jakarta.annotation.PostConstruct;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -18,11 +19,16 @@ public class ServerRegistry {
 
   private final ServerRepository repository;
   private final TrialServerAllowlist trialAllowlist;
+  private final TrialServerCatalog trialCatalog;
   private final Map<String, ServerConfig> servers = new ConcurrentHashMap<>();
 
-  public ServerRegistry(ServerRepository repository, TrialServerAllowlist trialAllowlist) {
+  public ServerRegistry(
+      ServerRepository repository,
+      TrialServerAllowlist trialAllowlist,
+      TrialServerCatalog trialCatalog) {
     this.repository = repository;
     this.trialAllowlist = trialAllowlist;
+    this.trialCatalog = trialCatalog;
   }
 
   @PostConstruct
@@ -62,11 +68,21 @@ public class ServerRegistry {
         .collect(Collectors.toList());
   }
 
+  /**
+   * 저장 목록과 체험 카탈로그 접속을 함께 반환한다. 로그아웃처럼 계정의 살아있는 연결을 끊을 때 쓴다. 데스크톱에 보여주는 목록 (listServers)에는 체험 서버를
+   * 넣지 않는다.
+   */
+  public List<ServerConfig> listRuntimeServers(String userId) {
+    List<ServerConfig> all = new ArrayList<>(listServers(userId));
+    all.addAll(trialCatalog.live(userId));
+    return all;
+  }
+
   public Optional<ServerConfig> getServer(String id, String userId) {
-    if (!repository.isServerOwnedByUser(id, userId)) {
-      return Optional.empty();
+    if (repository.isServerOwnedByUser(id, userId)) {
+      return Optional.ofNullable(servers.get(id));
     }
-    return Optional.ofNullable(servers.get(id));
+    return trialCatalog.find(userId, id);
   }
 
   public Optional<ServerConfig> getServerUnchecked(String id) {
@@ -74,7 +90,16 @@ public class ServerRegistry {
   }
 
   public boolean isOwnedByUser(String serverId, String userId) {
-    return repository.isServerOwnedByUser(serverId, userId);
+    return repository.isServerOwnedByUser(serverId, userId)
+        || trialCatalog.find(userId, serverId).isPresent();
+  }
+
+  public void releaseTrialServers(String userId) {
+    trialCatalog.forget(userId);
+  }
+
+  public List<TrialServerView> listTrialServers(String userId) {
+    return trialCatalog.list(userId);
   }
 
   public void logConnection(String serverId, String userId, String host, int port) {
