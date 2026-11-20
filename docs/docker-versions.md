@@ -31,8 +31,8 @@ re-run them. If the push is rejected, the check fails and prints the command to 
 | Service | Role | Image | Defined in |
 | --- | --- | --- | --- |
 | ci | workflow | `postgres:18.7-alpine` | `.github/workflows/ci.yml:53` |
-| demo-mc | build | `eclipse-temurin:17.0.21_9-jdk` | `demo-server/Dockerfile:1` |
-| demo-mc | runtime | `eclipse-temurin:17.0.21_9-jre` | `demo-server/Dockerfile:10` |
+| demo-mc | build | `eclipse-temurin:24.0.2_12-jdk` | `demo-server/Dockerfile:1` |
+| demo-mc | runtime | `eclipse-temurin:24.0.2_12-jre` | `demo-server/Dockerfile:10` |
 | db | service | `postgres:18.7-alpine` | `docker-compose.yml:3` |
 | app | builder | `eclipse-temurin:17.0.21_9-jdk` | `server/Dockerfile:1` |
 | app | runtime | `eclipse-temurin:17.0.21_9-jre` | `server/Dockerfile:12` |
