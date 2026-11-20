@@ -11,15 +11,13 @@
 <style>
   .desktop-app #tabHomeBtn, .desktop-app #homeView,
   .desktop-app #modeToggle, .desktop-app #modeToggleSkeleton,
-  .desktop-app #trialWarning, .desktop-app #tryWebBtn,
+  .desktop-app #tryWebBtn,
   .desktop-app #appManageBtn, .desktop-app #pairDesktopBtn,
   .desktop-app footer { display: none !important; }
   /* 웹 탐색에는 정식 모드를 두지 않는다. 데스크톱 셸과 네이티브 앱은 web-client가 아니라서 그대로 둔다. */
   html.web-client #modeRealBtn,
   html.web-client #modeToggle,
-  html.web-client #modeToggleSkeleton,
-  html.web-client #trialWarning,
-  html.web-client #banWarningBackdrop { display: none !important; }
+  html.web-client #modeToggleSkeleton { display: none !important; }
   :root {
     --accent: #9b5de5; --accent-text: #fff;
     --glass-bg-strong: rgba(255,255,255,0.07);
@@ -553,14 +551,7 @@
     .home-demo-body { flex-direction: column; overflow-y: auto; }
     .home-demo-sidebar-col { width: 100%; }
   }
-  .trial-warning {
-    display: none; border-radius: 10px; padding: 0.85rem 1.1rem; font-size: 0.82rem; margin-bottom: 1.25rem; line-height: 1.5;
-    background: rgba(169,124,31,0.18); border: 1px solid rgba(169,124,31,0.5); color: #ffd98a;
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  }
-  .trial-warning.show { display: block; }
-
-  /* Play-tab desktop-client gate: full-screen scrim + glass modal, distinct from the trial warning above */
+  /* Play-tab desktop-client gate: full-screen scrim + glass modal. */
   .gate-backdrop {
     display: none; position: fixed; inset: 0; z-index: 200;
     background: rgba(0,0,0,0.72); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
@@ -828,7 +819,6 @@
     .slot-log { overflow-y: auto; }
     .slot-chat-form { position: sticky; bottom: 0; background: rgba(12,12,16,0.92); padding-top: 0.15rem; }
     .line { font-size: 0.95rem; }
-    .trial-warning { font-size: 0.78rem; padding: 0.55rem 0.7rem; margin-bottom: 0.45rem; }
     body:has(#listView.active) .appFooter,
     body:has(#serversView.active) .appFooter { display: none; }
     .mode-toggle { margin-bottom: 0.6rem; }
@@ -968,19 +958,6 @@
       <div class="gate-buttons">
         <a class="btn-download" id="gateDownloadBtn" href="https://github.com/rdyjun/mineportal/releases/latest/download/MinePortal-win.zip">⬇ 다운로드</a>
         <script>applyDownloadAvailability(document.getElementById("gateDownloadBtn"));</script>
-      </div>
-    </div>
-  </div>
-
-  <div class="gate-backdrop" id="banWarningBackdrop">
-    <div class="gate-modal">
-      <button type="button" class="gate-close" id="banWarningCloseBtn">✕</button>
-      <div class="gate-icon">⚠️</div>
-      <h2 data-i18n="banWarningTitle">밴 위험을 알려드려요</h2>
-      <p data-i18n-html="banWarningTextHtml">지금은 <b>웹 체험 모드</b>예요. 이 방식은 서버가 대신 접속을 대리해주는 방식이라, 공인/실서버에 접속하면 "동일 IP 다중 접속" 등으로 인식되어 <b>밴(차단)</b>될 수 있어요.<br />그럼에도 접속하시겠습니까?</p>
-      <div class="gate-buttons">
-        <button type="button" class="btn-secondary" id="banWarningCancelBtn" data-i18n="banWarningCancel">취소</button>
-        <button type="button" class="btn-danger" id="banWarningProceedBtn" data-i18n="banWarningProceed">그래도 접속</button>
       </div>
     </div>
   </div>
@@ -1169,7 +1146,6 @@
       <button type="button" class="mode-toggle-btn" data-mode="real" id="modeRealBtn" data-i18n="modeReal">정식 모드</button>
       <button type="button" class="mode-toggle-btn" data-mode="trial" id="modeTrialBtn" data-i18n="modeTrial">체험모드</button>
     </div>
-    <div class="trial-warning" id="trialWarning" data-i18n-html="trialWarningHtml">⚠ 지금은 <b>웹 체험 모드</b>예요. 이 방식은 서버가 대신 접속을 대리해주는 방식이라, 공인/실서버에 접속하면 "동일 IP 다중 접속" 등으로 인식되어 <b>밴(차단)</b>될 수 있어요. 데스크톱 클라이언트를 사용하면 이 문제 없이 <b>정식 모드</b>로 플레이할 수 있어요.</div>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <div class="layout">
       <div class="sidebar" id="sidebar">
@@ -1314,11 +1290,6 @@
         recentServersTitle: "최근 접속 서버",
         modeReal: "정식 모드",
         modeTrial: "체험모드",
-        trialWarningHtml: "⚠ 지금은 <b>웹 체험 모드</b>예요. 이 방식은 서버가 대신 접속을 대리해주는 방식이라, 공인/실서버에 접속하면 \"동일 IP 다중 접속\" 등으로 인식되어 <b>밴(차단)</b>될 수 있어요. 데스크톱 클라이언트를 사용하면 이 문제 없이 <b>정식 모드</b>로 플레이할 수 있어요.",
-        banWarningTitle: "밴 위험을 알려드려요",
-        banWarningTextHtml: "지금은 <b>웹 체험 모드</b>예요. 이 방식은 서버가 대신 접속을 대리해주는 방식이라, 공인/실서버에 접속하면 \"동일 IP 다중 접속\" 등으로 인식되어 <b>밴(차단)</b>될 수 있어요.<br />그럼에도 접속하시겠습니까?",
-        banWarningCancel: "취소",
-        banWarningProceed: "그래도 접속",
         disconnectBtn: "연결 해제",
         disconnectConfirmTitle: "연결을 끊을까요?",
         disconnectConfirmText: "진짜 이 서버와의 연결을 끊으시겠습니까?",
@@ -1438,11 +1409,6 @@
         recentServersTitle: "Recently Played Servers",
         modeReal: "Full Mode",
         modeTrial: "Trial Mode",
-        trialWarningHtml: "⚠ You're in <b>web trial mode</b>. Since the server relays your connection on your behalf, official/public servers may flag it as \"multiple connections from the same IP\" and <b>ban</b> you. Use the desktop client to play in <b>Full Mode</b> without this risk.",
-        banWarningTitle: "Ban risk warning",
-        banWarningTextHtml: "You're in <b>web trial mode</b>. Since the server relays your connection on your behalf, official/public servers may flag it as \"multiple connections from the same IP\" and <b>ban</b> you.<br />Do you still want to connect?",
-        banWarningCancel: "Cancel",
-        banWarningProceed: "Connect anyway",
         disconnectBtn: "Disconnect",
         disconnectConfirmTitle: "Disconnect from this server?",
         disconnectConfirmText: "Are you sure you want to disconnect from this server?",
@@ -1559,7 +1525,6 @@
     const recentServersPanel = document.getElementById("recentServersPanel");
     const recentServersEl = document.getElementById("recentServers");
     const tryWebBtn = document.getElementById("tryWebBtn");
-    const trialWarning = document.getElementById("trialWarning");
     const modeToggle = document.getElementById("modeToggle");
     const modeToggleSkeleton = document.getElementById("modeToggleSkeleton");
     const modeRealBtn = document.getElementById("modeRealBtn");
@@ -1796,36 +1761,6 @@
       if (e.target === playGateBackdrop) closePlayGate();
     });
 
-    // Native trial mode still relays to arbitrary servers, so it asks before connecting.
-    // The web client only reaches the demo allowlist and skips this dialog.
-    const banWarningBackdrop = document.getElementById("banWarningBackdrop");
-    const banWarningCloseBtn = document.getElementById("banWarningCloseBtn");
-    const banWarningCancelBtn = document.getElementById("banWarningCancelBtn");
-    const banWarningProceedBtn = document.getElementById("banWarningProceedBtn");
-    let banWarningResolve = null;
-
-    function closeBanWarning(confirmed) {
-      banWarningBackdrop.classList.remove("open");
-      if (banWarningResolve) {
-        const resolve = banWarningResolve;
-        banWarningResolve = null;
-        resolve(confirmed);
-      }
-    }
-
-    function confirmTrialConnect() {
-      if (WEB_CLIENT || currentPlayMode !== "trial") return Promise.resolve(true);
-      banWarningBackdrop.classList.add("open");
-      return new Promise((resolve) => { banWarningResolve = resolve; });
-    }
-
-    banWarningCloseBtn.addEventListener("click", () => closeBanWarning(false));
-    banWarningCancelBtn.addEventListener("click", () => closeBanWarning(false));
-    banWarningProceedBtn.addEventListener("click", () => closeBanWarning(true));
-    banWarningBackdrop.addEventListener("click", (e) => {
-      if (e.target === banWarningBackdrop) closeBanWarning(false);
-    });
-
     // Confirmation modal shown before disconnecting from a server, so an accidental
     // click on the connect button (now repurposed as a disconnect button once
     // connected) doesn't silently drop the player's connection.
@@ -1928,7 +1863,6 @@
       currentPlayMode = mode;
       modeRealBtn.classList.toggle("active", mode === "real");
       modeTrialBtn.classList.toggle("active", mode === "trial");
-      trialWarning.classList.toggle("show", mode === "trial" && !WEB_CLIENT);
     }
 
     async function enterPlayTab(forcedMode) {
@@ -1940,7 +1874,6 @@
         return;
       }
       modeToggle.style.display = "none";
-      trialWarning.classList.remove("show");
       modeToggleSkeleton.style.display = "";
       await refreshDesktopAvailable();
       modeToggleSkeleton.style.display = "none";
@@ -2340,25 +2273,16 @@
         animate: runHomeDemoSignChat,
       },
       trial: {
-        html: WEB_CLIENT
-          ? '<div class="home-demo-sidebar-col">' +
-            '<div class="home-demo-sidebar-title">서버 목록</div>' +
-            '<ul class="home-demo-sidebar">' +
-            '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">데모 서버</span><div class="server-status">연결됨</div></div></li>' +
-            '</ul></div>' +
-            '<div class="chat-slot home-demo-slot">' +
-            '<div class="slot-header"><span class="slot-status-dot connected"></span>' +
-            '<button type="button" class="slot-server-btn" tabindex="-1">데모 서버</button></div>' +
-            '<div class="slot-log"><div class="line line-system"><b class="sys-tag">시스템</b> 제공하는 데모 서버에 연결되었습니다.</div></div>' +
-            '</div>'
-          : homeDemoSidebarHtml +
-            '<div class="chat-slot home-demo-slot">' +
-            '<div class="mode-toggle" style="margin-bottom:0">' +
-            '<button type="button" class="mode-toggle-btn active" tabindex="-1">체험모드</button>' +
-            '</div>' +
-            '<div class="trial-warning show" style="margin:0">⚠ 지금은 <b>웹 체험 모드</b>예요 — 프로그램 설치 없이 브라우저에서 바로 서버에 접속해볼 수 있어요.</div>' +
-            '<div class="slot-log"><div class="line line-system"><b class="sys-tag">시스템</b> 체험 모드로 play.hypixel.net에 연결되었습니다.</div></div>' +
-            '</div>',
+        html: '<div class="home-demo-sidebar-col">' +
+          '<div class="home-demo-sidebar-title">서버 목록</div>' +
+          '<ul class="home-demo-sidebar">' +
+          '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">데모 서버</span><div class="server-status">연결됨</div></div></li>' +
+          '</ul></div>' +
+          '<div class="chat-slot home-demo-slot">' +
+          '<div class="slot-header"><span class="slot-status-dot connected"></span>' +
+          '<button type="button" class="slot-server-btn" tabindex="-1">데모 서버</button></div>' +
+          '<div class="slot-log"><div class="line line-system"><b class="sys-tag">시스템</b> 제공하는 데모 서버에 연결되었습니다.</div></div>' +
+          '</div>',
       },
       anywhere: {
         html: homeDemoSidebarHtml +
@@ -3024,7 +2948,6 @@
     async function connectServerInSlot(i) {
       const serverId = slots[i] && slots[i].serverId;
       if (!serverId) return;
-      if (!(await confirmTrialConnect())) return;
       if (isNativeApp()) {
         const ok = await nativeConnect(serverId);
         if (ok) { renderServers(); loadSlotDetail(i); }
@@ -3235,7 +3158,6 @@
     }
 
     async function connectServer(id) {
-      if (!(await confirmTrialConnect())) return;
       await ensureWs();
       const res = await fetch(connectionUrl(id), { method: "POST" });
       if (!res.ok) {
