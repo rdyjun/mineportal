@@ -5,7 +5,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const source = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
-const notice = "웹 체험하기에서는 서버를 추가할 수 없어요. 다른 서버는 데스크톱 앱으로 접속해 주세요.";
+const notice =
+  "웹 체험하기에서는 서버를 추가할 수 없어요. 다른 서버는 데스크톱 앱으로 접속해 주세요.";
 
 function slice(start, end) {
   const from = source.indexOf(start);
@@ -18,7 +19,11 @@ test("trial mode keeps the add button but shows the notice instead of adding", (
   assert.match(source, /id="addServerBtn"/);
   assert.match(source, /id="trialAddNoticeBackdrop"/);
   assert.ok(source.includes(notice));
-  assert.ok(source.includes("You can't add a server in web Try it. Use the desktop app to connect to other servers."));
+  assert.ok(
+    source.includes(
+      "You can't add a server in web Try it. Use the desktop app to connect to other servers.",
+    ),
+  );
   assert.ok(source.includes("현재 이용 가능한 체험 서버가 없어요"));
   assert.ok(source.includes("No trial servers are available right now."));
 });
