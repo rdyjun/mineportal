@@ -10,8 +10,8 @@ import { defaultActions } from "@antithesishq/bombadil/browser/defaults";
 export { defaultActions };
 
 const copy = {
-  ko: { title: "마인포탈", play: "플레이", login: "로그인", unsupported: "준비 중" },
-  en: { title: "MinePortal", play: "Play", login: "Log in", unsupported: "not supported" },
+  ko: { title: "마인포탈", play: "체험하기", login: "로그인", unsupported: "준비 중" },
+  en: { title: "MinePortal", play: "Try it", login: "Log in", unsupported: "not supported" },
 };
 
 function shown(state, id) {
@@ -45,6 +45,7 @@ const ui = extract((state) => {
       playText: "",
       title: "",
       loginText: "",
+      realModeTabHidden: true,
     };
   }
   const slots = [...grid.querySelectorAll(":scope > .chat-slot")];
@@ -83,6 +84,7 @@ const ui = extract((state) => {
     playText: doc.getElementById("tabListBtn").textContent,
     title: doc.title,
     loginText: login.textContent,
+    realModeTabHidden: win.getComputedStyle(doc.getElementById("modeRealBtn")).display === "none",
   };
 });
 
@@ -119,6 +121,12 @@ export const chat_grid_matches_layout = always(() => {
     view.slotCount === view.layout &&
     view.slotsOk
   );
+});
+
+export const web_real_mode_tab_stays_hidden = always(() => {
+  const view = ui.current;
+  if (!view.shell) return true;
+  return view.realModeTabHidden;
 });
 
 export const language_matches_visible_copy = always(() => {

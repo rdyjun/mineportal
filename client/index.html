@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <script src="/downloads.js"></script>
 <title data-i18n="appTitle">마인포탈</title>
 <link rel="icon" type="image/png" href="/favicon.png" />
@@ -13,6 +14,10 @@
   .desktop-app #trialWarning, .desktop-app #tryWebBtn,
   .desktop-app #appManageBtn, .desktop-app #pairDesktopBtn,
   .desktop-app footer { display: none !important; }
+  /* 웹 탐색에는 정식 모드를 두지 않는다. 데스크톱 셸과 네이티브 앱은 web-client가 아니라서 그대로 둔다. */
+  html.web-client #modeRealBtn,
+  html.web-client #modeToggle,
+  html.web-client #modeToggleSkeleton { display: none !important; }
   :root {
     --accent: #9b5de5; --accent-text: #fff;
     --glass-bg-strong: rgba(255,255,255,0.07);
@@ -21,22 +26,25 @@
     --glass-highlight: inset 0 1px 0 rgba(255,255,255,0.12);
   }
   * { box-sizing: border-box; }
-  html { height: 100%; }
+  html { height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body {
-    font-family: system-ui, sans-serif; color: #f0f0f3; margin: 0; padding: 0.75rem 2rem 2rem;
+    font-family: system-ui, sans-serif; color: #f0f0f3; margin: 0;
+    padding: max(0.75rem, env(safe-area-inset-top)) max(2rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(2rem, env(safe-area-inset-left));
     background: #0a0a0d;
     background-attachment: fixed;
     display: flex; flex-direction: column; min-height: 100%;
+    min-height: 100dvh;
   }
   h1 { font-size: 1.1rem; margin-bottom: 1rem; }
   h2 { font-size: 0.95rem; color: #d8d8e0; margin: 0 0 0.5rem; }
   header.appHeader {
     display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; flex-shrink: 0;
-    padding: 0.9rem 2rem 1.4rem;
+    padding: 0.9rem max(2rem, env(safe-area-inset-right)) 1.4rem max(2rem, env(safe-area-inset-left));
     position: sticky; top: 0; z-index: 30;
     background: rgba(15,15,19,0.6);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-    margin-left: -2rem; margin-right: -2rem;
+    margin-left: calc(-1 * max(2rem, env(safe-area-inset-left)));
+    margin-right: calc(-1 * max(2rem, env(safe-area-inset-right)));
   }
   .logo-wrap { height: 2.3rem; overflow: hidden; display: flex; align-items: center; cursor: pointer; }
   .logo-wrap img { height: 9rem; width: auto; object-fit: cover; object-position: center; }
@@ -109,7 +117,7 @@
   }
   /* 이 모달만 고정폭(22rem) 대신 안에 넣은 \n 줄바꿈에 맞춰 내용만큼만 넓어진다.
      min-width는 닫기 버튼이 짧은 제목과 겹치지 않을 최소한의 여유만 준다. */
-  #pairDesktopModalBackdrop .modal { width: auto; min-width: 24rem; }
+  #pairDesktopModalBackdrop .modal { width: auto; min-width: min(24rem, calc(100vw - 2rem)); }
   .pair-code {
     font-size: 1.8rem; font-weight: 700; letter-spacing: 0.15em; text-align: center;
     padding: 0.9rem; border-radius: 10px; background: rgba(155,93,229,0.14); border: 1px solid var(--accent);
@@ -200,7 +208,7 @@
   .ping-badge { font-size: 0.78rem; color: #888; white-space: nowrap; }
   .ping-badge.online { color: #4ade80; }
   .ping-badge.offline { color: #f87171; }
-  .server-grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+  .server-grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 0.75rem; }
   .server-grid-view .server-card {
     border-radius: 16px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.6rem;
     background: rgba(255,255,255,0.035);
@@ -357,6 +365,20 @@
   }
   #chatPanel { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
   .layout-switcher { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .layout-switcher .sidebar-open-btn {
+    display: none; align-items: center; gap: 0.4rem; margin-right: auto;
+    background: rgba(255,255,255,0.06); color: #eee; border: 1px solid var(--glass-border);
+    box-shadow: none; font-size: 0.82rem; padding: 0.45rem 0.75rem;
+  }
+  .layout-switcher .sidebar-open-btn:hover { background: rgba(255,255,255,0.14); filter: none; }
+  .sidebar-open-icon {
+    width: 1rem; height: 0.72rem; flex-shrink: 0;
+    background:
+      linear-gradient(currentColor, currentColor) 0 0 / 100% 2px no-repeat,
+      linear-gradient(currentColor, currentColor) 0 50% / 100% 2px no-repeat,
+      linear-gradient(currentColor, currentColor) 0 100% / 100% 2px no-repeat;
+  }
+  .sidebar-backdrop { display: none; }
   .layout-switcher button {
     background: rgba(255,255,255,0.06); color: #ccc; padding: 0.5rem 0.75rem; display: flex; align-items: center; border: 1px solid var(--glass-border);
     backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
@@ -576,13 +598,6 @@
   .appFooter a { color: #999; text-decoration: none; }
   .appFooter a:hover { color: #ddd; }
 
-  @media (max-width: 700px) {
-    .layout { flex-direction: column; }
-    .layout-resizer { display: none; }
-    .sidebar { width: 100% !important; }
-    .sidebar.collapsed { width: 2.75rem !important; }
-  }
-
   .home-section { max-width: 68rem; margin: 5rem auto 0; padding: 0 2rem; }
   .home-section-title { font-size: 1.6rem; font-weight: 700; text-align: center; margin: 0 0 2.5rem; color: #fff; }
 
@@ -685,6 +700,163 @@
     .how-grid { grid-template-columns: 1fr; }
   }
 
+  /* 뷰포트가 좁아지면(창을 게임 옆에 붙인 PWA, 태블릿, 휴대폰) 미디어 쿼리로 바로 전환한다.
+     넓은 화면의 사이드바+그리드 배치는 위 규칙을 그대로 쓴다. */
+  @media (max-width: 1024px) {
+    .home-section { padding: 0 0.5rem; margin-top: 3.25rem; }
+    .hero { padding: 2.4rem 0.5rem 0.2rem; }
+    .chat-slot { min-width: 0; }
+    .how-grid { gap: 1.5rem; }
+  }
+  @media (min-width: 769px) and (max-width: 1024px) {
+    body {
+      padding-left: max(1.25rem, env(safe-area-inset-left));
+      padding-right: max(1.25rem, env(safe-area-inset-right));
+    }
+    header.appHeader {
+      gap: 0.9rem;
+      margin-left: calc(-1 * max(1.25rem, env(safe-area-inset-left)));
+      margin-right: calc(-1 * max(1.25rem, env(safe-area-inset-right)));
+      padding-left: max(1.25rem, env(safe-area-inset-left));
+      padding-right: max(1.25rem, env(safe-area-inset-right));
+    }
+    .sidebar { width: min(260px, 32vw); }
+  }
+  @media (max-width: 768px) {
+    html { overflow-x: hidden; }
+    body {
+      padding: max(0.5rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) calc(4.5rem + env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+    }
+    body:has(#listView.active),
+    body:has(#serversView.active) {
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
+    }
+    header.appHeader {
+      gap: 0.45rem;
+      margin-bottom: 0.55rem;
+      padding-top: max(0.45rem, env(safe-area-inset-top));
+      padding-bottom: 0.55rem;
+      margin-left: calc(-1 * max(0.75rem, env(safe-area-inset-left)));
+      margin-right: calc(-1 * max(0.75rem, env(safe-area-inset-right)));
+      padding-left: max(0.75rem, env(safe-area-inset-left));
+      padding-right: max(0.75rem, env(safe-area-inset-right));
+      /* backdrop-filter는 fixed 자식을 헤더 기준으로 가둔다. 하단 탭이 화면 바닥에 붙도록 끈다. */
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      background: rgba(12,12,16,0.96);
+    }
+    .logo-wrap { height: 1.7rem; }
+    .logo-wrap img { height: 6.6rem; }
+    .tabNav {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 50;
+      gap: 0.25rem;
+      margin: 0;
+      padding: 0.3rem 0.45rem calc(0.3rem + env(safe-area-inset-bottom));
+      background: rgba(15,15,19,0.96);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-top: 1px solid rgba(255,255,255,0.12);
+    }
+    .tabNav button {
+      flex: 1;
+      min-height: 2.75rem;
+      padding: 0.4rem 0.25rem;
+      font-size: 0.84rem;
+      border-radius: 10px;
+      border-bottom-color: transparent;
+    }
+    .tabNav button.active { background: rgba(155,93,229,0.22); border-bottom-color: transparent; }
+    .lang-btn, .account-btn, .modal-close, .gate-modal .gate-close,
+    button, .ms-login-btn, .explore-links a.button-link, input { min-height: 2.75rem; }
+    .lang-btn, .account-btn, .modal-close, .gate-modal .gate-close { min-width: 2.75rem; }
+    input, .slot-chat-form input, .slot-chat-form button { font-size: 1rem; }
+    .app-manage-btn { min-height: 2.75rem; }
+    .lang-menu .lang-item, .account-menu .account-menu-item, .slot-server-menu .item {
+      min-height: 2.75rem; display: flex; align-items: center;
+    }
+    .layout-switcher .sidebar-open-btn { display: inline-flex; }
+    .layout-switcher { flex-wrap: wrap; align-items: center; }
+    .layout { min-height: 0; }
+    .layout-resizer { display: none; }
+    .sidebar-backdrop {
+      display: block;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 55;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+    .sidebar, .sidebar.collapsed {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: min(20rem, calc(100vw - 2.5rem)) !important;
+      height: 100dvh;
+      z-index: 60;
+      transform: translateX(-105%);
+      transition: transform 0.2s ease;
+      background: #121218;
+      border-right: 1px solid rgba(255,255,255,0.12);
+      border-radius: 0 16px 16px 0;
+      padding: max(0.75rem, env(safe-area-inset-top)) 0.85rem max(0.85rem, env(safe-area-inset-bottom)) max(0.85rem, env(safe-area-inset-left));
+      overflow: auto;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+    }
+    .sidebar.drawer-open { transform: translateX(0); }
+    .sidebar.collapsed .sidebar-content { display: flex; }
+    .sidebar-toggle-btn { width: 2.75rem; height: 2.75rem; }
+    #serverList { max-height: none; }
+    #listView.active { min-height: 0; overflow: hidden; }
+    #serversView.active { min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
+    #chatPanel { min-height: 0; }
+    .chat-grid { overflow: hidden; }
+    .chat-grid[data-layout="2"],
+    .chat-grid[data-layout="4"] {
+      grid-template-columns: 1fr;
+      overflow: auto;
+      grid-auto-rows: minmax(16rem, auto);
+    }
+    .chat-grid[data-layout="1"] > .chat-slot { min-width: 0; min-height: 0; height: 100%; }
+    .chat-slot { min-width: 0; min-height: 0; padding: 0.75rem; }
+    .slot-header { flex-wrap: wrap; }
+    .slot-server-picker { flex: 1 1 8rem; }
+    .slot-log { overflow-y: auto; }
+    .slot-chat-form { position: sticky; bottom: 0; background: rgba(12,12,16,0.92); padding-top: 0.15rem; }
+    .line { font-size: 0.95rem; }
+    .trial-warning { font-size: 0.78rem; padding: 0.55rem 0.7rem; margin-bottom: 0.45rem; }
+    body:has(#listView.active) .appFooter,
+    body:has(#serversView.active) .appFooter { display: none; }
+    .mode-toggle { margin-bottom: 0.6rem; }
+    .hero { padding: 1.4rem 0 0.2rem; }
+    .hero h1 { font-size: clamp(1.7rem, 8vw, 2.4rem); }
+    .hero p { font-size: 0.95rem; }
+    .home-section { margin-top: 2.4rem; padding: 0; }
+    .home-section-title { font-size: 1.3rem; margin-bottom: 1.4rem; }
+    .home-demo-phone {
+      width: 8.2rem; height: 14.5rem; right: 0.45rem; bottom: 0.45rem;
+      border-width: 2px; border-radius: 1rem;
+    }
+    .home-demo-phone-notch { width: 2.8rem; height: 0.35rem; margin: 0.4rem auto 0.25rem; }
+    .home-demo-phone-header { font-size: 0.65rem; padding-bottom: 0.35rem; }
+    .home-demo-phone-log { padding: 0.4rem 0.45rem; gap: 0.3rem; }
+    .home-demo-phone-line { font-size: 0.62rem; }
+    .home-demo-body { padding: 0.7rem; gap: 0.65rem; }
+    .trust-card { padding: 1rem; }
+    .faq-item.open .faq-a { max-height: 40rem; }
+    .server-grid-view { grid-template-columns: 1fr; }
+    .top-servers .rank-row { flex-wrap: wrap; }
+    .top-servers .rank-goto, .top-servers .rank-count { margin-left: 0; }
+    .panel { padding: 0.9rem; }
+    .panel-header { flex-wrap: wrap; gap: 0.45rem; }
+    .appFooter { padding-top: 0.6rem; gap: 0.6rem; flex-wrap: wrap; }
+    .modal { width: min(22rem, calc(100vw - 1.5rem)); }
+    #pairDesktopModalBackdrop .modal { min-width: 0; width: min(24rem, calc(100vw - 1.5rem)); }
+    .gate-modal { width: min(24rem, calc(100vw - 1.5rem)); padding: 1.6rem 1.1rem; }
+  }
+
   .toast-container {
     position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 300;
     display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;
@@ -696,6 +868,17 @@
     opacity: 0; transform: translateY(0.5rem); transition: opacity 0.2s, transform 0.2s;
   }
   .toast.show { opacity: 1; transform: translateY(0); }
+  @media (max-width: 520px) {
+    .hero-feature-tabs-scroll { width: 100%; overflow: visible; }
+    .hero-feature-tabs { flex-wrap: wrap; justify-content: center; width: 100%; }
+  }
+  @media (max-width: 768px) {
+    .toast-container {
+      left: 0.75rem; right: 0.75rem;
+      bottom: calc(4.6rem + env(safe-area-inset-bottom));
+      align-items: stretch;
+    }
+  }
 </style>
 </head>
 <body>
@@ -703,7 +886,7 @@
     <div class="logo-wrap" id="logoBtn"><img src="/logo.png" alt="MinePortal" /></div>
     <nav class="tabNav">
       <button type="button" id="tabHomeBtn" class="active" style="display:none" data-i18n="tabHome">홈</button>
-      <button type="button" id="tabListBtn" data-i18n="tabPlay">플레이</button>
+      <button type="button" id="tabListBtn" data-i18n="tabPlay">체험하기</button>
       <button type="button" id="tabServersBtn" data-i18n="serverListTitle">서버 목록</button>
     </nav>
     <div class="lang-picker" id="langPicker">
@@ -779,7 +962,7 @@
       <button type="button" class="gate-close" id="gateCloseBtn">✕</button>
       <div class="gate-icon">🖥️</div>
       <h2 data-i18n="gateTitle">데스크톱 프로그램이 필요해요</h2>
-      <p data-i18n-html="gateText">플레이 탭은 내 PC에서 직접 서버에 접속하는 데스크톱 클라이언트가 실행 중일 때만 이용할 수 있어요.<br />프로그램을 내려받아 실행한 뒤 다시 시도해주세요.</p>
+      <p data-i18n-html="gateText">내 PC에서 직접 서버에 접속하려면 데스크톱 클라이언트가 실행 중이어야 해요.<br />프로그램을 내려받아 실행한 뒤 다시 시도해주세요.</p>
       <div class="gate-buttons">
         <a class="btn-download" id="gateDownloadBtn" href="https://github.com/rdyjun/mineportal/releases/latest/download/MinePortal-win.zip">⬇ 다운로드</a>
         <script>applyDownloadAvailability(document.getElementById("gateDownloadBtn"));</script>
@@ -985,6 +1168,7 @@
       <button type="button" class="mode-toggle-btn" data-mode="trial" id="modeTrialBtn" data-i18n="modeTrial">체험모드</button>
     </div>
     <div class="trial-warning" id="trialWarning" data-i18n-html="trialWarningHtml">⚠ 지금은 <b>웹 체험 모드</b>예요. 이 방식은 서버가 대신 접속을 대리해주는 방식이라, 공인/실서버에 접속하면 "동일 IP 다중 접속" 등으로 인식되어 <b>밴(차단)</b>될 수 있어요. 데스크톱 클라이언트를 사용하면 이 문제 없이 <b>정식 모드</b>로 플레이할 수 있어요.</div>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <div class="layout">
       <div class="sidebar" id="sidebar">
         <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn"><span class="sidebar-toggle-icon"><span class="l"></span><span class="r"></span></span></button>
@@ -1015,6 +1199,7 @@
 
       <div class="panel" id="chatPanel">
         <div class="layout-switcher" id="layoutSwitcher">
+          <button type="button" class="sidebar-open-btn" id="sidebarOpenBtn" data-i18n-aria="serversDrawerBtn" aria-label="서버 목록"><span class="sidebar-open-icon" aria-hidden="true"></span><span data-i18n="serversDrawerBtn">서버</span></button>
           <button type="button" data-n="1" class="active" data-i18n-title="layout1"><span class="layout-icon n1"><i></i></span></button>
           <button type="button" data-n="2" data-i18n-title="layout2"><span class="layout-icon n2"><i></i><i></i></span></button>
           <button type="button" data-n="4" data-i18n-title="layout4"><span class="layout-icon n4"><i></i><i></i><i></i><i></i></span></button>
@@ -1045,11 +1230,18 @@
   </footer>
 
   <script>
+    function isNativeApp() {
+      return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    }
+    // 브라우저만 체험 모드로 고정한다. 데스크톱 셸(MinePortalDesktop)과 Capacitor 앱은 정식 모드를 그대로 쓴다.
+    const WEB_CLIENT = !IS_DESKTOP && !isNativeApp();
+    if (WEB_CLIENT) document.documentElement.classList.add("web-client");
+
     const translations = {
       ko: {
         appTitle: "마인포탈",
         tabHome: "홈",
-        tabPlay: "플레이",
+        tabPlay: "체험하기",
         loginBtn: "로그인",
         logoutBtn: "로그아웃",
         msLoginBtn: "Microsoft로 로그인",
@@ -1064,7 +1256,7 @@
         slotPickLabelReplace: "{n}번 창 ({target} 교체)",
         slotPickLabelEmpty: "{n}번 창 (비어있음)",
         gateTitle: "데스크톱 프로그램이 필요해요",
-        gateText: "플레이 탭은 내 PC에서 직접 서버에 접속하는 데스크톱 클라이언트가 실행 중일 때만 이용할 수 있어요.<br />프로그램을 내려받아 실행한 뒤 다시 시도해주세요.",
+        gateText: "내 PC에서 직접 서버에 접속하려면 데스크톱 클라이언트가 실행 중이어야 해요.<br />프로그램을 내려받아 실행한 뒤 다시 시도해주세요.",
         downloadWindows: "⬇ Download for Windows",
         downloadOtherOs: "🚧 다른 OS는 준비 중이에요",
         heroBadge: "🎮 실제 마인크래프트 프로토콜로 동작해요",
@@ -1152,8 +1344,9 @@
         statusLegendConnecting: "연결 중",
         statusLegendConnected: "연결됨",
         statusLegendDisconnected: "연결 끊김/오류",
-        serverGridEmpty: "등록된 서버가 없습니다. Play 탭에서 추가해보세요.",
-        goToPlayBtn: "Play로 이동",
+        serverGridEmpty: "등록된 서버가 없습니다. 체험하기 탭에서 추가해보세요.",
+        goToPlayBtn: "체험하기로 이동",
+        serversDrawerBtn: "서버",
         pingChecking: "확인 중...",
         pingOnline: "🟢 {online}/{max}명",
         pingOffline: "🔴 오프라인",
@@ -1172,7 +1365,7 @@
       en: {
         appTitle: "MinePortal",
         tabHome: "Home",
-        tabPlay: "Play",
+        tabPlay: "Try it",
         loginBtn: "Log in",
         logoutBtn: "Log out",
         msLoginBtn: "Log in with Microsoft",
@@ -1187,7 +1380,7 @@
         slotPickLabelReplace: "Window {n} (replace {target})",
         slotPickLabelEmpty: "Window {n} (empty)",
         gateTitle: "Desktop app required",
-        gateText: "The Play tab is only available while the desktop client — which connects to servers directly from your PC — is running.<br />Please download and run it, then try again.",
+        gateText: "Connecting directly from your PC needs the desktop client to be running.<br />Please download and run it, then try again.",
         downloadWindows: "⬇ Download for Windows",
         downloadOtherOs: "🚧 Other OS support coming soon",
         heroBadge: "🎮 Runs on the real Minecraft protocol",
@@ -1275,8 +1468,9 @@
         statusLegendConnecting: "Connecting",
         statusLegendConnected: "Connected",
         statusLegendDisconnected: "Disconnected/Error",
-        serverGridEmpty: "No servers registered. Add one from the Play tab.",
-        goToPlayBtn: "Go to Play",
+        serverGridEmpty: "No servers registered. Add one from the Try it tab.",
+        goToPlayBtn: "Go to Try it",
+        serversDrawerBtn: "Servers",
         pingChecking: "Checking...",
         pingOnline: "🟢 {online}/{max} players",
         pingOffline: "🔴 Offline",
@@ -1320,6 +1514,9 @@
       });
       document.querySelectorAll("[data-i18n-title]").forEach((el) => {
         el.title = t(el.dataset.i18nTitle);
+      });
+      document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+        el.setAttribute("aria-label", t(el.dataset.i18nAria));
       });
     }
 
@@ -1699,10 +1896,8 @@
       return desktopAvailable;
     }
 
-    // Switches the Play tab between "정식 모드" (via the desktop client) and
-    // "체험모드" (web relay, with the ban-risk warning). Picking 정식 모드 without
-    // the desktop client connected tries to auto-pair it first (attemptAutoPair, defined
-    // below near the pairing modal) — only falls back to the download gate if that fails.
+    // 데스크톱 셸과 네이티브 앱은 정식 모드(내 PC에서 직접 접속)를 유지한다.
+    // 웹에서는 그 탭을 없앴으므로 항상 체험 모드만 고른다.
     // `recheck`는 false로 넘기면 이미 최신인 desktopAvailable을 그대로 믿고 재조회를 건너뛴다
     // (enterPlayTab이 직전에 이미 refreshDesktopAvailable을 호출해둔 경우 등, 중복 호출 방지용).
     async function setPlayMode(mode, recheck = true) {
@@ -1712,6 +1907,8 @@
           currentPlayMode = "real";
           return;
         }
+      } else if (WEB_CLIENT) {
+        mode = "trial";
       }
       if (mode === "real" && !(recheck ? await refreshDesktopAvailable() : desktopAvailable)) {
         attemptAutoPair();
@@ -1725,6 +1922,12 @@
 
     async function enterPlayTab(forcedMode) {
       showTab("list");
+      if (WEB_CLIENT) {
+        modeToggleSkeleton.style.display = "none";
+        modeToggle.style.display = "";
+        await setPlayMode("trial", false);
+        return;
+      }
       modeToggle.style.display = "none";
       trialWarning.classList.remove("show");
       modeToggleSkeleton.style.display = "";
@@ -1738,7 +1941,10 @@
     logoBtn.addEventListener("click", () => { showTab("home"); loadRecentServers(); });
     tabListBtn.addEventListener("click", () => enterPlayTab());
     tryWebBtn.addEventListener("click", () => enterPlayTab("trial"));
-    modeRealBtn.addEventListener("click", () => setPlayMode("real"));
+    modeRealBtn.addEventListener("click", () => {
+      if (WEB_CLIENT) return;
+      setPlayMode("real");
+    });
     modeTrialBtn.addEventListener("click", () => setPlayMode("trial"));
     tabServersBtn.addEventListener("click", () => {
       if (account.status !== "logged-in") {
@@ -2126,7 +2332,6 @@
         html: homeDemoSidebarHtml +
           '<div class="chat-slot home-demo-slot">' +
           '<div class="mode-toggle" style="margin-bottom:0">' +
-          '<button type="button" class="mode-toggle-btn" tabindex="-1">정식 모드</button>' +
           '<button type="button" class="mode-toggle-btn active" tabindex="-1">체험모드</button>' +
           '</div>' +
           '<div class="trial-warning show" style="margin:0">⚠ 지금은 <b>웹 체험 모드</b>예요 — 프로그램 설치 없이 브라우저에서 바로 서버에 접속해볼 수 있어요.</div>' +
@@ -2627,6 +2832,7 @@
         });
         li.querySelector(".select-slot-btn").addEventListener("click", (e) => {
           e.stopPropagation();
+          closeNarrowSidebar();
           openSlotPicker(s.id);
         });
         serverListEl.appendChild(li);
@@ -2937,6 +3143,7 @@
 
     let resizingSidebar = false;
     layoutResizer.addEventListener("mousedown", (e) => {
+      if (window.matchMedia("(max-width: 768px)").matches) return;
       if (sidebarEl.classList.contains("collapsed")) return;
       resizingSidebar = true;
       layoutResizer.classList.add("dragging");
@@ -2961,8 +3168,34 @@
     // (collapsed 클래스의 CSS 폭이 적용되도록) 좁게 만들고, 펼치면 원래 폭으로
     // 되돌린다.
     let savedSidebarInlineWidth = null;
+    const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+    const sidebarOpenBtn = document.getElementById("sidebarOpenBtn");
+    const narrowLayoutQuery = window.matchMedia("(max-width: 768px)");
+
+    function setNarrowSidebar(open) {
+      sidebarEl.classList.toggle("drawer-open", open);
+      if (sidebarBackdrop) sidebarBackdrop.classList.toggle("open", open);
+    }
+
+    function closeNarrowSidebar() {
+      setNarrowSidebar(false);
+    }
+
+    if (sidebarOpenBtn) sidebarOpenBtn.addEventListener("click", () => setNarrowSidebar(true));
+    if (sidebarBackdrop) sidebarBackdrop.addEventListener("click", closeNarrowSidebar);
+    narrowLayoutQuery.addEventListener("change", (event) => {
+      if (!event.matches) closeNarrowSidebar();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeNarrowSidebar();
+    });
+
     if (sidebarToggleBtn) {
       sidebarToggleBtn.addEventListener("click", () => {
+        if (narrowLayoutQuery.matches) {
+          setNarrowSidebar(!sidebarEl.classList.contains("drawer-open"));
+          return;
+        }
         const collapsed = sidebarEl.classList.toggle("collapsed");
         layoutResizer.classList.toggle("disabled", collapsed);
         if (collapsed) {
@@ -3147,10 +3380,6 @@
     // 그대로 쓰지만(기기 간 동기화 유지), 실제 소켓 연결·로그인·채팅 송수신은
     // McConnection 네이티브 플러그인이 기기 안에서 처리한다 — 마크 계정 토큰과 채팅
     // 서명 개인키가 백엔드로 나가지 않는다.
-    function isNativeApp() {
-      return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-    }
-
     const McNative = isNativeApp() ? window.Capacitor.Plugins.McConnection : null;
     // serverId -> 화면에 그릴 라인들. 백엔드 연결과 달리 이 기록은 기기 로컬에만 있고
     // 새로고침하면 사라진다(연결 자체가 그때그때 새로 맺어지는 세션이라 히스토리를
