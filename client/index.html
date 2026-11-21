@@ -19,18 +19,23 @@
   html.web-client #modeToggle,
   html.web-client #modeToggleSkeleton { display: none !important; }
   :root {
-    --accent: #9b5de5; --accent-text: #fff;
-    --glass-bg-strong: rgba(255,255,255,0.07);
-    --glass-border: rgba(255,255,255,0.32); --glass-shadow: 0 14px 40px rgba(0,0,0,0.5);
-    --glass-blur: blur(18px) saturate(160%);
-    --glass-highlight: inset 0 1px 0 rgba(255,255,255,0.12);
+    --accent: #6d28d9; --accent-text: #fff;
+    --bg: #1e1f22; --bg-sidebar: #2b2d31; --bg-raised: #313338; --bg-hover: #3f4147;
+    --line: rgba(255,255,255,0.08);
+    --text: #f2f3f5; --text-muted: #b5bac1;
+    --online: #3ddc84; --amber: #e6b450; --danger: #c43832;
+    --glass-bg-strong: #2b2d31;
+    --glass-border: rgba(255,255,255,0.08);
+    --glass-shadow: 0 8px 24px rgba(0,0,0,0.28);
+    --glass-blur: none;
+    --glass-highlight: none;
   }
   * { box-sizing: border-box; }
   html { height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body {
-    font-family: system-ui, sans-serif; color: #f0f0f3; margin: 0;
+    font-family: system-ui, sans-serif; color: var(--text); margin: 0;
     padding: max(0.75rem, env(safe-area-inset-top)) max(2rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(2rem, env(safe-area-inset-left));
-    background: #0a0a0d;
+    background: var(--bg);
     background-attachment: fixed;
     display: flex; flex-direction: column; min-height: 100%;
     min-height: 100dvh;
@@ -41,13 +46,14 @@
     display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; flex-shrink: 0;
     padding: 0.9rem max(2rem, env(safe-area-inset-right)) 1.4rem max(2rem, env(safe-area-inset-left));
     position: sticky; top: 0; z-index: 30;
-    background: rgba(15,15,19,0.6);
-    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
     margin-left: calc(-1 * max(2rem, env(safe-area-inset-left)));
     margin-right: calc(-1 * max(2rem, env(safe-area-inset-right)));
   }
-  .logo-wrap { height: 2.3rem; overflow: hidden; display: flex; align-items: center; cursor: pointer; }
-  .logo-wrap img { height: 9rem; width: auto; object-fit: cover; object-position: center; }
+  .logo-wrap { display: flex; align-items: center; cursor: pointer; }
+  .logo-word { color: #f2f3f5; font-weight: 700; font-size: 1.15rem; letter-spacing: -0.03em; line-height: 1; }
   .tabNav { display: flex; gap: 1.4rem; }
   .tabNav button {
     background: none; color: #a3a3ae; font-weight: 600; font-size: 0.95rem;
@@ -56,7 +62,7 @@
     transition: color 0.15s, border-color 0.15s;
   }
   .tabNav button:hover { color: #eee; }
-  .tabNav button.active { color: #fff; border-bottom-color: var(--accent); }
+  .tabNav button.active { color: #fff; border-bottom-color: #f2f3f5; }
   .accountArea { display: flex; align-items: center; gap: 0.6rem; }
   .lang-picker { position: relative; margin-left: auto; }
   .lang-btn {
@@ -68,7 +74,7 @@
   .lang-flag img { width: 1.35rem; height: auto; display: block; border-radius: 2px; }
   .lang-menu {
     display: none; position: absolute; top: calc(100% + 0.4rem); right: 0; z-index: 20;
-    background: rgba(38,38,46,0.9); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+    background: #2b2d31; backdrop-filter: none; -webkit-backdrop-filter: none;
     border: 1px solid var(--glass-border); border-radius: 10px; overflow: hidden;
     box-shadow: 0 6px 20px rgba(0,0,0,0.45); min-width: 8rem;
   }
@@ -85,7 +91,7 @@
   }
   .app-manage-btn:hover { background: rgba(255,255,255,0.08); filter: none; }
   .app-manage-btn .status-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: #666; flex-shrink: 0; }
-  .app-manage-btn.connected .status-dot { background: #4ade80; box-shadow: 0 0 6px rgba(74,222,128,0.7); }
+  .app-manage-btn.connected .status-dot { background: var(--text-muted); box-shadow: none; }
   #accountStatus { font-size: 0.82rem; color: #ccc; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.4rem; }
   .account-face { width: 1.35rem; height: 1.35rem; border-radius: 4px; image-rendering: pixelated; display: block; }
   .account-picker { position: relative; }
@@ -93,7 +99,7 @@
   .account-btn:hover { background: rgba(255,255,255,0.08); filter: none; }
   .account-menu {
     display: none; position: absolute; top: calc(100% + 0.4rem); right: 0; z-index: 20;
-    background: rgba(38,38,46,0.9); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+    background: #2b2d31; backdrop-filter: none; -webkit-backdrop-filter: none;
     border: 1px solid var(--glass-border); border-radius: 10px; overflow: hidden; min-width: 8rem;
   }
   .account-menu.open { display: block; }
@@ -106,7 +112,7 @@
   }
   .modal-backdrop.open { display: flex; }
   .modal {
-    background: rgba(38,38,46,0.65); backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%);
+    background: #313338; backdrop-filter: none; -webkit-backdrop-filter: none;
     border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.75rem; width: 22rem; max-width: 90vw; position: relative;
     box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,0.1);
   }
@@ -120,7 +126,7 @@
   #pairDesktopModalBackdrop .modal { width: auto; min-width: min(24rem, calc(100vw - 2rem)); }
   .pair-code {
     font-size: 1.8rem; font-weight: 700; letter-spacing: 0.15em; text-align: center;
-    padding: 0.9rem; border-radius: 10px; background: rgba(155,93,229,0.14); border: 1px solid var(--accent);
+    padding: 0.9rem; border-radius: 10px; background: var(--bg); border: 1px solid var(--line);
     color: #fff;
   }
   .login-modal-reason {
@@ -131,11 +137,17 @@
   .field-label { font-size: 0.78rem; color: #a8a8b3; margin-bottom: -0.35rem; }
   .ms-login-btn {
     display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-    padding: 0.75rem 1.1rem; border-radius: 8px; background: var(--accent); color: var(--accent-text);
+    padding: 0.75rem 1.1rem; border-radius: 8px; background: #f2f3f5; color: #1e1f22;
     font-weight: bold; text-decoration: none;
   }
   .view { display: none; }
   .view.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  /* 체험/플레이 화면은 뷰포트를 채워서 채팅 로그가 페이지가 아니라 창 안에서 스크롤되게 한다. */
+  body:has(#listView.active) {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
   .hero {
     padding: 3.5rem 2rem 0.2rem; text-align: center; margin-bottom: 1.5rem;
     position: relative;
@@ -182,11 +194,11 @@
   }
   .hero-buttons a, .hero-buttons button { padding: 0.85rem 1.6rem; font-size: 0.95rem; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: transform 0.15s, filter 0.15s; }
   .hero-buttons a:hover, .hero-buttons button:hover { transform: translateY(-1px); filter: brightness(1.08); }
-  .btn-download { background: var(--accent); color: var(--accent-text); box-shadow: var(--glass-highlight), 0 6px 18px rgba(155,93,229,0.3); }
+  .btn-download { background: #f2f3f5; color: #1e1f22; box-shadow: none; }
   .btn-download.btn-disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; box-shadow: none; }
   .btn-try {
     background: var(--glass-bg-strong); color: #eee; border: 1px solid var(--glass-border);
-    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
     box-shadow: var(--glass-highlight);
   }
   .btn-try:hover { background: rgba(255,255,255,0.14); }
@@ -195,11 +207,11 @@
   .top-servers .rank-row {
     display: flex; align-items: center; gap: 0.75rem; border-radius: 14px; padding: 0.75rem 1rem;
     background: rgba(255,255,255,0.035);
-    backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
     border: 1px solid rgba(255,255,255,0.08);
     box-shadow: var(--glass-highlight);
   }
-  .top-servers .rank-num { font-weight: bold; font-size: 1rem; color: var(--accent); width: 1.4rem; text-align: center; }
+  .top-servers .rank-num { font-weight: bold; font-size: 1rem; color: var(--text-muted); width: 1.4rem; text-align: center; }
   .top-servers .rank-info { display: flex; flex-direction: column; gap: 0.25rem; }
   .top-servers .rank-meta { font-size: 0.88rem; }
   .top-servers .rank-count { margin-left: auto; font-size: 0.78rem; color: #9ad; white-space: nowrap; }
@@ -211,13 +223,12 @@
   .server-grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 0.75rem; }
   .server-grid-view .server-card {
     border-radius: 16px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.6rem;
-    background: rgba(255,255,255,0.035);
-    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: var(--glass-highlight);
-    transition: transform 0.15s, border-color 0.15s;
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    box-shadow: none;
+    transition: border-color 0.15s;
   }
-  .server-grid-view .server-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.2); }
+  .server-grid-view .server-card:hover { border-color: rgba(255,255,255,0.16); }
   .server-grid-view .server-card .name { font-weight: bold; font-size: 0.95rem; }
   .server-grid-view .server-card .status { font-size: 0.8rem; color: #9ad; }
   .server-grid-view .empty { color: #888; font-size: 0.85rem; }
@@ -225,7 +236,7 @@
   .explore-links a.button-link {
     padding: 0.55rem 0.9rem; border-radius: 8px; color: #eee; text-decoration: none; font-size: 0.85rem;
     background: var(--glass-bg-strong); border: 1px solid var(--glass-border);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
   }
   .explore-links a.button-link:hover { background: rgba(255,255,255,0.16); }
   .layout { display: flex; gap: 0; align-items: stretch; flex: 1; min-height: 0; }
@@ -238,7 +249,7 @@
     background: rgba(255,255,255,0.18); box-shadow: 4px 0 0 rgba(255,255,255,0.18);
     transform: translateY(-50%); transition: opacity 0.15s;
   }
-  .layout-resizer:hover, .layout-resizer.dragging { background: var(--accent); }
+  .layout-resizer:hover, .layout-resizer.dragging { background: #4e5058; }
   .layout-resizer:hover::before, .layout-resizer.dragging::before { opacity: 0; }
   .layout-resizer.disabled { cursor: default; }
   .layout-resizer.disabled:hover { background: transparent; }
@@ -248,10 +259,10 @@
   .mode-toggle-btn {
     flex: 1; text-align: center; background: var(--glass-bg-strong); color: #ccc;
     border: 1px solid var(--glass-border); padding: 0.65rem; font-size: 0.85rem; border-radius: 10px;
-    backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
     box-shadow: var(--glass-highlight);
   }
-  .mode-toggle-btn.active { background: var(--accent); color: var(--accent-text); }
+  .mode-toggle-btn.active { background: var(--bg-hover); color: var(--text); }
   .mode-toggle-skeleton {
     flex: 1; height: 2.6rem; border-radius: 8px;
     background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.11) 50%, rgba(255,255,255,0.04) 75%);
@@ -280,7 +291,8 @@
   }
   .sidebar {
     width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0.6rem;
-    transition: width 0.2s ease;
+    min-height: 0; transition: width 0.2s ease;
+    background: var(--bg-sidebar); border-radius: 12px;
   }
   .sidebar-toggle-btn {
     align-self: flex-start; flex-shrink: 0; width: 1.9rem; height: 1.9rem; padding: 0;
@@ -296,23 +308,29 @@
   }
   .sidebar-toggle-icon .l { width: 34%; height: 100%; background: currentColor; }
   .sidebar-toggle-icon .r { width: 66%; height: 100%; border-left: 1.5px solid currentColor; }
-  .sidebar-content { display: flex; flex-direction: column; gap: 1.25rem; overflow: hidden; min-width: 0; }
+  .sidebar-content {
+    display: flex; flex-direction: column; gap: 1.25rem; overflow: hidden;
+    flex: 1; min-width: 0; min-height: 0;
+  }
+  .sidebar-content > .panel:last-child {
+    flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  }
   .sidebar.collapsed { width: 2.75rem; }
   .sidebar.collapsed .sidebar-content { display: none; }
   input {
     padding: 0.6rem 0.75rem; border-radius: 10px; border: 1px solid var(--glass-border);
     background: rgba(0,0,0,0.22); color: #eee; width: 100%;
-    backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
     box-shadow: var(--glass-highlight);
   }
   button {
-    padding: 0.6rem 0.9rem; border-radius: 10px; border: none;
-    background: var(--accent); color: var(--accent-text);
-    font-weight: bold; cursor: pointer; transition: transform 0.12s, filter 0.12s;
-    box-shadow: var(--glass-highlight);
+    padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid transparent;
+    background: var(--bg-hover); color: var(--text);
+    font-weight: 600; cursor: pointer; transition: background 0.12s;
+    box-shadow: none;
   }
-  button:hover { filter: brightness(1.08); }
-  button:disabled { background: #4a4a52; color: #999; cursor: not-allowed; filter: none; }
+  button:hover { background: #4e5058; filter: none; }
+  button:disabled { background: #2b2d31; color: #949ba4; cursor: not-allowed; filter: none; }
   #addServerForm { display: flex; flex-direction: column; gap: 0.8rem; }
   #addServerForm button[type="submit"] { margin-top: 0.5rem; padding: 0.75rem 0.9rem; }
   #addServerError {
@@ -332,24 +350,78 @@
   .icon-btn.refresh-btn .refresh-icon { display: inline-block; }
   .icon-btn.refresh-btn.spinning .refresh-icon { animation: icon-btn-spin 0.6s linear; }
   @keyframes icon-btn-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  .add-server-btn, .icon-btn.refresh-btn {
+  .legend-btn {
+    padding: 0.4rem 0.55rem; font-size: 0.78rem; line-height: 1; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .add-server-btn, .icon-btn.refresh-btn, .legend-btn {
     background: transparent; color: #ccc; border: 1px solid rgba(255,255,255,0.16); box-shadow: none;
   }
-  .add-server-btn:hover, .icon-btn.refresh-btn:hover {
-    background: rgba(155,93,229,0.16); border-color: var(--accent); color: #fff; filter: none;
+  .add-server-btn:hover, .icon-btn.refresh-btn:hover, .legend-btn:hover {
+    background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: #fff; filter: none;
   }
+  .sidebar .panel-header { flex-wrap: wrap; gap: 0.35rem 0.5rem; }
+  .sidebar .panel-header h2 { white-space: nowrap; }
   #serverList {
     list-style: none; padding: 0; margin: 0.75rem 0 0; display: flex; flex-direction: column; gap: 0.5rem;
-    max-height: 22rem; overflow-y: auto; overscroll-behavior: contain;
+    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   }
   #serverList li, .home-demo-sidebar li {
-    padding: 0.7rem; border-radius: 14px; font-size: 0.85rem; cursor: grab;
-    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-    backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
-    box-shadow: var(--glass-highlight);
+    padding: 0.7rem; border-radius: 10px; font-size: 0.85rem; cursor: grab;
+    background: var(--bg-raised); border: 1px solid var(--line);
+    box-shadow: none;
     display: flex; align-items: center; gap: 0.9rem;
   }
-  #serverList li.selected, .home-demo-sidebar li.selected { border-color: var(--accent); background: rgba(155,93,229,0.14); }
+  #serverList li.on-screen { border-color: var(--line); }
+  #serverList li.selected, .home-demo-sidebar li.selected {
+    border-color: var(--line); background: var(--bg-hover); box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .server-title-row { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+  .server-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; min-width: 0; }
+  .server-availability {
+    display: inline-flex; align-items: center; gap: 0.28rem; max-width: 100%;
+    border: 0; background: none; box-shadow: none; padding: 0; margin: 0;
+    color: #c6c6d0; font: inherit; font-size: 0.72rem; font-weight: 700; line-height: 1.2;
+    cursor: pointer; text-align: left;
+  }
+  .server-availability:hover { filter: none; }
+  .server-signal { display: inline-flex; align-items: flex-end; gap: 2px; width: 0.78rem; height: 0.72rem; flex-shrink: 0; }
+  .server-signal i { display: block; width: 2px; border-radius: 1px; background: currentColor; }
+  .server-signal i:nth-child(1) { height: 35%; }
+  .server-signal i:nth-child(2) { height: 65%; }
+  .server-signal i:nth-child(3) { height: 100%; }
+  .server-availability.online { color: var(--online); }
+  .server-availability.offline { color: #b7b7c4; }
+  .server-availability.offline .server-signal i { opacity: 0.28; }
+  .server-availability.checking { color: #b7b7c4; }
+  .server-availability.checking .server-signal i:nth-child(2) { animation: slot-status-pulse 1.1s ease-in-out infinite; }
+  .server-signal-text { min-width: 0; }
+  .conn-pill {
+    display: inline-flex; align-items: center; gap: 0.15rem;
+    border-radius: 999px; border: 1px solid currentColor; background: transparent;
+    box-shadow: none; padding: 0.05rem 0.42rem; margin: 0;
+    font: inherit; font-size: 0.68rem; font-weight: 700; line-height: 1.35;
+    color: #c6c6d0; cursor: pointer; white-space: nowrap;
+  }
+  .conn-pill:hover { filter: none; }
+  .conn-pill[hidden], .server-availability[hidden] { display: none !important; }
+  .conn-pill.connecting { color: var(--amber); }
+  .conn-pill.reconnecting { color: var(--amber); }
+  .conn-pill.reconnecting::before { content: "↻"; font-size: 0.78rem; line-height: 1; }
+  .conn-pill.connected { color: #dbdee1; background: transparent; }
+  .conn-pill.disconnected { color: var(--text-muted); }
+  .conn-pill.error { color: #ffb4ac; background: transparent; }
+  .pane-badge {
+    flex-shrink: 0; font-size: 0.68rem; font-weight: 700; line-height: 1.2;
+    color: #f2f3f5; background: #4e5058; border-radius: 6px; padding: 0.12rem 0.38rem;
+  }
+  .unread-badge {
+    flex-shrink: 0; min-width: 1.25rem; height: 1.25rem; padding: 0 0.35rem;
+    border-radius: 999px; background: var(--danger); color: #fff;
+    font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .pane-badge[hidden], .unread-badge[hidden], .slot-jump[hidden],
+  .conn-pill[hidden], .server-availability[hidden] { display: none !important; }
   #serverList li.empty-trial {
     display: block; cursor: default; color: #b7b7c4; background: transparent; border: none;
     box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; line-height: 1.5;
@@ -357,7 +429,11 @@
   .server-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.3rem; }
   .server-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .server-status { color: #9ad; font-size: 0.75rem; }
-  .select-slot-btn { flex-shrink: 0; padding: 0.4rem 0.7rem; font-size: 0.78rem; }
+  .select-slot-btn {
+    flex-shrink: 0; padding: 0.4rem 0.7rem; font-size: 0.78rem; font-weight: 600;
+    background: transparent; color: #dbdee1; border: 1px solid rgba(255,255,255,0.16); box-shadow: none;
+  }
+  .select-slot-btn:hover { background: rgba(255,255,255,0.08); filter: none; }
   .drag-handle {
     flex-shrink: 0; width: 9px; height: 13px; margin-left: 0.15rem; position: relative;
   }
@@ -384,10 +460,11 @@
   }
   .sidebar-backdrop { display: none; }
   .layout-switcher button {
-    background: rgba(255,255,255,0.06); color: #ccc; padding: 0.5rem 0.75rem; display: flex; align-items: center; border: 1px solid var(--glass-border);
-    backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
+    background: transparent; color: var(--text-muted); padding: 0.5rem 0.75rem; display: flex; align-items: center;
+    border: 1px solid var(--line); box-shadow: none;
   }
-  .layout-switcher button.active { background: var(--accent); color: var(--accent-text); }
+  .layout-switcher button:hover { background: rgba(255,255,255,0.06); filter: none; }
+  .layout-switcher button.active { background: rgba(255,255,255,0.1); color: #fff; }
   .layout-icon { display: inline-grid; gap: 2px; width: 1.1rem; height: 1.1rem; }
   .layout-icon i { background: currentColor; border-radius: 1px; display: block; }
   .layout-icon.n1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
@@ -397,26 +474,36 @@
   .chat-grid[data-layout="1"] { grid-template-columns: 1fr; }
   .chat-grid[data-layout="2"] { grid-template-columns: 1fr 1fr; }
   .chat-grid[data-layout="4"] { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
+  .chat-grid[data-layout="2"] > .chat-slot,
+  .chat-grid[data-layout="4"] > .chat-slot { min-width: 0; min-height: 0; }
   .chat-slot {
+    position: relative;
     border-radius: 16px; padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;
     min-width: 260px; min-height: 260px;
-    background: rgba(255,255,255,0.035);
-    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: var(--glass-highlight);
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    box-shadow: none;
   }
+  .chat-slot.focused { border-color: rgba(255,255,255,0.16); box-shadow: none; }
   .chat-slot.drag-hint {
-    outline: 2px dashed var(--accent); outline-offset: -2px;
+    outline: 2px dashed rgba(255,255,255,0.35); outline-offset: -2px;
     animation: chat-slot-drop-hint 0.8s ease-in-out infinite;
+  }
+  .slot-jump {
+    position: absolute; left: 50%; bottom: 4.15rem; transform: translateX(-50%); z-index: 5;
+    border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.78rem; font-weight: 700;
+    background: #4e5058; color: #fff; border: none; box-shadow: none;
   }
   @keyframes chat-slot-drop-hint {
     0%, 100% { background: transparent; }
-    50% { background: rgba(155,93,229,0.14); }
+    50% { background: rgba(255,255,255,0.06); }
   }
   .slot-header { display: flex; gap: 0.5rem; align-items: center; }
   .slot-connect-btn { flex-shrink: 0; padding: 0.4rem 0.7rem; font-size: 0.78rem; }
-  .slot-connect-btn.disconnect-mode { background: rgba(224,84,74,0.16); border: 1px solid rgba(224,84,74,0.5); color: #ffb4ac; }
-  .slot-connect-btn.disconnect-mode:hover { background: rgba(224,84,74,0.28); }
+  .slot-chat-form button { background: var(--accent); color: #fff; border-color: transparent; }
+  .slot-chat-form button:hover { background: #5b21b6; filter: none; }
+  .slot-connect-btn.disconnect-mode { background: transparent; border: 1px solid rgba(255,255,255,0.16); color: #dbdee1; }
+  .slot-connect-btn.disconnect-mode:hover { background: rgba(196,56,50,0.18); border-color: var(--danger); color: #ffb4ac; filter: none; }
   .slot-server-picker { position: relative; flex: 1; min-width: 0; }
   .slot-server-btn {
     width: 100%; box-sizing: border-box; min-height: 2.2rem; text-align: left; background-color: rgba(255,255,255,0.06); color: #eee; border: 1px solid var(--glass-border); border-radius: 10px;
@@ -424,21 +511,21 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23999' d='M4 6l4 4 4-4z'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 0.6rem center; background-size: 0.7rem;
-    backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
     box-shadow: var(--glass-highlight);
     transition: border-color 0.15s;
   }
   .slot-server-btn:hover { border-color: #888; }
   .slot-server-menu {
     display: none; position: absolute; top: calc(100% + 0.3rem); left: 0; right: 0; z-index: 20;
-    background: rgba(38,38,46,0.85); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+    background: #2b2d31; backdrop-filter: none; -webkit-backdrop-filter: none;
     border: 1px solid var(--glass-border); border-radius: 10px; max-height: 14rem; overflow-y: auto;
     box-shadow: 0 6px 20px rgba(0,0,0,0.45);
   }
   .slot-server-menu.open { display: block; }
   .slot-server-menu .item { padding: 0.65rem 0.9rem; font-size: 0.82rem; cursor: pointer; }
   .slot-server-menu .item:hover { background: rgba(255,255,255,0.08); }
-  .slot-server-menu .item.selected { background: rgba(155,93,229,0.18); color: var(--accent); font-weight: bold; }
+  .slot-server-menu .item.selected { background: rgba(255,255,255,0.08); color: #fff; font-weight: bold; }
   .slot-server-menu .empty { padding: 0.65rem 0.9rem; font-size: 0.8rem; color: #888; }
   .slot-status-dot {
     flex-shrink: 0; width: 0.6rem; height: 0.6rem; border-radius: 50%; margin: 0 0.5rem;
@@ -458,8 +545,8 @@
      clipped by .chat-grid's overflow:auto like an in-place absolute tooltip would. */
   .slot-status-tooltip {
     display: none; position: fixed; transform: translateX(-50%);
-    z-index: 300; width: 13rem; padding: 0.4rem 1rem 0.75rem; border-radius: 12px;
-    background: rgba(30,30,38,0.96); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+    z-index: 300; width: min(18rem, calc(100vw - 1.5rem)); padding: 0.4rem 1rem 0.85rem; border-radius: 12px;
+    background: #2b2d31; backdrop-filter: none; -webkit-backdrop-filter: none;
     border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
     font-size: 0.8rem; color: #e4e4ea; cursor: default;
     animation: slot-status-tooltip-in 0.12s ease-out;
@@ -468,9 +555,10 @@
     from { opacity: 0; transform: translateX(-50%) translateY(-3px); }
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
+  .slot-status-tooltip.legend-open::before { display: none; }
   .slot-status-tooltip::before {
     content: ""; position: absolute; top: -6px; left: 50%; margin-left: -6px;
-    width: 12px; height: 12px; background: rgba(30,30,38,0.96);
+    width: 12px; height: 12px; background: #2b2d31;
     border-left: 1px solid rgba(255,255,255,0.14); border-top: 1px solid rgba(255,255,255,0.14);
     transform: rotate(45deg); border-radius: 2px 0 0 0;
   }
@@ -485,11 +573,21 @@
   .slot-status-tooltip .dot.connecting { background: #e0a83a; }
   .slot-status-tooltip .dot.connected { background: #4caf50; }
   .slot-status-tooltip .dot.disconnected { background: #e0544a; }
-  .slot-log { flex: 1; overflow-y: auto; background: rgba(0,0,0,0.28); border-radius: 8px; padding: 0.6rem 0.8rem; min-height: 0; }
+  .legend-section { padding: 0.35rem 0 0.15rem; }
+  .legend-kicker { font-size: 0.75rem; font-weight: 700; color: #fff; margin: 0.15rem 0; }
+  .legend-section p { margin: 0 0 0.4rem; color: #c6c6d0; line-height: 1.45; }
+  .legend-sample { display: flex; align-items: center; gap: 0.35rem; color: #3ddc84; font-weight: 700; font-size: 0.75rem; padding: 0.12rem 0; }
+  .legend-sample.offline { color: #b7b7c4; }
+  .legend-sample.offline .server-signal i { opacity: 0.28; }
+  .legend-pills { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .slot-status-tooltip .conn-pill { cursor: default; pointer-events: none; }
+  #slotStatusTooltip [hidden] { display: none !important; }
+  .status-tip-line { margin: 0.35rem 0 0.15rem; line-height: 1.4; }
+  .slot-log { flex: 1; overflow-y: auto; background: var(--bg-sidebar); border-radius: 8px; padding: 0.6rem 0.8rem; min-height: 0; }
   .slot-chat-form { display: flex; gap: 0.5rem; }
   .line { padding: 0.2rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.9rem; word-break: break-word; }
   .line.line-system { color: #9a9aa8; font-style: italic; font-size: 0.82rem; }
-  .sys-tag { font-style: normal; color: var(--accent); margin-right: 0.35rem; }
+  .sys-tag { font-style: normal; color: var(--text-muted); margin-right: 0.35rem; }
   .time { color: #888; font-size: 0.8rem; margin-right: 0.5rem; }
   /* Home hero preview: a non-interactive mockup of the real Play tab, scripted in JS
      to animate on a loop so we don't need to record/host an actual demo video. Styled
@@ -499,8 +597,7 @@
     margin: 0.3rem auto 0; width: 82rem; max-width: 100%; text-align: left;
     background: #0d0d10; border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06),
-      0 0 120px 20px rgba(255,255,255,0.10);
+    box-shadow: none;
     pointer-events: none; display: flex; flex-direction: column; aspect-ratio: 16 / 9;
   }
   .home-demo-titlebar {
@@ -517,7 +614,7 @@
   }
   .home-demo-body { position: relative; display: flex; gap: 1.25rem; padding: 1.4rem; flex: 1; min-height: 0; }
   .sign-badge {
-    float: right; font-size: 0.72rem; color: #9ad; background: rgba(155,93,229,0.15);
+    float: right; font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.08);
     padding: 0.1rem 0.5rem; border-radius: 6px; margin-left: 0.5rem; white-space: nowrap;
   }
   /* "어디서든 접속" 데모: 웹 채팅 카드 위에 휴대폰 모양을 우측 하단에 겹쳐서
@@ -564,7 +661,7 @@
   .gate-backdrop.open { display: flex; }
   .gate-modal {
     width: 24rem; max-width: 90vw; text-align: center; padding: 2.25rem 2rem; position: relative;
-    background: rgba(38,38,46,0.55); backdrop-filter: blur(32px) saturate(180%); -webkit-backdrop-filter: blur(32px) saturate(180%);
+    background: #313338; backdrop-filter: none; -webkit-backdrop-filter: none;
     border: 1px solid rgba(255,255,255,0.16); border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12);
   }
@@ -580,11 +677,11 @@
   .gate-buttons a, .gate-buttons button { padding: 0.75rem 1.4rem; font-size: 0.88rem; border-radius: 10px; text-decoration: none; }
   .btn-secondary {
     background: rgba(255,255,255,0.1); color: #eee;
-    backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: none; -webkit-backdrop-filter: none;
     box-shadow: var(--glass-highlight);
   }
   .btn-secondary:hover { background: rgba(255,255,255,0.18); }
-  .btn-danger { background: #d9534f; color: #fff; box-shadow: 0 6px 18px rgba(217,83,79,0.35); }
+  .btn-danger { background: var(--danger); color: #fff; border-color: transparent; box-shadow: none; }
   .btn-danger:hover { background: #c9433f; }
 
   .appFooter {
@@ -741,10 +838,9 @@
       padding-right: max(0.75rem, env(safe-area-inset-right));
       /* backdrop-filter는 fixed 자식을 헤더 기준으로 가둔다. 하단 탭이 화면 바닥에 붙도록 끈다. */
       backdrop-filter: none; -webkit-backdrop-filter: none;
-      background: rgba(12,12,16,0.96);
+      background: var(--bg);
     }
-    .logo-wrap { height: 1.7rem; }
-    .logo-wrap img { height: 6.6rem; }
+    .logo-word { font-size: 1.05rem; }
     .tabNav {
       position: fixed;
       left: 0; right: 0; bottom: 0;
@@ -752,7 +848,7 @@
       gap: 0.25rem;
       margin: 0;
       padding: 0.3rem 0.45rem calc(0.3rem + env(safe-area-inset-bottom));
-      background: rgba(15,15,19,0.96);
+      background: var(--bg);
       backdrop-filter: var(--glass-blur);
       -webkit-backdrop-filter: var(--glass-blur);
       border-top: 1px solid rgba(255,255,255,0.12);
@@ -765,7 +861,7 @@
       border-radius: 10px;
       border-bottom-color: transparent;
     }
-    .tabNav button.active { background: rgba(155,93,229,0.22); border-bottom-color: transparent; }
+    .tabNav button.active { background: rgba(255,255,255,0.08); border-bottom-color: transparent; }
     .lang-btn, .account-btn, .modal-close, .gate-modal .gate-close,
     button, .ms-login-btn, .explore-links a.button-link, input { min-height: 2.75rem; }
     .lang-btn, .account-btn, .modal-close, .gate-modal .gate-close { min-width: 2.75rem; }
@@ -775,6 +871,7 @@
       min-height: 2.75rem; display: flex; align-items: center;
     }
     .layout-switcher .sidebar-open-btn { display: inline-flex; }
+    .layout-switcher button[data-n] { display: none !important; }
     .layout-switcher { flex-wrap: wrap; align-items: center; }
     .layout { min-height: 0; }
     .layout-resizer { display: none; }
@@ -795,12 +892,12 @@
       z-index: 60;
       transform: translateX(-105%);
       transition: transform 0.2s ease;
-      background: #121218;
+      background: var(--bg-sidebar);
       border-right: 1px solid rgba(255,255,255,0.12);
       border-radius: 0 16px 16px 0;
       padding: max(0.75rem, env(safe-area-inset-top)) 0.85rem max(0.85rem, env(safe-area-inset-bottom)) max(0.85rem, env(safe-area-inset-left));
       overflow: auto;
-      box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+      box-shadow: none;
     }
     .sidebar.drawer-open { transform: translateX(0); }
     .sidebar.collapsed .sidebar-content { display: flex; }
@@ -821,7 +918,8 @@
     .slot-header { flex-wrap: wrap; }
     .slot-server-picker { flex: 1 1 8rem; }
     .slot-log { overflow-y: auto; }
-    .slot-chat-form { position: sticky; bottom: 0; background: rgba(12,12,16,0.92); padding-top: 0.15rem; }
+    .server-availability, .conn-pill { min-height: 0; padding: 0.05rem 0.4rem; }
+    .slot-chat-form { position: sticky; bottom: 0; background: var(--bg-raised); padding-top: 0.15rem; }
     .line { font-size: 0.95rem; }
     body:has(#listView.active) .appFooter,
     body:has(#serversView.active) .appFooter { display: none; }
@@ -858,7 +956,7 @@
     display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;
   }
   .toast {
-    background: rgba(38,38,46,0.92); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: #2b2d31; backdrop-filter: none; -webkit-backdrop-filter: none;
     border: 1px solid var(--glass-border); border-radius: 10px; padding: 0.75rem 1rem;
     color: #eee; font-size: 0.85rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     opacity: 0; transform: translateY(0.5rem); transition: opacity 0.2s, transform 0.2s;
@@ -879,7 +977,7 @@
 </head>
 <body>
   <header class="appHeader">
-    <div class="logo-wrap" id="logoBtn"><img src="/logo.png" alt="MinePortal" /></div>
+    <div class="logo-wrap" id="logoBtn"><span class="logo-word">MinePortal</span></div>
     <nav class="tabNav">
       <button type="button" id="tabHomeBtn" class="active" style="display:none" data-i18n="tabHome">홈</button>
       <button type="button" id="tabListBtn" data-i18n="tabPlay">체험하기</button>
@@ -989,11 +1087,27 @@
   </div>
 
   <div class="slot-status-tooltip" id="slotStatusTooltip">
-    <div class="slot-status-tooltip-title" data-i18n="statusLegendTitle">연결 상태</div>
-    <div class="row"><span class="dot idle"></span><span data-i18n="statusLegendIdle">미연결</span></div>
-    <div class="row"><span class="dot connecting"></span><span data-i18n="statusLegendConnecting">연결 중</span></div>
-    <div class="row"><span class="dot connected"></span><span data-i18n="statusLegendConnected">연결됨</span></div>
-    <div class="row"><span class="dot disconnected"></span><span data-i18n="statusLegendDisconnected">연결 끊김/오류</span></div>
+    <div class="slot-status-tooltip-title" id="statusLegendHeading" data-i18n="legendTitle">상태 안내</div>
+    <p class="status-tip-line" id="statusTipLine" hidden></p>
+    <div id="statusLegendBody">
+      <div class="legend-section">
+        <div class="legend-kicker" data-i18n="legendServerTitle">서버 상태</div>
+        <p data-i18n="legendServerBody">신호 표시는 마인크래프트 서버가 응답하는지를 알려 줘요. 인원수는 서버 목록 핑으로 가져오고, 내가 접속하지 않아도 모든 서버에 보여요.</p>
+        <div class="legend-sample"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span data-i18n="legendServerOnlineSample">온라인 12/100</span></div>
+        <div class="legend-sample offline"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span data-i18n="legendServerOfflineSample">오프라인</span></div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-kicker" data-i18n="legendConnTitle">내 연결</div>
+        <p data-i18n="legendConnBody">알약 표시는 마인포탈로 접속한 뒤에만 나와요. 서버가 온라인이어도 내가 접속하지 않으면 이 표시는 없어요.</p>
+        <div class="legend-pills">
+          <span class="conn-pill connecting" data-i18n="connConnecting">연결 중</span>
+          <span class="conn-pill reconnecting" data-i18n="connReconnecting">재연결 중</span>
+          <span class="conn-pill connected" data-i18n="connConnected">연결됨</span>
+          <span class="conn-pill disconnected" data-i18n="connDisconnected">연결 끊김</span>
+          <span class="conn-pill error" data-i18n="connError">오류</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="view active" id="homeView">
@@ -1035,28 +1149,28 @@
               <span class="drag-handle" aria-hidden="true"></span>
               <div class="server-info">
                 <span class="server-meta">play.hypixel.net</span>
-                <div class="server-status">연결됨</div>
+                <div class="server-meta-row"><span class="server-availability online"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">온라인 12/100</span></span><span class="conn-pill connected">연결됨</span></div>
               </div>
             </li>
             <li>
               <span class="drag-handle" aria-hidden="true"></span>
               <div class="server-info">
                 <span class="server-meta">mc.hive.com</span>
-                <div class="server-status">대기 중</div>
+                <div class="server-meta-row"><span class="server-availability online"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">온라인 40/100</span></span></div>
               </div>
             </li>
             <li>
               <span class="drag-handle" aria-hidden="true"></span>
               <div class="server-info">
                 <span class="server-meta">survival.kr</span>
-                <div class="server-status">대기 중</div>
+                <div class="server-meta-row"><span class="server-availability offline"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">오프라인</span></span></div>
               </div>
             </li>
           </ul>
         </div>
         <div class="chat-slot home-demo-slot">
           <div class="slot-header">
-            <span class="slot-status-dot connected" id="homeDemoDot"></span>
+            <span class="conn-pill connected" id="homeDemoDot">연결됨</span>
             <button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button>
           </div>
           <div class="slot-log" id="homeDemoLog"></div>
@@ -1177,6 +1291,7 @@
             <div class="panel-header">
               <h2 data-i18n="serverListTitle">서버 목록</h2>
               <div class="panel-header-actions">
+                <button type="button" class="icon-btn legend-btn" id="statusLegendBtn" data-i18n="legendBtn" data-i18n-aria="legendBtnAria" aria-label="서버 상태와 내 연결 안내">안내</button>
                 <button type="button" class="icon-btn refresh-btn" id="refreshServerListBtn" data-i18n-title="refreshBtnTitle" aria-label="새로고침"><span class="refresh-icon">⟳</span></button>
                 <button type="button" class="add-server-btn" id="addServerBtn" data-i18n="addServerBtn">+ 서버 추가</button>
               </div>
@@ -1205,6 +1320,7 @@
       <div class="panel-header">
         <h2 data-i18n="serverListTitle">서버 목록</h2>
         <div class="panel-header-actions">
+          <button type="button" class="icon-btn legend-btn" id="statusLegendBtn2" data-i18n="legendBtn" data-i18n-aria="legendBtnAria" aria-label="서버 상태와 내 연결 안내">안내</button>
           <button type="button" class="icon-btn refresh-btn" id="refreshServersBtn" data-i18n-title="refreshBtnTitle" aria-label="새로고침"><span class="refresh-icon">⟳</span></button>
           <button type="button" class="add-server-btn" id="addServerBtn2" data-i18n="addServerBtn">+ 서버 추가</button>
         </div>
@@ -1327,6 +1443,9 @@
         layout1: "1개",
         layout2: "2개",
         layout4: "4개",
+        newMessagesBtn: "새 메시지",
+        paneBadgeAria: "{n}번 창",
+        unreadBadgeAria: "안 읽은 메시지 {n}",
         serverSelectPlaceholder: "서버 선택",
         connectBtn: "연결",
         connectedBtn: "연결됨",
@@ -1350,6 +1469,27 @@
         pingChecking: "확인 중...",
         pingOnline: "🟢 {online}/{max}명",
         pingOffline: "🔴 오프라인",
+        serverOnline: "온라인 {online}/{max}",
+        serverOffline: "오프라인",
+        serverChecking: "확인 중",
+        serverOnlineAria: "서버 상태: 온라인 {online}/{max}",
+        serverOfflineAria: "서버 상태: 오프라인",
+        serverCheckingAria: "서버 상태: 확인 중",
+        connConnecting: "연결 중",
+        connReconnecting: "재연결 중",
+        connConnected: "연결됨",
+        connDisconnected: "연결 끊김",
+        connError: "오류",
+        connAria: "내 연결: {label}",
+        legendTitle: "상태 안내",
+        legendBtn: "안내",
+        legendBtnAria: "서버 상태와 내 연결 안내",
+        legendServerTitle: "서버 상태",
+        legendServerBody: "신호 표시는 마인크래프트 서버가 응답하는지를 알려 줘요. 인원수는 서버 목록 핑으로 가져오고, 내가 접속하지 않아도 모든 서버에 보여요.",
+        legendServerOnlineSample: "온라인 12/100",
+        legendServerOfflineSample: "오프라인",
+        legendConnTitle: "내 연결",
+        legendConnBody: "알약 표시는 마인포탈로 접속한 뒤에만 나와요. 서버가 온라인이어도 내가 접속하지 않으면 이 표시는 없어요.",
         accountLoginFailed: "로그인 실패",
         loginNeededForServers: "로그인 후 서버 목록을 이용할 수 있어요.",
         toastServerSelected: "서버가 선택되었습니다. 연결 버튼을 눌러주세요.",
@@ -1449,6 +1589,9 @@
         layout1: "1 window",
         layout2: "2 windows",
         layout4: "4 windows",
+        newMessagesBtn: "New messages",
+        paneBadgeAria: "Pane {n}",
+        unreadBadgeAria: "{n} unread",
         serverSelectPlaceholder: "Select server",
         connectBtn: "Connect",
         connectedBtn: "Connected",
@@ -1472,6 +1615,27 @@
         pingChecking: "Checking...",
         pingOnline: "🟢 {online}/{max} players",
         pingOffline: "🔴 Offline",
+        serverOnline: "Online {online}/{max}",
+        serverOffline: "Offline",
+        serverChecking: "Checking",
+        serverOnlineAria: "Server status: online {online}/{max}",
+        serverOfflineAria: "Server status: offline",
+        serverCheckingAria: "Server status: checking",
+        connConnecting: "Connecting",
+        connReconnecting: "Reconnecting",
+        connConnected: "Connected",
+        connDisconnected: "Disconnected",
+        connError: "Error",
+        connAria: "Your connection: {label}",
+        legendTitle: "Status guide",
+        legendBtn: "Guide",
+        legendBtnAria: "Guide to server status and your connection",
+        legendServerTitle: "Server status",
+        legendServerBody: "The signal shows whether the Minecraft server itself answers. The player count comes from the server-list ping and is shown for every server, whether you are connected or not.",
+        legendServerOnlineSample: "Online 12/100",
+        legendServerOfflineSample: "Offline",
+        legendConnTitle: "Your connection",
+        legendConnBody: "The pill appears only after you connect through MinePortal. An online server with no pill means you are not connected to it.",
         accountLoginFailed: "Login failed",
         loginNeededForServers: "Log in to use the server list.",
         toastServerSelected: "Server selected. Click Connect to continue.",
@@ -1568,9 +1732,6 @@
     const trialAddNoticeBackdrop = document.getElementById("trialAddNoticeBackdrop");
     const trialAddNoticeClose = document.getElementById("trialAddNoticeClose");
     const trialAddNoticeOk = document.getElementById("trialAddNoticeOk");
-    const slotPickerBackdrop = document.getElementById("slotPickerBackdrop");
-    const slotPickerClose = document.getElementById("slotPickerClose");
-    const slotPickerList = document.getElementById("slotPickerList");
     const toastContainer = document.getElementById("toastContainer");
     // Flag icons are embedded as base64 PNGs (official flag artwork) so they render
     // pixel-identical everywhere, instead of being hand-drawn approximations.
@@ -1667,46 +1828,6 @@
     trialAddNoticeOk.addEventListener("click", closeTrialAddNotice);
     trialAddNoticeBackdrop.addEventListener("click", (e) => {
       if (e.target === trialAddNoticeBackdrop) closeTrialAddNotice();
-    });
-
-    // Lets the user pick which open chat window a server lands in, instead of always
-    // guessing "first empty slot". `hint` shows the "server selected, click connect" toast —
-    // skipped when this is opened right after a successful connect (server-grid-view),
-    // since in that case it's already connecting.
-    let slotPickerTargetId = null;
-    let slotPickerHint = true;
-
-    function openSlotPicker(id, hint) {
-      slotPickerTargetId = id;
-      slotPickerHint = hint !== false;
-      slotPickerList.innerHTML = slots.map((slot, i) => {
-        const current = slot.serverId ? servers.find((s) => s.id === slot.serverId) : null;
-        const label = current
-          ? t("slotPickLabelReplace", { n: i + 1, target: escapeHtml(current.host + ':' + current.port) })
-          : t("slotPickLabelEmpty", { n: i + 1 });
-        return '<button type="button" class="slot-pick-btn" data-i="' + i + '">' + label + '</button>';
-      }).join("");
-      slotPickerList.querySelectorAll(".slot-pick-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const i = Number(btn.dataset.i);
-          slots[i].serverId = slotPickerTargetId;
-          closeSlotPicker();
-          renderServers();
-          loadSlotDetail(i);
-          if (slotPickerHint) showToast(t("toastServerSelected"));
-        });
-      });
-      slotPickerBackdrop.classList.add("open");
-    }
-
-    function closeSlotPicker() {
-      slotPickerBackdrop.classList.remove("open");
-      slotPickerTargetId = null;
-    }
-
-    slotPickerClose.addEventListener("click", closeSlotPicker);
-    slotPickerBackdrop.addEventListener("click", (e) => {
-      if (e.target === slotPickerBackdrop) closeSlotPicker();
     });
 
     function openLoginModal(reason) {
@@ -1848,22 +1969,193 @@
     // dot with fixed coordinates computed from its bounding rect.
     const slotStatusTooltip = document.getElementById("slotStatusTooltip");
 
+    const statusTipLine = document.getElementById("statusTipLine");
+    const statusLegendBody = document.getElementById("statusLegendBody");
+    let statusTipPinned = false;
+    let statusTipAnchor = null;
+
+    function isLegendButton(el) {
+      return el && (el.id === "statusLegendBtn" || el.id === "statusLegendBtn2");
+    }
+
     function showStatusTooltip(anchorEl) {
-      const rect = anchorEl.getBoundingClientRect();
+      if (!anchorEl) return;
+      statusTipAnchor = anchorEl;
+      const full = isLegendButton(anchorEl);
+      statusTipLine.hidden = full;
+      statusLegendBody.hidden = !full;
+      slotStatusTooltip.classList.toggle("legend-open", full);
+      if (!full) statusTipLine.textContent = anchorEl.dataset.tip || anchorEl.getAttribute("aria-label") || "";
       slotStatusTooltip.style.display = "block";
-      slotStatusTooltip.style.left = (rect.left + rect.width / 2) + "px";
-      slotStatusTooltip.style.top = (rect.bottom + 8) + "px";
+      const rect = anchorEl.getBoundingClientRect();
+      const tipRect = slotStatusTooltip.getBoundingClientRect();
+      const width = tipRect.width || 260;
+      const height = tipRect.height || 80;
+      let left = rect.left + rect.width / 2;
+      let top = rect.bottom + 8;
+      const sidebar = document.getElementById("sidebar");
+      const side = sidebar ? sidebar.getBoundingClientRect() : rect;
+      // The full guide is wide. Park it just to the right of the server list
+      // when that list is a sidebar, so the guide and the rows stay readable.
+      if (full && side.width < window.innerWidth * 0.7 && side.right + width + 16 < window.innerWidth) {
+        left = side.right + 12 + width / 2;
+        top = Math.max(8, Math.min(rect.top, window.innerHeight - height - 8));
+      } else {
+        left = Math.max(width / 2 + 8, Math.min(window.innerWidth - width / 2 - 8, left));
+        if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 8);
+      }
+      slotStatusTooltip.style.left = left + "px";
+      slotStatusTooltip.style.top = top + "px";
     }
 
     function hideStatusTooltip() {
+      statusTipPinned = false;
+      statusTipAnchor = null;
       slotStatusTooltip.style.display = "none";
     }
+
+    // 안내 버튼과 각 표시는 눌러도(터치 포함) 같은 설명을 연다. 캡처 단계에서
+    // 막아야 사이드바 줄을 고르는 클릭으로 이어지지 않는다.
+    document.addEventListener("click", (e) => {
+      const anchor = e.target.closest("[data-tip], #statusLegendBtn, #statusLegendBtn2");
+      if (anchor) {
+        e.stopPropagation();
+        if (statusTipPinned && statusTipAnchor === anchor) {
+          hideStatusTooltip();
+          return;
+        }
+        statusTipPinned = true;
+        showStatusTooltip(anchor);
+        return;
+      }
+      if (!e.target.closest("#slotStatusTooltip")) hideStatusTooltip();
+    }, true);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") hideStatusTooltip();
+    });
+    document.addEventListener("mouseover", (e) => {
+      if (statusTipPinned) return;
+      const anchor = e.target.closest("[data-tip], #statusLegendBtn, #statusLegendBtn2");
+      if (!anchor) return;
+      showStatusTooltip(anchor);
+    });
+    document.addEventListener("mouseout", (e) => {
+      if (statusTipPinned) return;
+      const anchor = e.target.closest("[data-tip], #statusLegendBtn, #statusLegendBtn2");
+      if (!anchor || anchor.contains(e.relatedTarget)) return;
+      hideStatusTooltip();
+    });
 
     let account = { status: "logged-out" };
     let servers = [];
     let serversLoaded = false; // 서버 목록을 아직 한 번도 못 받아왔으면(HTTP/WS 둘 다) true로 안 바뀜 — 그동안은 스켈레톤을 보여준다
-    let slots = [{ serverId: null }]; // one entry per visible chat-grid slot
+    let slots = [{ serverId: null }]; // one entry per visible chat pane
     let slotRefs = []; // DOM refs parallel to `slots`, rebuilt whenever the layout changes
+    let requestedLayout = 1;
+    let focusedSlot = 0;
+    // Remembers which server each pane was showing, including panes hidden by the
+    // 1-window layout or by the phone drawer. Switching layout never disconnects.
+    let slotMemory = [null, null, null, null];
+    const rooms = {};
+    const CHAT_LOG_LIMIT = 500;
+    const NEAR_BOTTOM_PX = 48;
+
+    // CHAT_ROOM_MODEL_START
+    function layoutCount(requested, narrow) {
+      if (narrow) return 1;
+      return requested === 2 || requested === 4 ? requested : 1;
+    }
+
+    function pushChatLine(room, line, visible, limit) {
+      const next = {
+        lines: room.lines.concat([line]),
+        unread: room.unread,
+        stickToBottom: room.stickToBottom,
+        scrollTop: room.scrollTop,
+      };
+      if (next.lines.length > limit) next.lines = next.lines.slice(next.lines.length - limit);
+      if (visible && room.stickToBottom) {
+        next.unread = 0;
+        return { room: next, follow: true, showJump: false };
+      }
+      next.unread = room.unread + 1;
+      return { room: next, follow: false, showJump: !!visible };
+    }
+
+    function noteRoomScroll(room, scrollTop, scrollHeight, clientHeight, threshold) {
+      const near = scrollHeight - scrollTop - clientHeight <= threshold;
+      return {
+        lines: room.lines,
+        unread: near ? 0 : room.unread,
+        stickToBottom: near,
+        scrollTop: scrollTop,
+      };
+    }
+
+    function selectServerPane(currentSlots, focused, serverId) {
+      const existing = currentSlots.findIndex((slot) => slot.serverId === serverId);
+      if (existing !== -1) {
+        return {
+          slots: currentSlots.map((slot) => ({ serverId: slot.serverId })),
+          focused: existing,
+        };
+      }
+      const index = focused >= 0 && focused < currentSlots.length ? focused : 0;
+      const next = currentSlots.map((slot) => ({ serverId: slot.serverId }));
+      next[index] = { serverId: serverId };
+      return { slots: next, focused: index };
+    }
+
+    function dropServerOnPane(currentSlots, paneIndex, serverId) {
+      const next = currentSlots.map((slot) => ({
+        serverId: slot.serverId === serverId ? null : slot.serverId,
+      }));
+      next[paneIndex] = { serverId: serverId };
+      return { slots: next, focused: paneIndex };
+    }
+
+    function slotsForLayout(memory, count) {
+      const seen = new Set();
+      const next = [];
+      for (let i = 0; i < count; i++) {
+        const id = memory[i] || null;
+        if (id && seen.has(id)) next.push({ serverId: null });
+        else {
+          if (id) seen.add(id);
+          next.push({ serverId: id });
+        }
+      }
+      return next;
+    }
+    // CHAT_ROOM_MODEL_END
+
+    function roomFor(id) {
+      if (!rooms[id]) {
+        rooms[id] = {
+          lines: [],
+          unread: 0,
+          stickToBottom: true,
+          scrollTop: 0,
+          hydrated: false,
+          hydrating: null,
+        };
+      }
+      return rooms[id];
+    }
+
+    function activeLayoutCount() {
+      return layoutCount(requestedLayout, window.matchMedia("(max-width: 768px)").matches);
+    }
+
+    function writeMemoryFromVisible() {
+      slots.forEach((slot, i) => {
+        slotMemory[i] = slot.serverId;
+      });
+      const visible = new Set(slots.map((slot) => slot.serverId).filter(Boolean));
+      for (let i = slots.length; i < slotMemory.length; i++) {
+        if (visible.has(slotMemory[i])) slotMemory[i] = null;
+      }
+    }
     let desktopAvailable = false;
     let currentPlayMode = null;
 
@@ -1953,42 +2245,157 @@
       return s.displayName || (s.host + ":" + s.port);
     }
 
-    function pingBadgeHtml(host, port, preset) {
-      if (preset && typeof preset.online === "boolean") {
-        if (preset.online) {
-          return '<span class="ping-badge online">' + escapeHtml(t("pingOnline", {
-            online: preset.playersOnline ?? "?",
-            max: preset.playersMax ?? "?",
-          })) + '</span>';
-        }
-        return '<span class="ping-badge offline">' + escapeHtml(t("pingOffline")) + '</span>';
+    // CONNECTION_KIND_START
+    // 마인크래프트 서버가 켜져 있는지는 여기 넣지 않는다. 이 값은 마인포탈로
+    // 접속을 시작한 뒤에만 남고, 한 번도 접속하지 않았으면 null이다.
+    function connectionKind(server) {
+      if (!server) return null;
+      const status = typeof server.status === "string" ? server.status.trim() : "";
+      const normalized = status.toLowerCase();
+      if (server.connected === true || normalized === "connected") return "connected";
+      if (normalized === "reconnecting" || normalized.startsWith("reconnecting")) return "reconnecting";
+      if (normalized === "connecting" || (server.phase === "active" && server.connected !== true)) {
+        return "connecting";
       }
-      return '<span class="ping-badge" data-host="' + escapeHtml(host) + '" data-port="' + port + '">' + t("pingChecking") + '</span>';
+      if (!normalized || normalized === "idle") return null;
+      if (
+        normalized === "error" ||
+        normalized.startsWith("error:") ||
+        normalized.startsWith("connection failed") ||
+        normalized.includes("failed")
+      ) {
+        return "error";
+      }
+      return "disconnected";
+    }
+    // CONNECTION_KIND_END
+
+    function connectionLabel(kind) {
+      if (kind === "connecting") return t("connConnecting");
+      if (kind === "reconnecting") return t("connReconnecting");
+      if (kind === "connected") return t("connConnected");
+      if (kind === "disconnected") return t("connDisconnected");
+      if (kind === "error") return t("connError");
+      return "";
     }
 
-    // Server List Ping (loginless status query) — fetched per-badge so a slow/unreachable
-    // server can't hold up rendering the rest of the list.
-    function refreshPingBadges(root) {
-      (root || document).querySelectorAll(".ping-badge").forEach(async (badge) => {
+    function availabilityState(server) {
+      if (server && typeof server.online === "boolean") return server.online ? "online" : "offline";
+      return "checking";
+    }
+
+    function availabilityText(server) {
+      const state = availabilityState(server);
+      if (state === "online") {
+        return t("serverOnline", { online: server.playersOnline ?? "?", max: server.playersMax ?? "?" });
+      }
+      if (state === "offline") return t("serverOffline");
+      return t("serverChecking");
+    }
+
+    function availabilityAria(server) {
+      const state = availabilityState(server);
+      if (state === "online") {
+        return t("serverOnlineAria", { online: server.playersOnline ?? "?", max: server.playersMax ?? "?" });
+      }
+      if (state === "offline") return t("serverOfflineAria");
+      return t("serverCheckingAria");
+    }
+
+    function availabilityHtml(server) {
+      const state = availabilityState(server);
+      const needsPing = !server || typeof server.online !== "boolean";
+      const hostAttr = needsPing && server && server.host
+        ? ' data-host="' + escapeHtml(server.host) + '" data-port="' + escapeHtml(String(server.port)) + '"'
+        : "";
+      const aria = availabilityAria(server);
+      return '<button type="button" class="server-availability ' + state + '"' + hostAttr +
+        ' aria-label="' + escapeHtml(aria) + '" data-tip="' + escapeHtml(aria) + '">' +
+        '<span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span>' +
+        '<span class="server-signal-text">' + escapeHtml(availabilityText(server)) + '</span></button>';
+    }
+
+    function connectionHtml(server) {
+      const kind = connectionKind(server);
+      if (!kind) return '<button type="button" class="conn-pill" hidden></button>';
+      const label = connectionLabel(kind);
+      const aria = t("connAria", { label: label });
+      return '<button type="button" class="conn-pill ' + kind + '" aria-label="' +
+        escapeHtml(aria) + '" data-tip="' + escapeHtml(aria) + '">' + escapeHtml(label) + '</button>';
+    }
+
+    function paintAvailability(el, server) {
+      if (!el) return;
+      el.classList.remove("online", "offline", "checking");
+      el.classList.add(availabilityState(server));
+      const text = el.querySelector(".server-signal-text");
+      if (text) text.textContent = availabilityText(server);
+      const aria = availabilityAria(server);
+      el.setAttribute("aria-label", aria);
+      el.dataset.tip = aria;
+    }
+
+    function paintConnection(el, server) {
+      if (!el) return;
+      const kind = connectionKind(server);
+      el.classList.remove("connecting", "reconnecting", "connected", "disconnected", "error");
+      if (!kind) {
+        el.hidden = true;
+        el.textContent = "";
+        el.removeAttribute("aria-label");
+        delete el.dataset.tip;
+        return;
+      }
+      const label = connectionLabel(kind);
+      const aria = t("connAria", { label: label });
+      el.hidden = false;
+      el.classList.add(kind);
+      el.textContent = label;
+      el.setAttribute("aria-label", aria);
+      el.dataset.tip = aria;
+    }
+
+    function pingBadgeHtml(host, port, preset) {
+      return availabilityHtml(preset || { host: host, port: port });
+    }
+
+    // Server List Ping (loginless status query) — fetched per host so a slow server
+    // can't hold up the rest of the list. The result is the server's own availability,
+    // kept separate from whether this account is connected through MinePortal.
+    function refreshPingBadges(root, force) {
+      const seen = new Set();
+      (root || document).querySelectorAll(".server-availability[data-host]").forEach(async (badge) => {
         const host = badge.dataset.host;
         const port = badge.dataset.port;
-        // 체험 목록은 카탈로그 응답의 인원수를 이미 그려 둔다. 로그인 전 /api/ping은 401이라 그걸로 덮으면 오프라인이 된다.
         if (!host) return;
-        badge.classList.remove("online", "offline");
-        badge.textContent = t("pingChecking");
+        const key = host + ":" + port;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const server = servers.find((item) => item.host === host && String(item.port) === String(port));
+        const matches = () => [...document.querySelectorAll(".server-availability[data-host]")].filter(
+          (el) => el.dataset.host === host && el.dataset.port === String(port),
+        );
+        if (server && server.availabilityKnown && !force) {
+          matches().forEach((el) => paintAvailability(el, server));
+          return;
+        }
+        matches().forEach((el) => paintAvailability(el, null));
+        const apply = (online, playersOnline, playersMax) => {
+          const next = server || { online: online, playersOnline: playersOnline, playersMax: playersMax };
+          if (server) {
+            server.online = online;
+            server.playersOnline = playersOnline;
+            server.playersMax = playersMax;
+            server.availabilityKnown = true;
+          }
+          matches().forEach((el) => paintAvailability(el, next));
+        };
         try {
           const res = await fetch("/api/ping?host=" + encodeURIComponent(host) + "&port=" + encodeURIComponent(port));
           const data = await res.json();
-          if (data.online) {
-            badge.textContent = t("pingOnline", { online: data.playersOnline ?? "?", max: data.playersMax ?? "?" });
-            badge.classList.add("online");
-          } else {
-            badge.textContent = t("pingOffline");
-            badge.classList.add("offline");
-          }
+          apply(!!data.online, data.playersOnline, data.playersMax);
         } catch {
-          badge.textContent = t("pingOffline");
-          badge.classList.add("offline");
+          apply(false, null, null);
         }
       });
     }
@@ -2001,27 +2408,11 @@
         btn.classList.remove("spinning");
         void btn.offsetWidth;
         btn.classList.add("spinning");
-        refreshPingBadges(root);
+        refreshPingBadges(root, true);
       });
     }
     bindRefreshBtn(refreshServerListBtn, serverListEl);
     bindRefreshBtn(refreshServersBtn, serverGridView);
-
-    // Maps a raw status string (from ServerConfig.status on the backend: "idle",
-    // "connecting", "connected", or "disconnected: <reason>") to one of the four
-    // dot colors/states shown next to the slot's server picker.
-    function statusDotState(status) {
-      if (status === "connecting") return "connecting";
-      if (status === "connected") return "connected";
-      if (status && status.startsWith("disconnected")) return "disconnected";
-      return "idle";
-    }
-
-    function setSlotStatusDot(dotEl, status) {
-      if (!dotEl) return;
-      dotEl.classList.remove("idle", "connecting", "connected", "disconnected");
-      dotEl.classList.add(statusDotState(status));
-    }
 
     function connectLabel(s) {
       const canConnect = s.phase !== "active";
@@ -2039,14 +2430,13 @@
             const label = connectLabel(s);
             return '<div class="server-card" data-id="' + s.id + '">' +
               '<div class="name">' + escapeHtml(serverLabel(s)) + '</div>' +
-              '<div class="status">' + escapeHtml(s.status) + '</div>' +
-              pingBadgeHtml(s.host, s.port, s) +
-              '<button type="button" ' + (canConnect ? "" : "disabled") + '>' + label + '</button>' +
+              '<div class="server-card-states">' + availabilityHtml(s) + connectionHtml(s) + '</div>' +
+              '<button type="button" class="card-connect-btn" ' + (canConnect ? "" : "disabled") + '>' + label + '</button>' +
               '</div>';
           }).join("")
         : '<div class="empty">' + escapeHtml(usesTrialCatalog() ? t("trialEmpty") : t("serverGridEmpty")) + '</div>';
       serverGridView.querySelectorAll(".server-card").forEach((card) => {
-        card.querySelector("button").onclick = () => connectServer(card.dataset.id);
+        card.querySelector(".card-connect-btn").onclick = () => connectServer(card.dataset.id);
       });
       refreshPingBadges(serverGridView);
     }
@@ -2092,9 +2482,9 @@
       '<div class="home-demo-sidebar-col">' +
       '<div class="home-demo-sidebar-title">서버 목록</div>' +
       '<ul class="home-demo-sidebar">' +
-      '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">play.hypixel.net</span><div class="server-status">연결됨</div></div></li>' +
-      '<li><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">mc.hive.com</span><div class="server-status">대기 중</div></div></li>' +
-      '<li><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">survival.kr</span><div class="server-status">대기 중</div></div></li>' +
+      '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">play.hypixel.net</span><div class="server-meta-row"><span class="server-availability online"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">온라인 12/100</span></span><span class="conn-pill connected">연결됨</span></div></div></li>' +
+      '<li><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">mc.hive.com</span><div class="server-meta-row"><span class="server-availability online"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">온라인 40/100</span></span></div></div></li>' +
+      '<li><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">survival.kr</span><div class="server-meta-row"><span class="server-availability offline"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">오프라인</span></span></div></div></li>' +
       '</ul></div>';
 
     function runHomeDemoChat(isActive) {
@@ -2153,10 +2543,12 @@
           if (isLast) {
             setTimeout(() => {
               if (!isActive()) return;
-              dotEl.className = "slot-status-dot connecting";
+              dotEl.className = "conn-pill connecting";
+              dotEl.textContent = "연결 중";
               setTimeout(() => {
                 if (!isActive()) return;
-                dotEl.className = "slot-status-dot connected";
+                dotEl.className = "conn-pill connected";
+                dotEl.textContent = "연결됨";
                 step();
               }, 900);
             }, 1200);
@@ -2307,7 +2699,7 @@
       chat: {
         html: homeDemoSidebarHtml +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected" id="homeDemoDot"></span>' +
+          '<div class="slot-header"><span class="conn-pill connected" id="homeDemoDot">연결됨</span>' +
           '<button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button></div>' +
           '<div class="slot-log" id="homeDemoLog"></div>' +
           '<div class="home-demo-inputbar"><span id="homeDemoTyped"></span><span class="home-demo-caret"></span></div>' +
@@ -2318,11 +2710,11 @@
         html: homeDemoSidebarHtml +
           '<div class="home-demo-multi-slots">' +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected"></span><button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button></div>' +
+          '<div class="slot-header"><span class="conn-pill connected">연결됨</span><button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button></div>' +
           '<div class="slot-log" id="homeDemoMultiLog1"></div>' +
           '</div>' +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected"></span><button type="button" class="slot-server-btn" tabindex="-1">mc.hive.com</button></div>' +
+          '<div class="slot-header"><span class="conn-pill connected">연결됨</span><button type="button" class="slot-server-btn" tabindex="-1">mc.hive.com</button></div>' +
           '<div class="slot-log" id="homeDemoMultiLog2"></div>' +
           '</div>' +
           '</div>',
@@ -2331,7 +2723,7 @@
       sign: {
         html: homeDemoSidebarHtml +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected" id="homeDemoDot"></span>' +
+          '<div class="slot-header"><span class="conn-pill connected" id="homeDemoDot">연결됨</span>' +
           '<button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button></div>' +
           '<div class="slot-log" id="homeDemoLog"></div>' +
           '<div class="home-demo-inputbar"><span id="homeDemoTyped"></span><span class="home-demo-caret"></span></div>' +
@@ -2342,10 +2734,10 @@
         html: '<div class="home-demo-sidebar-col">' +
           '<div class="home-demo-sidebar-title">서버 목록</div>' +
           '<ul class="home-demo-sidebar">' +
-          '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">데모 서버</span><div class="server-status">연결됨</div></div></li>' +
+          '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">데모 서버</span><div class="server-meta-row"><span class="server-availability online"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">온라인 8/20</span></span><span class="conn-pill connected">연결됨</span></div></div></li>' +
           '</ul></div>' +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected"></span>' +
+          '<div class="slot-header"><span class="conn-pill connected">연결됨</span>' +
           '<button type="button" class="slot-server-btn" tabindex="-1">데모 서버</button></div>' +
           '<div class="slot-log"><div class="line line-system"><b class="sys-tag">시스템</b> 제공하는 데모 서버에 연결되었습니다.</div></div>' +
           '</div>',
@@ -2353,7 +2745,7 @@
       anywhere: {
         html: homeDemoSidebarHtml +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected" id="homeDemoDot"></span>' +
+          '<div class="slot-header"><span class="conn-pill connected" id="homeDemoDot">연결됨</span>' +
           '<button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button></div>' +
           '<div class="slot-log" id="homeDemoLog"></div>' +
           '</div>' +
@@ -2533,10 +2925,10 @@
       moveHowCursorTo(btn, myGen, () => {
         if (!howGenValid(myGen)) return;
         added.style.visibility = "visible";
-        added.innerHTML = '<span class="dot connecting"></span>play.hypixel.net 연결 중...';
+        added.innerHTML = '<span class="conn-pill connecting">연결 중</span><span>play.hypixel.net</span>';
         setTimeout(() => {
           if (!howGenValid(myGen)) return;
-          added.innerHTML = '<span class="dot"></span>play.hypixel.net 연결됨';
+          added.innerHTML = '<span class="conn-pill connected">연결됨</span><span>play.hypixel.net</span>';
           setTimeout(() => { if (howGenValid(myGen)) onDone(); }, 700);
         }, 900);
       });
@@ -2557,7 +2949,7 @@
     function playChatScene(myGen, onDone) {
       howPreviewStage.innerHTML =
         '<div class="chat-slot how-mock-chat">' +
-        '<div class="slot-header"><span class="slot-status-dot connected"></span><b>play.hypixel.net</b></div>' +
+        '<div class="slot-header"><span class="conn-pill connected">연결됨</span><b>play.hypixel.net</b></div>' +
         '<div class="slot-log" id="howChatLog">' +
         '<div class="line"><span class="time">14:22</span><b>Notch</b>: 안녕하세요~</div>' +
         '</div>' +
@@ -2829,19 +3221,37 @@
         renderServerGridView();
         return;
       }
-      servers.forEach((s) => {
+      const ordered = servers.slice().sort((a, b) => {
+        const rank = (item) => (item.connected || item.phase === "active" ? 0 : 1);
+        return rank(a) - rank(b);
+      });
+      ordered.forEach((s) => {
         const li = document.createElement("li");
-        li.className = slots.some((slot) => slot.serverId === s.id) ? "selected" : "";
+        const pane = slots.findIndex((slot) => slot.serverId === s.id);
+        const room = rooms[s.id];
+        const unread = room ? room.unread : 0;
+        const unreadLabel = unread > 99 ? "99+" : String(unread);
+        li.className =
+          (pane !== -1 ? "on-screen" : "") + (pane === focusedSlot ? " selected" : "");
+        li.dataset.id = s.id;
         li.draggable = true;
         li.innerHTML =
           '<span class="drag-handle" aria-hidden="true"></span>' +
           '<div class="server-info">' +
+          '<div class="server-title-row">' +
           '<span class="server-meta">' + escapeHtml(serverLabel(s)) + '</span>' +
-          '<div class="server-ping">' + pingBadgeHtml(s.host, s.port, s) + '</div>' +
-          '<div class="server-status">' + escapeHtml(s.status) + '</div>' +
+          '<span class="pane-badge"' + (pane === -1 ? " hidden" : "") +
+          ' aria-label="' + escapeHtml(t("paneBadgeAria", { n: Math.max(pane + 1, 1) })) + '">' +
+          (pane === -1 ? "" : String(pane + 1)) + '</span>' +
           '</div>' +
+          '<div class="server-meta-row">' + availabilityHtml(s) + connectionHtml(s) + '</div>' +
+          '</div>' +
+          '<span class="unread-badge"' + (unread > 0 ? "" : " hidden") +
+          ' aria-label="' + escapeHtml(t("unreadBadgeAria", { n: unreadLabel })) + '">' +
+          unreadLabel + '</span>' +
           '<button type="button" class="select-slot-btn">' + t("selectBtn") + '</button>';
 
+        let suppressClick = false;
         li.addEventListener("dragstart", (e) => {
           e.dataTransfer.setData("text/plain", s.id);
           // 커스텀 타입도 같이 실어 보낸다 — dragover 시점엔 브라우저가 보안상 값(getData)은
@@ -2850,10 +3260,19 @@
           e.dataTransfer.setData("application/x-server-id", s.id);
           e.dataTransfer.effectAllowed = "move";
         });
+        li.addEventListener("dragend", () => {
+          suppressClick = true;
+          setTimeout(() => {
+            suppressClick = false;
+          }, 0);
+        });
+        li.addEventListener("click", () => {
+          if (suppressClick) return;
+          chooseServer(s.id);
+        });
         li.querySelector(".select-slot-btn").addEventListener("click", (e) => {
           e.stopPropagation();
-          closeNarrowSidebar();
-          openSlotPicker(s.id);
+          chooseServer(s.id);
         });
         serverListEl.appendChild(li);
       });
@@ -2862,49 +3281,163 @@
       renderServerGridView();
     }
 
-    // Puts a server into the first empty grid slot (or slot 0 if all slots are already taken).
-    function assignServerToSlot(id) {
-      let idx = slots.findIndex((slot) => !slot.serverId);
-      if (idx === -1) idx = 0;
-      slots[idx].serverId = id;
+    function captureVisibleScroll() {
+      slots.forEach((slot, i) => {
+        const ref = slotRefs[i];
+        if (!slot.serverId || !ref) return;
+        const room = roomFor(slot.serverId);
+        const next = noteRoomScroll(
+          room,
+          ref.logEl.scrollTop,
+          ref.logEl.scrollHeight,
+          ref.logEl.clientHeight,
+          NEAR_BOTTOM_PX,
+        );
+        room.stickToBottom = next.stickToBottom;
+        room.scrollTop = next.scrollTop;
+        room.unread = next.unread;
+      });
+    }
+
+    function refreshSidebarChrome() {
+      serverListEl.querySelectorAll("li[data-id]").forEach((li) => {
+        const id = li.dataset.id;
+        const room = rooms[id];
+        const unread = room ? room.unread : 0;
+        const unreadLabel = unread > 99 ? "99+" : String(unread);
+        const badge = li.querySelector(".unread-badge");
+        if (badge) {
+          badge.textContent = unreadLabel;
+          badge.hidden = unread <= 0;
+          badge.setAttribute("aria-label", t("unreadBadgeAria", { n: unreadLabel }));
+        }
+        const pane = slots.findIndex((slot) => slot.serverId === id);
+        li.classList.toggle("on-screen", pane !== -1);
+        li.classList.toggle("selected", pane !== -1 && pane === focusedSlot);
+        const paneBadge = li.querySelector(".pane-badge");
+        if (paneBadge) {
+          paneBadge.hidden = pane === -1;
+          paneBadge.textContent = pane === -1 ? "" : String(pane + 1);
+          if (pane !== -1) paneBadge.setAttribute("aria-label", t("paneBadgeAria", { n: pane + 1 }));
+        }
+        const server = servers.find((item) => item.id === id);
+        paintAvailability(li.querySelector(".server-availability"), server || null);
+        paintConnection(li.querySelector(".conn-pill"), server || null);
+      });
+    }
+
+    function focusPane(i) {
+      if (i < 0 || i >= slots.length || focusedSlot === i) {
+        slotRefs.forEach((ref, index) => {
+          if (ref.slotEl) ref.slotEl.classList.toggle("focused", index === focusedSlot);
+        });
+        return;
+      }
+      focusedSlot = i;
+      slotRefs.forEach((ref, index) => {
+        if (ref.slotEl) ref.slotEl.classList.toggle("focused", index === focusedSlot);
+      });
+      refreshSidebarChrome();
+    }
+
+    function applyPaneResult(result) {
+      captureVisibleScroll();
+      slots = result.slots;
+      focusedSlot = result.focused;
+      writeMemoryFromVisible();
       renderServers();
-      loadSlotDetail(idx);
+      slots.forEach((_, index) => loadSlotDetail(index));
+    }
+
+    function chooseServer(id) {
+      applyPaneResult(selectServerPane(slots, focusedSlot, id));
+      closeNarrowSidebar();
+    }
+
+    // Sidebar selection fills the focused pane. A server already on screen is focused
+    // instead of being copied into a second pane. The previous pane stays connected.
+    function assignServerToSlot(id) {
+      chooseServer(id);
     }
 
     function setLayout(n) {
-      const prev = slots;
-      slots = [];
-      for (let i = 0; i < n; i++) slots.push(prev[i] || { serverId: null });
-      layoutSwitcher.querySelectorAll("button").forEach((b) => b.classList.toggle("active", Number(b.dataset.n) === n));
+      requestedLayout = layoutCount(n, false);
+      applyLayout();
+    }
+
+    function applyLayout() {
+      captureVisibleScroll();
+      const n = activeLayoutCount();
+      slots = slotsForLayout(slotMemory, n);
+      if (focusedSlot >= slots.length) focusedSlot = 0;
+      slots.forEach((slot, i) => {
+        slotMemory[i] = slot.serverId;
+      });
+      layoutSwitcher.querySelectorAll("button[data-n]").forEach((b) => {
+        b.classList.toggle("active", Number(b.dataset.n) === requestedLayout);
+      });
       chatGrid.dataset.layout = String(n);
       buildChatGrid();
+      renderServers();
     }
 
     function buildChatGrid() {
       chatGrid.innerHTML = "";
       slotRefs = slots.map((slot, i) => {
         const div = document.createElement("div");
-        div.className = "chat-slot";
+        div.className = "chat-slot" + (i === focusedSlot ? " focused" : "");
         div.innerHTML =
           '<div class="slot-header">' +
-          '<span class="slot-status-dot idle"></span>' +
+          '<button type="button" class="server-availability checking" hidden aria-label="' + escapeHtml(t("serverCheckingAria")) + '"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">' + escapeHtml(t("serverChecking")) + '</span></button>' +
+          '<button type="button" class="conn-pill" hidden></button>' +
           '<div class="slot-server-picker"><button type="button" class="slot-server-btn">' + t("serverSelectPlaceholder") + '</button><div class="slot-server-menu"></div></div>' +
           '<button type="button" class="slot-connect-btn" disabled>' + t("connectBtn") + '</button>' +
           '</div>' +
           '<div class="slot-log"></div>' +
+          '<button type="button" class="slot-jump" hidden></button>' +
           '<form class="slot-chat-form"><input placeholder="' + escapeHtml(t("chatInputPlaceholder")) + '" style="flex:1" /><button type="submit">' + t("sendBtn") + '</button></form>';
         chatGrid.appendChild(div);
 
         const btnEl = div.querySelector(".slot-server-btn");
         const menuEl = div.querySelector(".slot-server-menu");
         const connectBtnEl = div.querySelector(".slot-connect-btn");
-        const statusDotEl = div.querySelector(".slot-status-dot");
+        const availabilityEl = div.querySelector(".server-availability");
+        const connEl = div.querySelector(".conn-pill");
         const logEl = div.querySelector(".slot-log");
+        const jumpEl = div.querySelector(".slot-jump");
         const formEl = div.querySelector("form");
         const inputEl = div.querySelector("input");
 
-        statusDotEl.addEventListener("mouseenter", () => showStatusTooltip(statusDotEl));
-        statusDotEl.addEventListener("mouseleave", hideStatusTooltip);
+        div.addEventListener("pointerdown", () => focusPane(i));
+        logEl.addEventListener("scroll", () => {
+          const serverId = slots[i] && slots[i].serverId;
+          if (!serverId) return;
+          const room = roomFor(serverId);
+          const next = noteRoomScroll(
+            room,
+            logEl.scrollTop,
+            logEl.scrollHeight,
+            logEl.clientHeight,
+            NEAR_BOTTOM_PX,
+          );
+          const changed = room.unread !== next.unread || room.stickToBottom !== next.stickToBottom;
+          room.stickToBottom = next.stickToBottom;
+          room.scrollTop = next.scrollTop;
+          room.unread = next.unread;
+          jumpEl.hidden = room.unread === 0 || room.stickToBottom;
+          if (changed) refreshSidebarChrome();
+        });
+        jumpEl.addEventListener("click", () => {
+          const serverId = slots[i] && slots[i].serverId;
+          if (!serverId) return;
+          const room = roomFor(serverId);
+          logEl.scrollTop = logEl.scrollHeight;
+          room.stickToBottom = true;
+          room.scrollTop = logEl.scrollTop;
+          room.unread = 0;
+          jumpEl.hidden = true;
+          refreshSidebarChrome();
+        });
 
         btnEl.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -2945,9 +3478,7 @@
           // 다시 지워버려서(refreshSlotMenus) 채팅 슬롯이 통째로 비어 보이게 된다.
           if (!id || !servers.some((s) => s.id === id)) return;
           closeAllSlotMenus();
-          slots[i].serverId = id;
-          renderServers();
-          loadSlotDetail(i);
+          applyPaneResult(dropServerOnPane(slots, i, id));
         });
 
         formEl.addEventListener("submit", async (e) => {
@@ -2983,7 +3514,7 @@
           inputEl.value = "";
         });
 
-        return { btnEl, menuEl, connectBtnEl, statusDotEl, logEl, formEl, inputEl };
+        return { btnEl, menuEl, connectBtnEl, availabilityEl, connEl, logEl, jumpEl, slotEl: div, formEl, inputEl };
       });
       refreshSlotMenus();
       slots.forEach((_, i) => loadSlotDetail(i));
@@ -3036,7 +3567,7 @@
           alert(t("alertLoginFirst"));
           openLoginModal();
         } else {
-          if (denied && slotRefs[i]) addLineTo(slotRefs[i].logEl, denied, Date.now(), true);
+          if (denied) ingestLine(serverId, denied, Date.now(), true);
           alert(t("alertConnectFailed", { error: denied || body.error }));
         }
         return;
@@ -3083,6 +3614,7 @@
         }
         if (slots[i].serverId && !servers.some((s) => s.id === slots[i].serverId)) {
           slots[i].serverId = null;
+          slotMemory[i] = null;
         }
         const current = slots[i].serverId;
         const currentServer = servers.find((s) => s.id === current);
@@ -3096,61 +3628,181 @@
           : '<div class="empty">' + escapeHtml(usesTrialCatalog() ? t("trialEmpty") : t("slotMenuEmpty")) + '</div>';
         ref.menuEl.querySelectorAll(".item").forEach((item) => {
           item.addEventListener("click", () => {
-            slots[i].serverId = item.dataset.id;
             closeAllSlotMenus();
-            renderServers();
-            loadSlotDetail(i);
+            applyPaneResult(dropServerOnPane(slots, i, item.dataset.id));
           });
         });
       });
+    }
+
+    function sameLine(a, b) {
+      return a.timestamp === b.timestamp && a.text === b.text && !!a.system === !!b.system;
+    }
+
+    async function hydrateRoom(serverId) {
+      const room = roomFor(serverId);
+      if (room.hydrated) return;
+      if (room.hydrating) return room.hydrating;
+      room.hydrating = (async () => {
+        let fetched = [];
+        if (!directNativePlay()) {
+          const res = await fetch("/api/servers/" + serverId);
+          if (res.ok) {
+            const detail = await res.json();
+            const server = servers.find((item) => item.id === serverId);
+            if (server && detail.status) {
+              server.status = detail.status;
+              if (detail.phase) server.phase = detail.phase;
+              if (typeof detail.connected === "boolean") server.connected = detail.connected;
+            }
+            const history = (detail.statusHistory || []).map((h) => ({
+              timestamp: h.timestamp,
+              text: h.status,
+              system: true,
+            }));
+            const chat = (detail.messages || []).map((m) => ({
+              timestamp: m.timestamp,
+              text: m.message,
+              system: false,
+            }));
+            fetched = history.concat(chat).sort((a, b) => a.timestamp - b.timestamp);
+          }
+        }
+        const prior = room.lines.slice();
+        const merged = fetched.slice();
+        prior.forEach((line) => {
+          if (!merged.some((item) => sameLine(item, line))) merged.push(line);
+        });
+        merged.sort((a, b) => a.timestamp - b.timestamp);
+        room.lines = merged.slice(-CHAT_LOG_LIMIT);
+        room.hydrated = true;
+        room.hydrating = null;
+      })();
+      return room.hydrating;
+    }
+
+    function syncSlotPresence(i) {
+      const ref = slotRefs[i];
+      if (!ref) return;
+      const serverId = slots[i] && slots[i].serverId;
+      const server = serverId && servers.find((item) => item.id === serverId);
+      if (!server) {
+        if (ref.availabilityEl) ref.availabilityEl.hidden = true;
+        if (ref.connEl) ref.connEl.hidden = true;
+        return;
+      }
+      if (ref.availabilityEl) {
+        ref.availabilityEl.hidden = false;
+        if (typeof server.online === "boolean") {
+          delete ref.availabilityEl.dataset.host;
+          delete ref.availabilityEl.dataset.port;
+        } else {
+          ref.availabilityEl.dataset.host = server.host;
+          ref.availabilityEl.dataset.port = String(server.port);
+        }
+        paintAvailability(ref.availabilityEl, server);
+      }
+      paintConnection(ref.connEl, server);
+      if (ref.availabilityEl && ref.availabilityEl.dataset.host) refreshPingBadges(ref.slotEl);
+    }
+
+    function paintRoom(i) {
+      const ref = slotRefs[i];
+      const serverId = slots[i] && slots[i].serverId;
+      if (!ref) return;
+      ref.slotEl.classList.toggle("focused", i === focusedSlot);
+      syncSlotPresence(i);
+      if (!serverId) {
+        ref.logEl.innerHTML = "";
+        ref.jumpEl.hidden = true;
+        return;
+      }
+      const room = roomFor(serverId);
+      ref.logEl.innerHTML = "";
+      room.lines.forEach((line) => addLineTo(ref.logEl, line.text, line.timestamp, line.system));
+      if (room.stickToBottom) {
+        ref.logEl.scrollTop = ref.logEl.scrollHeight;
+        room.scrollTop = ref.logEl.scrollTop;
+        room.unread = 0;
+        ref.jumpEl.hidden = true;
+      } else {
+        ref.logEl.scrollTop = room.scrollTop;
+        ref.jumpEl.hidden = room.unread === 0;
+        ref.jumpEl.textContent = t("newMessagesBtn");
+      }
+      const paintedId = serverId;
+      requestAnimationFrame(() => {
+        if (!slotRefs[i] || slotRefs[i] !== ref) return;
+        if (!slots[i] || slots[i].serverId !== paintedId) return;
+        if (!room.stickToBottom) return;
+        ref.logEl.scrollTop = ref.logEl.scrollHeight;
+        room.scrollTop = ref.logEl.scrollTop;
+      });
+    }
+
+    function ingestLine(serverId, text, timestamp, system) {
+      const room = roomFor(serverId);
+      const slotIndex = slots.findIndex((slot) => slot.serverId === serverId);
+      const visible = slotIndex !== -1 && !!slotRefs[slotIndex];
+      const pushed = pushChatLine(
+        room,
+        { text: text, timestamp: timestamp, system: !!system },
+        visible,
+        CHAT_LOG_LIMIT,
+      );
+      room.lines = pushed.room.lines;
+      room.unread = pushed.room.unread;
+      if (visible) {
+        const ref = slotRefs[slotIndex];
+        addLineTo(ref.logEl, text, timestamp, system);
+        if (pushed.follow) {
+          ref.logEl.scrollTop = ref.logEl.scrollHeight;
+          room.scrollTop = ref.logEl.scrollTop;
+          ref.jumpEl.hidden = true;
+        } else {
+          ref.jumpEl.hidden = false;
+          ref.jumpEl.textContent = t("newMessagesBtn");
+        }
+      }
+      refreshSidebarChrome();
     }
 
     async function loadSlotDetail(i) {
       const ref = slotRefs[i];
       const serverId = slots[i] && slots[i].serverId;
       if (!ref) return;
+      ref.slotEl.classList.toggle("focused", i === focusedSlot);
+      syncSlotPresence(i);
       if (!serverId) {
-        setSlotStatusDot(ref.statusDotEl, null);
         ref.logEl.innerHTML = "";
+        if (ref.jumpEl) ref.jumpEl.hidden = true;
         return;
       }
-      if (directNativePlay()) {
-        const s = servers.find((x) => x.id === serverId);
-        setSlotStatusDot(ref.statusDotEl, s ? s.status : null);
-        ref.logEl.innerHTML = "";
-        (nativeMessages[serverId] || []).forEach((m) => addLineTo(ref.logEl, m.message, m.timestamp, m.system));
-        return;
-      }
-      const res = await fetch("/api/servers/" + serverId);
-      if (!res.ok) return;
-      const detail = await res.json();
-      setSlotStatusDot(ref.statusDotEl, detail.status);
-      ref.logEl.innerHTML = "";
-      const history = detail.statusHistory.map((h) => ({ timestamp: h.timestamp, text: h.status, system: true }));
-      const chat = detail.messages.map((m) => ({ timestamp: m.timestamp, text: m.message, system: false }));
-      history.concat(chat)
-        .sort((a, b) => a.timestamp - b.timestamp)
-        .forEach((line) => addLineTo(ref.logEl, line.text, line.timestamp, line.system));
+      await hydrateRoom(serverId);
+      if (!slots[i] || slots[i].serverId !== serverId || slotRefs[i] !== ref) return;
+      paintRoom(i);
+      refreshSidebarChrome();
     }
 
     function updateSlotsForServer(serverId, payload) {
-      slots.forEach((slot, i) => {
-        if (slot.serverId !== serverId) return;
-        const ref = slotRefs[i];
-        if (!ref) return;
-        if (payload.type === "status") {
-          setSlotStatusDot(ref.statusDotEl, payload.status);
+      if (payload.type === "status") {
+        slots.forEach((slot, i) => {
+          if (slot.serverId !== serverId) return;
+          const ref = slotRefs[i];
+          if (!ref) return;
+          syncSlotPresence(i);
           updateSlotConnectBtn(i);
-          if (payload.logged) addLineTo(ref.logEl, payload.status, payload.timestamp, true);
-        } else if (payload.type === "chat") {
-          addLineTo(ref.logEl, payload.message.message, payload.message.timestamp, false);
-        }
-      });
+        });
+        if (payload.logged) ingestLine(serverId, payload.status, payload.timestamp, true);
+        else refreshSidebarChrome();
+      } else if (payload.type === "chat") {
+        ingestLine(serverId, payload.message.message, payload.message.timestamp, false);
+      }
     }
 
     layoutSwitcher.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-n]");
-      if (!btn) return;
+      if (!btn || window.matchMedia("(max-width: 768px)").matches) return;
       setLayout(Number(btn.dataset.n));
     });
 
@@ -3204,6 +3856,7 @@
     if (sidebarBackdrop) sidebarBackdrop.addEventListener("click", closeNarrowSidebar);
     narrowLayoutQuery.addEventListener("change", (event) => {
       if (!event.matches) closeNarrowSidebar();
+      applyLayout();
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeNarrowSidebar();
@@ -3245,11 +3898,7 @@
         }
         return;
       }
-      if (slots.length > 1) {
-        openSlotPicker(id, false);
-      } else {
-        assignServerToSlot(id);
-      }
+      assignServerToSlot(id);
     }
 
     function addLineTo(container, text, time, system) {
@@ -3259,7 +3908,6 @@
       div.innerHTML = '<span class="time">' + timeStr + '</span>' +
         (system ? '<b class="sys-tag">' + t("sysTag") + '</b> ' : '') + escapeHtml(text).replace(/\n/g, "<br>");
       container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
     }
 
     setLayout(1);
@@ -3316,6 +3964,9 @@
       renderDesktopStatus();
       renderAccount();
       renderServers();
+      slotRefs.forEach((ref) => {
+        if (ref.jumpEl) ref.jumpEl.textContent = t("newMessagesBtn");
+      });
     }
 
     renderLangPicker();
@@ -3411,18 +4062,10 @@
     // McConnection 네이티브 플러그인이 기기 안에서 처리한다 — 마크 계정 토큰과 채팅
     // 서명 개인키가 백엔드로 나가지 않는다.
     const McNative = isNativeApp() ? window.Capacitor.Plugins.McConnection : null;
-    // serverId -> 화면에 그릴 라인들. 백엔드 연결과 달리 이 기록은 기기 로컬에만 있고
-    // 새로고침하면 사라진다(연결 자체가 그때그때 새로 맺어지는 세션이라 히스토리를
-    // 서버가 대신 들고 있어줄 필요가 없음).
-    const nativeMessages = {};
-
+    // 네이티브 접속도 같은 방 버퍼에 쌓는다. 화면 밖 서버의 줄과 안 읽은 수는
+    // 여기서 유지되고, 앱을 새로고침하면 연결 자체와 함께 사라진다.
     function nativeAppendLine(serverId, text, system) {
-      const list = (nativeMessages[serverId] ||= []);
-      const entry = { message: text, timestamp: Date.now(), system: !!system };
-      list.push(entry);
-      if (list.length > 500) list.shift();
-      const idx = slots.findIndex((slot) => slot.serverId === serverId);
-      if (idx !== -1 && slotRefs[idx]) addLineTo(slotRefs[idx].logEl, entry.message, entry.timestamp, entry.system);
+      ingestLine(serverId, text, Date.now(), system);
     }
 
     if (McNative) {
@@ -3439,7 +4082,7 @@
         }
         const idx = slots.findIndex((slot) => slot.serverId === data.serverId);
         if (idx !== -1 && slotRefs[idx]) {
-          setSlotStatusDot(slotRefs[idx].statusDotEl, data.status);
+          syncSlotPresence(idx);
           updateSlotConnectBtn(idx);
         }
         nativeAppendLine(data.serverId, data.status, true);
