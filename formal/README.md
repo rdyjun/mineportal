@@ -57,7 +57,8 @@ formal/ui/run.sh
 ```
 
 That script serves `client/` behind a local stub. The stub answers `/api/account` and
-`/api/servers` and turns `/api/account/login/microsoft` into a cookie session. It never
+`/api/servers/trial`. A saved server list stays in the browser and is not posted back.
+It turns `/api/account/login/microsoft` into a cookie session. It never
 calls Microsoft and has no credentials. The Bombadil spec checks the login gate, that the
 sidebar and the server grid show the same addresses, that the chat grid's slot count is the
 selected layout, that both download buttons follow `downloadPlatform`, and that the visible

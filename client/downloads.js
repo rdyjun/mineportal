@@ -23,11 +23,11 @@ function applyDownloadAvailability(el) {
     var filename = platform === "mac" ? "MinePortal-mac-arm64.dmg" : "MinePortal-win.zip";
     el.href = "https://github.com/rdyjun/mineportal/releases/latest/download/" + filename;
     el.textContent =
-      platform === "mac" ? "⬇ Download for Mac (Apple Silicon)" : "⬇ Download for Windows";
+      platform === "mac" ? "Download for Mac (Apple Silicon)" : "Download for Windows";
     el.removeAttribute("tabindex");
   } else {
     el.removeAttribute("href");
     el.setAttribute("tabindex", "-1");
-    el.textContent = lang === "ko" ? "🚧 이 OS는 준비 중이에요" : "🚧 This OS is not supported yet";
+    el.textContent = lang === "ko" ? "이 OS는 준비 중이에요" : "This OS is not supported yet";
   }
 }

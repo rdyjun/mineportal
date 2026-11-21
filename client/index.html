@@ -17,7 +17,8 @@
   /* 웹 탐색에는 정식 모드를 두지 않는다. 데스크톱 셸과 네이티브 앱은 web-client가 아니라서 그대로 둔다. */
   html.web-client #modeRealBtn,
   html.web-client #modeToggle,
-  html.web-client #modeToggleSkeleton { display: none !important; }
+  html.web-client #modeToggleSkeleton,
+  html.web-client #tabServersBtn { display: none !important; }
   :root {
     --accent: #6d28d9; --accent-text: #fff;
     --bg: #1e1f22; --bg-sidebar: #2b2d31; --bg-raised: #313338; --bg-hover: #3f4147;
@@ -57,12 +58,19 @@
   .tabNav { display: flex; gap: 1.4rem; }
   .tabNav button {
     background: none; color: #a3a3ae; font-weight: 600; font-size: 0.95rem;
-    padding: 0.2rem 0; border-radius: 0; border-bottom: 2px solid transparent;
+    padding: 6px 12px; border-radius: 8px; border-bottom: 2px solid transparent;
     box-shadow: none;
-    transition: color 0.15s, border-color 0.15s;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
   }
-  .tabNav button:hover { color: #eee; }
+  .tabNav button:hover { color: #eee; background: rgba(255,255,255,0.08); }
   .tabNav button.active { color: #fff; border-bottom-color: #f2f3f5; }
+  .icon-x { position: relative; display: inline-block; width: 0.9rem; height: 0.9rem; }
+  .icon-x::before, .icon-x::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 0.9rem; height: 2px;
+    background: currentColor; border-radius: 1px;
+  }
+  .icon-x::before { transform: translate(-50%, -50%) rotate(45deg); }
+  .icon-x::after { transform: translate(-50%, -50%) rotate(-45deg); }
   .accountArea { display: flex; align-items: center; gap: 0.6rem; }
   .lang-picker { position: relative; margin-left: auto; }
   .lang-btn {
@@ -347,7 +355,10 @@
     padding: 0.4rem 0.55rem; font-size: 0.95rem; line-height: 1; flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
   }
-  .icon-btn.refresh-btn .refresh-icon { display: inline-block; }
+  .icon-btn.refresh-btn .refresh-icon {
+    display: inline-block; width: 0.95rem; height: 0.95rem; box-sizing: border-box;
+    border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  }
   .icon-btn.refresh-btn.spinning .refresh-icon { animation: icon-btn-spin 0.6s linear; }
   @keyframes icon-btn-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   .legend-btn {
@@ -407,7 +418,6 @@
   .conn-pill[hidden], .server-availability[hidden] { display: none !important; }
   .conn-pill.connecting { color: var(--amber); }
   .conn-pill.reconnecting { color: var(--amber); }
-  .conn-pill.reconnecting::before { content: "↻"; font-size: 0.78rem; line-height: 1; }
   .conn-pill.connected { color: #dbdee1; background: transparent; }
   .conn-pill.disconnected { color: var(--text-muted); }
   .conn-pill.error { color: #ffb4ac; background: transparent; }
@@ -1005,7 +1015,7 @@
 
   <div class="modal-backdrop" id="loginModalBackdrop">
     <div class="modal">
-      <button type="button" class="modal-close" id="loginModalClose">✕</button>
+      <button type="button" class="modal-close" id="loginModalClose" aria-label="닫기"><span class="icon-x" aria-hidden="true"></span></button>
       <h2 data-i18n="loginBtn">로그인</h2>
       <p class="login-modal-reason" id="loginModalReason" style="display:none"></p>
       <a class="ms-login-btn" id="msLoginBtn" href="/api/account/login/microsoft" data-i18n="msLoginBtn">Microsoft로 로그인</a>
@@ -1014,7 +1024,7 @@
 
   <div class="modal-backdrop" id="pairDesktopModalBackdrop">
     <div class="modal">
-      <button type="button" class="modal-close" id="pairDesktopModalClose">✕</button>
+      <button type="button" class="modal-close" id="pairDesktopModalClose" aria-label="닫기"><span class="icon-x" aria-hidden="true"></span></button>
       <h2 data-i18n="pairDesktopBtn">데스크톱 앱 연동</h2>
       <p class="modal-subtext" id="pairDesktopStatus" data-i18n="pairDesktopDesc">데스크톱 앱이 자동으로 연동돼요.
 잠시만 기다려주세요.</p>
@@ -1028,8 +1038,7 @@
 
   <div class="modal-backdrop" id="addServerModalBackdrop">
     <div class="modal">
-      <button type="button" class="modal-close" id="addServerModalClose">✕</button>
-      <div class="modal-icon">➕</div>
+      <button type="button" class="modal-close" id="addServerModalClose" aria-label="닫기"><span class="icon-x" aria-hidden="true"></span></button>
       <h2 data-i18n="addServerModalTitle">서버 추가</h2>
       <p class="modal-subtext" data-i18n="addServerModalDesc">채팅을 보고 싶은 서버의 주소와 버전을 입력하세요.</p>
       <form id="addServerForm">
@@ -1045,7 +1054,7 @@
 
   <div class="modal-backdrop" id="trialAddNoticeBackdrop">
     <div class="modal">
-      <button type="button" class="modal-close" id="trialAddNoticeClose">✕</button>
+      <button type="button" class="modal-close" id="trialAddNoticeClose" aria-label="닫기"><span class="icon-x" aria-hidden="true"></span></button>
       <h2 data-i18n="addServerModalTitle">서버 추가</h2>
       <p class="modal-subtext" data-i18n="trialAddNotice">웹 체험하기에서는 서버를 추가할 수 없어요. 다른 서버는 데스크톱 앱으로 접속해 주세요.</p>
       <button type="button" id="trialAddNoticeOk" data-i18n="trialAddNoticeOk">확인</button>
@@ -1054,7 +1063,7 @@
 
   <div class="modal-backdrop" id="slotPickerBackdrop">
     <div class="modal">
-      <button type="button" class="modal-close" id="slotPickerClose">✕</button>
+      <button type="button" class="modal-close" id="slotPickerClose" aria-label="닫기"><span class="icon-x" aria-hidden="true"></span></button>
       <h2 data-i18n="slotPickerTitle">어느 창에 띄울까요?</h2>
       <div class="slot-picker-list" id="slotPickerList"></div>
     </div>
@@ -1062,12 +1071,11 @@
 
   <div class="gate-backdrop" id="playGateBackdrop">
     <div class="gate-modal">
-      <button type="button" class="gate-close" id="gateCloseBtn">✕</button>
-      <div class="gate-icon">🖥️</div>
+      <button type="button" class="gate-close" id="gateCloseBtn" aria-label="닫기"><span class="icon-x" aria-hidden="true"></span></button>
       <h2 data-i18n="gateTitle">데스크톱 프로그램이 필요해요</h2>
       <p data-i18n-html="gateText">내 PC에서 직접 서버에 접속하려면 데스크톱 클라이언트가 실행 중이어야 해요.<br />프로그램을 내려받아 실행한 뒤 다시 시도해주세요.</p>
       <div class="gate-buttons">
-        <a class="btn-download" id="gateDownloadBtn" href="https://github.com/rdyjun/mineportal/releases/latest/download/MinePortal-win.zip">⬇ 다운로드</a>
+        <a class="btn-download" id="gateDownloadBtn" href="https://github.com/rdyjun/mineportal/releases/latest/download/MinePortal-win.zip">다운로드</a>
         <script>applyDownloadAvailability(document.getElementById("gateDownloadBtn"));</script>
       </div>
     </div>
@@ -1075,8 +1083,7 @@
 
   <div class="gate-backdrop" id="disconnectConfirmBackdrop">
     <div class="gate-modal">
-      <button type="button" class="gate-close" id="disconnectConfirmCloseBtn">✕</button>
-      <div class="gate-icon">🔌</div>
+      <button type="button" class="gate-close" id="disconnectConfirmCloseBtn" aria-label="닫기"><span class="icon-x" aria-hidden="true"></span></button>
       <h2 data-i18n="disconnectConfirmTitle">연결을 끊을까요?</h2>
       <p data-i18n="disconnectConfirmText">진짜 이 서버와의 연결을 끊으시겠습니까?</p>
       <div class="gate-buttons">
@@ -1112,11 +1119,11 @@
 
   <div class="view active" id="homeView">
     <div class="hero">
-      <div class="hero-badge" data-i18n="heroBadge">🎮 실제 마인크래프트 프로토콜로 동작해요</div>
+      <div class="hero-badge" data-i18n="heroBadge">실제 마인크래프트 프로토콜로 동작해요</div>
       <h1 data-i18n="heroHeadline">복잡한 설정 없이, 편하게 마크 채팅</h1>
       <p data-i18n="heroDesc">내 마인크래프트 계정으로 서버 채팅을 보고, 보내세요.</p>
       <div class="hero-buttons">
-        <a class="btn-download" id="downloadBtn" href="https://github.com/rdyjun/mineportal/releases/latest/download/MinePortal-win.zip">⬇ 다운로드</a>
+        <a class="btn-download" id="downloadBtn" href="https://github.com/rdyjun/mineportal/releases/latest/download/MinePortal-win.zip">다운로드</a>
         <script>applyDownloadAvailability(document.getElementById("downloadBtn"));</script>
         <button type="button" class="btn-try" id="tryWebBtn" data-i18n="tryWebBtn">체험하기</button>
       </div>
@@ -1193,7 +1200,7 @@
             <div class="how-step-num">2</div>
             <div class="how-step-body">
               <h3 data-i18n="howStep2Title">서버 주소 등록</h3>
-              <p data-i18n="howStep2Desc">접속하고 싶은 서버 주소를 추가하면 목록에 저장돼요.</p>
+              <p data-i18n="howStep2Desc">접속하고 싶은 서버 주소를 추가하면 이 PC의 목록에 저장돼요.</p>
             </div>
           </div>
           <div class="how-step" data-scene="chat">
@@ -1214,22 +1221,18 @@
     <div class="home-section trust-points">
       <div class="trust-grid">
         <div class="trust-card">
-          <div class="trust-icon">🔒</div>
           <h3 data-i18n="trust1Title">계정 정보는 안전하게</h3>
           <p data-i18n="trust1Desc">로그인 정보는 디스크나 DB에 저장하지 않고, 접속 세션 메모리에서만 사용해요.</p>
         </div>
         <div class="trust-card">
-          <div class="trust-icon">🎮</div>
           <h3 data-i18n="trust2Title">실제 마인크래프트 프로토콜</h3>
           <p data-i18n="trust2Desc">에뮬레이션이 아니라 실제 프로토콜로 서버와 직접 통신해요.</p>
         </div>
         <div class="trust-card">
-          <div class="trust-icon">🌐</div>
           <h3 data-i18n="trust3Title">오픈소스로 공개</h3>
           <p data-i18n="trust3Desc">전체 코드가 GitHub에 공개되어 있어 누구나 확인할 수 있어요.</p>
         </div>
         <div class="trust-card">
-          <div class="trust-icon">🖥️</div>
           <h3 data-i18n="trust4Title">IP 제한 서버도 OK</h3>
           <p data-i18n="trust4Desc">데스크톱 클라이언트는 내 PC에서 직접 접속해 화이트리스트 서버에서도 안정적으로 동작해요.</p>
         </div>
@@ -1292,7 +1295,7 @@
               <h2 data-i18n="serverListTitle">서버 목록</h2>
               <div class="panel-header-actions">
                 <button type="button" class="icon-btn legend-btn" id="statusLegendBtn" data-i18n="legendBtn" data-i18n-aria="legendBtnAria" aria-label="서버 상태와 내 연결 안내">안내</button>
-                <button type="button" class="icon-btn refresh-btn" id="refreshServerListBtn" data-i18n-title="refreshBtnTitle" aria-label="새로고침"><span class="refresh-icon">⟳</span></button>
+                <button type="button" class="icon-btn refresh-btn" id="refreshServerListBtn" data-i18n-title="refreshBtnTitle" aria-label="새로고침"><span class="refresh-icon" aria-hidden="true"></span></button>
                 <button type="button" class="add-server-btn" id="addServerBtn" data-i18n="addServerBtn">+ 서버 추가</button>
               </div>
             </div>
@@ -1321,7 +1324,7 @@
         <h2 data-i18n="serverListTitle">서버 목록</h2>
         <div class="panel-header-actions">
           <button type="button" class="icon-btn legend-btn" id="statusLegendBtn2" data-i18n="legendBtn" data-i18n-aria="legendBtnAria" aria-label="서버 상태와 내 연결 안내">안내</button>
-          <button type="button" class="icon-btn refresh-btn" id="refreshServersBtn" data-i18n-title="refreshBtnTitle" aria-label="새로고침"><span class="refresh-icon">⟳</span></button>
+          <button type="button" class="icon-btn refresh-btn" id="refreshServersBtn" data-i18n-title="refreshBtnTitle" aria-label="새로고침"><span class="refresh-icon" aria-hidden="true"></span></button>
           <button type="button" class="add-server-btn" id="addServerBtn2" data-i18n="addServerBtn">+ 서버 추가</button>
         </div>
       </div>
@@ -1355,6 +1358,65 @@
       return isNativeApp() && !usesTrialCatalog();
     }
 
+    const LOCAL_SERVERS_KEY = "mineportal.servers";
+
+    function parseServerAddress(raw) {
+      const text = String(raw || "").trim();
+      const split = text.lastIndexOf(":");
+      if (split <= 0) return { host: text, port: 25565 };
+      const port = Number(text.slice(split + 1));
+      if (!Number.isInteger(port) || port < 1 || port > 65535) return { host: text, port: 25565 };
+      return { host: text.slice(0, split), port };
+    }
+
+    function readLocalServers() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(LOCAL_SERVERS_KEY) || "[]");
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((item) => item && item.id && item.host).map((item) => ({
+          id: String(item.id),
+          host: String(item.host),
+          port: Number(item.port) || 25565,
+          version: item.version || "auto",
+          lastConnectedAt: Number(item.lastConnectedAt) || 0,
+          status: "idle",
+          phase: "idle",
+          connected: false,
+        }));
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function writeLocalServers() {
+      if (usesTrialCatalog()) return;
+      localStorage.setItem(LOCAL_SERVERS_KEY, JSON.stringify(servers.map((server) => ({
+        id: server.id,
+        host: server.host,
+        port: server.port,
+        version: server.version || "auto",
+        lastConnectedAt: server.lastConnectedAt || 0,
+      }))));
+    }
+
+    function rememberLocalConnect(serverId) {
+      if (usesTrialCatalog()) return;
+      const server = servers.find((item) => item.id === serverId);
+      if (!server) return;
+      server.lastConnectedAt = Date.now();
+      writeLocalServers();
+    }
+
+    function connectInit(serverId) {
+      const server = servers.find((item) => item.id === serverId);
+      if (usesTrialCatalog() || !server) return { method: "POST" };
+      return {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ host: server.host, port: server.port, version: server.version || "auto" }),
+      };
+    }
+
     const translations = {
       ko: {
         appTitle: "마인포탈",
@@ -1375,9 +1437,9 @@
         slotPickLabelEmpty: "{n}번 창 (비어있음)",
         gateTitle: "데스크톱 프로그램이 필요해요",
         gateText: "내 PC에서 직접 서버에 접속하려면 데스크톱 클라이언트가 실행 중이어야 해요.<br />프로그램을 내려받아 실행한 뒤 다시 시도해주세요.",
-        downloadWindows: "⬇ Download for Windows",
-        downloadOtherOs: "🚧 다른 OS는 준비 중이에요",
-        heroBadge: "🎮 실제 마인크래프트 프로토콜로 동작해요",
+        downloadWindows: "Download for Windows",
+        downloadOtherOs: "다른 OS는 준비 중이에요",
+        heroBadge: "실제 마인크래프트 프로토콜로 동작해요",
         heroHeadline: "복잡한 설정 없이, 편하게 마크 채팅",
         heroDesc: "내 계정으로 직접 접속해서 채팅을 보고 보내세요. 데스크톱에서도, 브라우저에서도.",
         tryWebBtn: "체험하기",
@@ -1388,7 +1450,7 @@
         featureTab5: "어디서든 접속",
         desktopNoteDefault: "데스크톱 프로그램은 내 PC에서 직접 접속해 IP 제한이 있는 서버에서도 안정적으로 동작해요.",
         desktopNoteRunning: "데스크톱 클라이언트가 이 계정과 연동되어 있어요.",
-        desktopRunningLabel: "✅ 데스크톱 클라이언트 연동됨",
+        desktopRunningLabel: "데스크톱 클라이언트 연동됨",
         pairDesktopBtn: "데스크톱 앱 연동",
         pairDesktopDesc: "데스크톱 앱이 자동으로 연동돼요.\n잠시만 기다려주세요.",
         pairDesktopManualDesc: "앱이 자동으로 안 열리면,\n데스크톱 앱이 실행 중인지 확인한 뒤\n아래 버튼을 눌러주세요.",
@@ -1396,8 +1458,8 @@
         pairDesktopFailed: "코드 발급에 실패했어요: {error}",
         appManageBtn: "앱 관리",
         appManageChecking: "확인 중...",
-        appManageConnected: "✅ 데스크톱 앱이 연결되어 있어요.",
-        appManageDisconnected: "🔴 데스크톱 앱이 연결되어 있지 않아요.",
+        appManageConnected: "데스크톱 앱이 연결되어 있어요.",
+        appManageDisconnected: "데스크톱 앱이 연결되어 있지 않아요.",
         appManageReconnectHint: "혹시 이상하게 연결됐다면,\n아래 버튼으로 다시 연결해보세요.",
         appManageReconnectBtn: "재연결",
         unpairDesktopBtn: "이 PC 연동 해제",
@@ -1407,7 +1469,7 @@
         howStep1Title: "마인크래프트 계정으로 로그인",
         howStep1Desc: "Microsoft 계정으로 안전하게 로그인해요. 로그인 정보는 기기 밖으로 나가지 않아요.",
         howStep2Title: "서버 주소 등록",
-        howStep2Desc: "접속하고 싶은 서버 주소를 추가하면 목록에 저장돼요.",
+        howStep2Desc: "접속하고 싶은 서버 주소를 추가하면 이 PC의 목록에 저장돼요.",
         howStep3Title: "실시간 채팅 & 명령어",
         howStep3Desc: "브라우저에서 바로 채팅을 확인하고, 서명된 명령어도 보낼 수 있어요.",
         trust1Title: "계정 정보는 안전하게",
@@ -1467,8 +1529,8 @@
         goToPlayBtn: "체험하기로 이동",
         serversDrawerBtn: "서버",
         pingChecking: "확인 중...",
-        pingOnline: "🟢 {online}/{max}명",
-        pingOffline: "🔴 오프라인",
+        pingOnline: "{online}/{max}명",
+        pingOffline: "오프라인",
         serverOnline: "온라인 {online}/{max}",
         serverOffline: "오프라인",
         serverChecking: "확인 중",
@@ -1499,6 +1561,7 @@
         alertLoginFirst: "먼저 로그인 해주세요.",
         alertConnectFailed: "연결 실패: {error}",
         alertAddServerFailed: "서버 추가 실패: {error}",
+        alertDuplicateServer: "이미 이 PC의 목록에 있는 주소예요.",
         trialServerNotAllowed: "웹 체험 모드에서는 허용된 서버에만 접속할 수 있어요. 다른 서버는 데스크톱 앱으로 접속해 주세요.",
         sysTag: "마인포탈",
       },
@@ -1521,9 +1584,9 @@
         slotPickLabelEmpty: "Window {n} (empty)",
         gateTitle: "Desktop app required",
         gateText: "Connecting directly from your PC needs the desktop client to be running.<br />Please download and run it, then try again.",
-        downloadWindows: "⬇ Download for Windows",
-        downloadOtherOs: "🚧 Other OS support coming soon",
-        heroBadge: "🎮 Runs on the real Minecraft protocol",
+        downloadWindows: "Download for Windows",
+        downloadOtherOs: "Other OS support coming soon",
+        heroBadge: "Runs on the real Minecraft protocol",
         heroHeadline: "No complicated setup — just comfortable Minecraft chat",
         heroDesc: "Connect with your own account and view/send chat — from desktop or right in the browser.",
         tryWebBtn: "Try it",
@@ -1534,7 +1597,7 @@
         featureTab5: "Connect from anywhere",
         desktopNoteDefault: "The desktop app connects directly from your PC, so it works reliably even on servers with IP restrictions.",
         desktopNoteRunning: "The desktop client is linked to this account.",
-        desktopRunningLabel: "✅ Desktop client linked",
+        desktopRunningLabel: "Desktop client linked",
         pairDesktopBtn: "Link desktop app",
         pairDesktopDesc: "Linking automatically with the desktop app.\nPlease wait a moment.",
         pairDesktopManualDesc: "If the app doesn't open automatically,\nmake sure the desktop app is running\nand click the button below.",
@@ -1542,8 +1605,8 @@
         pairDesktopFailed: "Couldn't get a pairing code: {error}",
         appManageBtn: "App",
         appManageChecking: "Checking...",
-        appManageConnected: "✅ The desktop app is connected.",
-        appManageDisconnected: "🔴 The desktop app isn't connected.",
+        appManageConnected: "The desktop app is connected.",
+        appManageDisconnected: "The desktop app isn't connected.",
         appManageReconnectHint: "If something seems off,\nreconnect using the button below.",
         appManageReconnectBtn: "Reconnect",
         unpairDesktopBtn: "Unlink this PC",
@@ -1553,7 +1616,7 @@
         howStep1Title: "Log in with your Minecraft account",
         howStep1Desc: "Sign in securely with your Microsoft account. Your credentials never leave your device.",
         howStep2Title: "Add a server address",
-        howStep2Desc: "Add the server you want to connect to and it's saved to your list.",
+        howStep2Desc: "Add a server address and it stays in the list on this PC.",
         howStep3Title: "Live chat & commands",
         howStep3Desc: "See chat right in the browser, and send signed commands too.",
         trust1Title: "Your account stays safe",
@@ -1613,8 +1676,8 @@
         goToPlayBtn: "Go to Try it",
         serversDrawerBtn: "Servers",
         pingChecking: "Checking...",
-        pingOnline: "🟢 {online}/{max} players",
-        pingOffline: "🔴 Offline",
+        pingOnline: "{online}/{max} players",
+        pingOffline: "Offline",
         serverOnline: "Online {online}/{max}",
         serverOffline: "Offline",
         serverChecking: "Checking",
@@ -1645,6 +1708,7 @@
         alertLoginFirst: "Please log in first.",
         alertConnectFailed: "Connect failed: {error}",
         alertAddServerFailed: "Failed to add server: {error}",
+        alertDuplicateServer: "That address is already in the list on this PC.",
         trialServerNotAllowed: "웹 체험 모드에서는 허용된 서버에만 접속할 수 있어요. 다른 서버는 데스크톱 앱으로 접속해 주세요.",
         sysTag: "MinePortal",
       },
@@ -2442,13 +2506,14 @@
     }
 
     async function loadRecentServers() {
-      if (account.status !== "logged-in") {
+      if (account.status !== "logged-in" || usesTrialCatalog()) {
         recentServersPanel.style.display = "none";
         return;
       }
-      const res = await fetch("/api/servers/recent");
-      if (!res.ok) return;
-      const recent = await res.json();
+      const recent = readLocalServers()
+        .filter((server) => server.lastConnectedAt)
+        .sort((a, b) => b.lastConnectedAt - a.lastConnectedAt)
+        .slice(0, 5);
       recentServersPanel.style.display = recent.length ? "" : "none";
       if (!recent.length) return;
       recentServersEl.innerHTML = recent.map((s) =>
@@ -2622,7 +2687,7 @@
         const div = document.createElement("div");
         div.className = "line";
         const time = new Date().toLocaleTimeString();
-        div.innerHTML = '<span class="sign-badge">서명됨 ✓</span>' +
+        div.innerHTML = '<span class="sign-badge">서명됨</span>' +
           '<span class="time">' + time + '</span>&lt;나&gt; ' + escapeHtml(text);
         logEl.appendChild(div);
         while (logEl.children.length > 6) logEl.removeChild(logEl.firstChild);
@@ -2886,7 +2951,6 @@
     function playLoginScene(myGen, onDone) {
       howPreviewStage.innerHTML =
         '<div class="how-mock-login">' +
-        '<div class="how-mock-login-icon">🎮</div>' +
         '<div class="how-mock-login-title">마인크래프트 계정으로 로그인</div>' +
         '<div class="how-mock-login-btn">Microsoft로 로그인</div>' +
         '</div>';
@@ -2895,14 +2959,12 @@
         if (!howGenValid(myGen)) return;
         howPreviewStage.innerHTML =
           '<div class="how-mock-login">' +
-          '<div class="how-mock-login-icon">🪟</div>' +
           '<div class="how-mock-login-title">Microsoft 계정으로 로그인 중...</div>' +
           '</div>';
         setTimeout(() => {
           if (!howGenValid(myGen)) return;
           howPreviewStage.innerHTML =
             '<div class="how-mock-login">' +
-            '<div class="how-mock-login-icon">✅</div>' +
             '<div class="how-mock-login-title">로그인 완료</div>' +
             '</div>';
           setTimeout(() => { if (howGenValid(myGen)) onDone(); }, 700);
@@ -3559,7 +3621,7 @@
         return;
       }
       await ensureWs();
-      const res = await fetch(connectionUrl(serverId), { method: "POST" });
+      const res = await fetch(connectionUrl(serverId), connectInit(serverId));
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }));
         const denied = trialDeniedReason(body);
@@ -3572,6 +3634,7 @@
         }
         return;
       }
+      rememberLocalConnect(serverId);
       renderServers();
       loadSlotDetail(i);
     }
@@ -3886,7 +3949,7 @@
 
     async function connectServer(id) {
       await ensureWs();
-      const res = await fetch(connectionUrl(id), { method: "POST" });
+      const res = await fetch(connectionUrl(id), connectInit(id));
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }));
         const denied = trialDeniedReason(body);
@@ -3898,6 +3961,7 @@
         }
         return;
       }
+      rememberLocalConnect(id);
       assignServerToSlot(id);
     }
 
@@ -3914,7 +3978,13 @@
     renderServers(); // 첫 fetch가 끝나기 전(serversLoaded=false)에도 사이드바/슬롯 select가 바로 스켈레톤을 보여주도록
 
     async function loadServerList() {
-      const res = await fetch(usesTrialCatalog() ? "/api/servers/trial" : "/api/servers");
+      if (!usesTrialCatalog()) {
+        servers = readLocalServers();
+        serversLoaded = true;
+        renderServers();
+        return;
+      }
+      const res = await fetch("/api/servers/trial");
       if (!res.ok) return;
       servers = await res.json();
       serversLoaded = true;
@@ -3930,23 +4000,31 @@
       }
       clearAddServerError();
       const data = Object.fromEntries(new FormData(addServerForm).entries());
-      const res = await fetch("/api/servers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: res.statusText }));
-        const denied = trialDeniedReason(body);
-        const reason = denied || body.error || res.statusText;
-        if (denied) showAddServerError(denied);
-        alert(t("alertAddServerFailed", { error: reason }));
+      const address = String(data.host || "").trim();
+      const version = String(data.version || "").trim();
+      if (!address || address.length > 253 || !version || version.length > 64) {
+        showAddServerError(t("alertAddServerFailed", { error: "host and version are required" }));
         return;
       }
-      // Adding a server need not have a WebSocket open yet. Reflect the HTTP result
-      // immediately instead of waiting for a snapshot that may never arrive.
-      const added = await res.json();
-      servers = servers.filter((server) => server.id !== added.id).concat(added);
+      const parsed = parseServerAddress(address);
+      const duplicate = servers.some((server) =>
+        String(server.host).toLowerCase() === parsed.host.toLowerCase() && Number(server.port) === parsed.port);
+      if (duplicate) {
+        showAddServerError(t("alertDuplicateServer"));
+        return;
+      }
+      const added = {
+        id: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "local-" + Date.now(),
+        host: parsed.host,
+        port: parsed.port,
+        version,
+        status: "idle",
+        phase: "idle",
+        connected: false,
+        lastConnectedAt: 0,
+      };
+      servers = servers.concat(added);
+      writeLocalServers();
       serversLoaded = true;
       renderServers();
       addServerForm.reset();
@@ -4006,11 +4084,18 @@
             attemptAutoPair();
           }
         } else if (data.type === "servers") {
-          // 체험 목록은 저장 서버 스냅샷으로 덮지 않는다. 데스크톱 정식 모드는 이 스냅샷을 그대로 쓴다.
-          if (usesTrialCatalog()) return;
-          servers = data.servers;
-          serversLoaded = true;
-          renderServers();
+          // 목록 자체는 이 PC(또는 체험 카탈로그)에 있다. 스냅샷은 같은 id의 접속 상태만 반영한다.
+          if (!Array.isArray(data.servers)) return;
+          let changed = false;
+          for (const incoming of data.servers) {
+            const mine = servers.find((item) => item.id === incoming.id);
+            if (!mine) continue;
+            if (incoming.status) mine.status = incoming.status;
+            if (incoming.phase) mine.phase = incoming.phase;
+            if (typeof incoming.connected === "boolean") mine.connected = incoming.connected;
+            changed = true;
+          }
+          if (changed) renderServers();
         } else if (data.type === "server-event") {
           const s = servers.find((x) => x.id === data.serverId);
           if (data.payload.type === "status" && s) {
@@ -4057,8 +4142,8 @@
     initAccountAndServers();
 
     // --- 앱(Capacitor) 전용: 백엔드를 거치지 않고 기기에서 마인크래프트 서버로 직접
-    // 접속하는 경로. 서버 목록/계정 표시는 지금처럼 백엔드 REST(/api/servers, /api/account)를
-    // 그대로 쓰지만(기기 간 동기화 유지), 실제 소켓 연결·로그인·채팅 송수신은
+    // 접속하는 경로. 서버 목록은 이 기기의 localStorage에만 있고, 계정 표시는
+    // /api/account를 그대로 쓴다. 실제 소켓 연결·로그인·채팅 송수신은
     // McConnection 네이티브 플러그인이 기기 안에서 처리한다 — 마크 계정 토큰과 채팅
     // 서명 개인키가 백엔드로 나가지 않는다.
     const McNative = isNativeApp() ? window.Capacitor.Plugins.McConnection : null;
@@ -4102,6 +4187,7 @@
       renderServers();
       try {
         await McNative.connect({ serverId, host: server.host, port: server.port });
+        rememberLocalConnect(serverId);
         return true;
       } catch (e) {
         server.phase = "closed";

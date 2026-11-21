@@ -31,11 +31,6 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-
-    // Version comes from the Spring Boot BOM (42.7.14 on Boot 4.1.2). An explicit
-    // older pin here overrides that BOM and kept the driver on 42.7.4.
-    runtimeOnly 'org.postgresql:postgresql'
 
     // Keep the Java 17-compatible native codec. ViaVersion/ViaBackwards 5.12.2 translates
     // between this 26.1 codec and both older servers and the observed 26.2/26.3 servers.

@@ -5,6 +5,7 @@ import com.mineportal.server.account.AccountState;
 import com.mineportal.server.desktop.DesktopConnectionManager;
 import com.mineportal.server.servers.ServerConfig;
 import com.mineportal.server.servers.ServerRegistry;
+import com.mineportal.server.servers.TrialServerAddress;
 import com.mineportal.server.servers.TrialServerAllowlist;
 import com.mineportal.server.servers.TrialServerDenial;
 import com.mineportal.server.status.PingResult;
@@ -52,8 +53,8 @@ public class ConnectionController {
   }
 
   /**
-   * DB의 owner id는 언제나 로그인된 마인크래프트 프로필 id다 — 서버 측에서 이 세션 고유의 AccountState로부터 계산되며, 클라이언트가 보내는 값은 절대
-   * 사용하지 않는다. null이면 "이 브라우저 세션은 로그인하지 않음"을 뜻한다.
+   * 소유자 id는 언제나 로그인된 마인크래프트 프로필 id다. 서버가 이 세션의 AccountState에서 계산하며, 클라이언트가 보내는 값은 쓰지 않는다. null이면 이
+   * 브라우저 세션은 로그인하지 않았다는 뜻이다.
    */
   private String ownerId(String sid) {
     var profile = accountSessions.get(sid).profile;
@@ -64,6 +65,7 @@ public class ConnectionController {
   public ResponseEntity<?> connect(
       @RequestAttribute("sid") String sid,
       @PathVariable String id,
+      @RequestBody(required = false) ConnectTarget target,
       @RequestParam(defaultValue = "false") boolean desktopOnly) {
     String ownerId = ownerId(sid);
     if (ownerId == null) {
@@ -75,10 +77,6 @@ public class ConnectionController {
                   "code",
                   "not-logged-in"));
     }
-    ServerConfig server = registry.getServer(id, ownerId).orElse(null);
-    if (server == null) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "server not found"));
-    }
     boolean viaDesktop = desktopConnections.isConnected(ownerId);
     // Desktop mode must never silently fall back to the public relay when the local
     // application is starting, reconnecting, or has lost its control channel.
@@ -86,7 +84,24 @@ public class ConnectionController {
       return ResponseEntity.status(HttpStatus.CONFLICT)
           .body(Map.of("error", "desktop app is not connected", "code", "desktop-offline"));
     }
-    // 릴레이(체험 모드)만 allowlist를 본다. 비교 대상은 사용자가 입력해 저장한 host/port다.
+    ServerConfig server = registry.getServer(id, ownerId).orElse(null);
+    if (server == null) {
+      server = openRememberedServer(ownerId, id, target, viaDesktop);
+      if (server == null) {
+        if (target != null
+            && target.host() != null
+            && !target.host().isBlank()
+            && !viaDesktop
+            && !trialAllowlist.isAllowed(
+                target.host(),
+                target.port() == null ? TrialServerAddress.DEFAULT_PORT : target.port())) {
+          return TrialServerDenial.response();
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "server not found"));
+      }
+    }
+    // 릴레이(체험 모드)만 allowlist를 본다. 비교 대상은 클라이언트가 보내거나 체험 목록에 있는 host/port다.
     // SRV로 풀린 대상 호스트·포트는 여기서 보지 않는다. 데스크톱 앱이 직접 접속할 때는 제한하지 않는다.
     if (!viaDesktop && !trialAllowlist.isAllowed(server.host, server.port)) {
       return TrialServerDenial.response();
@@ -160,6 +175,26 @@ public class ConnectionController {
       mcConnections.connect(server, account, ping, observation.endpoint(), attemptId);
     }
     return ResponseEntity.ok(Map.of("ok", true));
+  }
+
+  /**
+   * 이 PC에 저장된 서버는 서버 목록에 없다. 접속 요청에 주소가 있으면 그 세션 동안만 연결 상태를 붙든다. 허용되지 않은 체험 주소는 만들지 않고 null을 돌려,
+   * 호출부가 거절 응답을 고르게 한다.
+   */
+  private ServerConfig openRememberedServer(
+      String ownerId, String id, ConnectTarget target, boolean viaDesktop) {
+    if (target == null || target.host() == null || target.host().isBlank()) {
+      return null;
+    }
+    int port = target.port() == null ? TrialServerAddress.DEFAULT_PORT : target.port();
+    if (!viaDesktop && !trialAllowlist.isAllowed(target.host(), port)) {
+      return null;
+    }
+    try {
+      return registry.openSession(ownerId, id, target.host(), port, target.version());
+    } catch (IllegalArgumentException invalid) {
+      return null;
+    }
   }
 
   @PostMapping("/{id}/disconnect")
