@@ -344,12 +344,18 @@
   .icon-btn.refresh-btn .refresh-icon { display: inline-block; }
   .icon-btn.refresh-btn.spinning .refresh-icon { animation: icon-btn-spin 0.6s linear; }
   @keyframes icon-btn-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  .add-server-btn, .icon-btn.refresh-btn {
+  .legend-btn {
+    padding: 0.4rem 0.55rem; font-size: 0.78rem; line-height: 1; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .add-server-btn, .icon-btn.refresh-btn, .legend-btn {
     background: transparent; color: #ccc; border: 1px solid rgba(255,255,255,0.16); box-shadow: none;
   }
-  .add-server-btn:hover, .icon-btn.refresh-btn:hover {
+  .add-server-btn:hover, .icon-btn.refresh-btn:hover, .legend-btn:hover {
     background: rgba(155,93,229,0.16); border-color: var(--accent); color: #fff; filter: none;
   }
+  .sidebar .panel-header { flex-wrap: wrap; gap: 0.35rem 0.5rem; }
+  .sidebar .panel-header h2 { white-space: nowrap; }
   #serverList {
     list-style: none; padding: 0; margin: 0.75rem 0 0; display: flex; flex-direction: column; gap: 0.5rem;
     flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
@@ -364,7 +370,40 @@
   #serverList li.on-screen { border-color: rgba(155,93,229,0.55); }
   #serverList li.selected, .home-demo-sidebar li.selected { border-color: var(--accent); background: rgba(155,93,229,0.14); }
   .server-title-row { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
-  .server-title-row .slot-status-dot { margin: 0; width: 0.5rem; height: 0.5rem; }
+  .server-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; min-width: 0; }
+  .server-availability {
+    display: inline-flex; align-items: center; gap: 0.28rem; max-width: 100%;
+    border: 0; background: none; box-shadow: none; padding: 0; margin: 0;
+    color: #c6c6d0; font: inherit; font-size: 0.72rem; font-weight: 700; line-height: 1.2;
+    cursor: pointer; text-align: left;
+  }
+  .server-availability:hover { filter: none; }
+  .server-signal { display: inline-flex; align-items: flex-end; gap: 2px; width: 0.78rem; height: 0.72rem; flex-shrink: 0; }
+  .server-signal i { display: block; width: 2px; border-radius: 1px; background: currentColor; }
+  .server-signal i:nth-child(1) { height: 35%; }
+  .server-signal i:nth-child(2) { height: 65%; }
+  .server-signal i:nth-child(3) { height: 100%; }
+  .server-availability.online { color: #3ddc84; }
+  .server-availability.offline { color: #b7b7c4; }
+  .server-availability.offline .server-signal i { opacity: 0.28; }
+  .server-availability.checking { color: #b7b7c4; }
+  .server-availability.checking .server-signal i:nth-child(2) { animation: slot-status-pulse 1.1s ease-in-out infinite; }
+  .server-signal-text { min-width: 0; }
+  .conn-pill {
+    display: inline-flex; align-items: center; gap: 0.15rem;
+    border-radius: 999px; border: 1px solid currentColor; background: transparent;
+    box-shadow: none; padding: 0.05rem 0.42rem; margin: 0;
+    font: inherit; font-size: 0.68rem; font-weight: 700; line-height: 1.35;
+    color: #c6c6d0; cursor: pointer; white-space: nowrap;
+  }
+  .conn-pill:hover { filter: none; }
+  .conn-pill[hidden], .server-availability[hidden] { display: none !important; }
+  .conn-pill.connecting { color: #e6b450; }
+  .conn-pill.reconnecting { color: #e6b450; }
+  .conn-pill.reconnecting::before { content: "↻"; font-size: 0.78rem; line-height: 1; }
+  .conn-pill.connected { color: #8ee0b0; background: rgba(61,220,132,0.1); }
+  .conn-pill.disconnected { color: #c8c8d2; }
+  .conn-pill.error { color: #ffb0a8; background: rgba(224,84,74,0.12); }
   .pane-badge {
     flex-shrink: 0; font-size: 0.68rem; font-weight: 700; line-height: 1.2;
     color: #fff; background: var(--accent); border-radius: 6px; padding: 0.12rem 0.38rem;
@@ -374,7 +413,8 @@
     border-radius: 999px; background: #e0544a; color: #fff;
     font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
   }
-  .pane-badge[hidden], .unread-badge[hidden], .slot-jump[hidden] { display: none !important; }
+  .pane-badge[hidden], .unread-badge[hidden], .slot-jump[hidden],
+  .conn-pill[hidden], .server-availability[hidden] { display: none !important; }
   #serverList li.empty-trial {
     display: block; cursor: default; color: #b7b7c4; background: transparent; border: none;
     box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; line-height: 1.5;
@@ -492,7 +532,7 @@
      clipped by .chat-grid's overflow:auto like an in-place absolute tooltip would. */
   .slot-status-tooltip {
     display: none; position: fixed; transform: translateX(-50%);
-    z-index: 300; width: 13rem; padding: 0.4rem 1rem 0.75rem; border-radius: 12px;
+    z-index: 300; width: min(18rem, calc(100vw - 1.5rem)); padding: 0.4rem 1rem 0.85rem; border-radius: 12px;
     background: rgba(30,30,38,0.96); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
     font-size: 0.8rem; color: #e4e4ea; cursor: default;
@@ -502,6 +542,7 @@
     from { opacity: 0; transform: translateX(-50%) translateY(-3px); }
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
+  .slot-status-tooltip.legend-open::before { display: none; }
   .slot-status-tooltip::before {
     content: ""; position: absolute; top: -6px; left: 50%; margin-left: -6px;
     width: 12px; height: 12px; background: rgba(30,30,38,0.96);
@@ -519,6 +560,16 @@
   .slot-status-tooltip .dot.connecting { background: #e0a83a; }
   .slot-status-tooltip .dot.connected { background: #4caf50; }
   .slot-status-tooltip .dot.disconnected { background: #e0544a; }
+  .legend-section { padding: 0.35rem 0 0.15rem; }
+  .legend-kicker { font-size: 0.75rem; font-weight: 700; color: #fff; margin: 0.15rem 0; }
+  .legend-section p { margin: 0 0 0.4rem; color: #c6c6d0; line-height: 1.45; }
+  .legend-sample { display: flex; align-items: center; gap: 0.35rem; color: #3ddc84; font-weight: 700; font-size: 0.75rem; padding: 0.12rem 0; }
+  .legend-sample.offline { color: #b7b7c4; }
+  .legend-sample.offline .server-signal i { opacity: 0.28; }
+  .legend-pills { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .slot-status-tooltip .conn-pill { cursor: default; pointer-events: none; }
+  #slotStatusTooltip [hidden] { display: none !important; }
+  .status-tip-line { margin: 0.35rem 0 0.15rem; line-height: 1.4; }
   .slot-log { flex: 1; overflow-y: auto; background: rgba(0,0,0,0.28); border-radius: 8px; padding: 0.6rem 0.8rem; min-height: 0; }
   .slot-chat-form { display: flex; gap: 0.5rem; }
   .line { padding: 0.2rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.9rem; word-break: break-word; }
@@ -856,6 +907,7 @@
     .slot-header { flex-wrap: wrap; }
     .slot-server-picker { flex: 1 1 8rem; }
     .slot-log { overflow-y: auto; }
+    .server-availability, .conn-pill { min-height: 0; padding: 0.05rem 0.4rem; }
     .slot-chat-form { position: sticky; bottom: 0; background: rgba(12,12,16,0.92); padding-top: 0.15rem; }
     .line { font-size: 0.95rem; }
     body:has(#listView.active) .appFooter,
@@ -1024,11 +1076,27 @@
   </div>
 
   <div class="slot-status-tooltip" id="slotStatusTooltip">
-    <div class="slot-status-tooltip-title" data-i18n="statusLegendTitle">연결 상태</div>
-    <div class="row"><span class="dot idle"></span><span data-i18n="statusLegendIdle">미연결</span></div>
-    <div class="row"><span class="dot connecting"></span><span data-i18n="statusLegendConnecting">연결 중</span></div>
-    <div class="row"><span class="dot connected"></span><span data-i18n="statusLegendConnected">연결됨</span></div>
-    <div class="row"><span class="dot disconnected"></span><span data-i18n="statusLegendDisconnected">연결 끊김/오류</span></div>
+    <div class="slot-status-tooltip-title" id="statusLegendHeading" data-i18n="legendTitle">상태 안내</div>
+    <p class="status-tip-line" id="statusTipLine" hidden></p>
+    <div id="statusLegendBody">
+      <div class="legend-section">
+        <div class="legend-kicker" data-i18n="legendServerTitle">서버 상태</div>
+        <p data-i18n="legendServerBody">신호 표시는 마인크래프트 서버가 응답하는지를 알려 줘요. 인원수는 서버 목록 핑으로 가져오고, 내가 접속하지 않아도 모든 서버에 보여요.</p>
+        <div class="legend-sample"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span data-i18n="legendServerOnlineSample">온라인 12/100</span></div>
+        <div class="legend-sample offline"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span data-i18n="legendServerOfflineSample">오프라인</span></div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-kicker" data-i18n="legendConnTitle">내 연결</div>
+        <p data-i18n="legendConnBody">알약 표시는 마인포탈로 접속한 뒤에만 나와요. 서버가 온라인이어도 내가 접속하지 않으면 이 표시는 없어요.</p>
+        <div class="legend-pills">
+          <span class="conn-pill connecting" data-i18n="connConnecting">연결 중</span>
+          <span class="conn-pill reconnecting" data-i18n="connReconnecting">재연결 중</span>
+          <span class="conn-pill connected" data-i18n="connConnected">연결됨</span>
+          <span class="conn-pill disconnected" data-i18n="connDisconnected">연결 끊김</span>
+          <span class="conn-pill error" data-i18n="connError">오류</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="view active" id="homeView">
@@ -1070,28 +1138,28 @@
               <span class="drag-handle" aria-hidden="true"></span>
               <div class="server-info">
                 <span class="server-meta">play.hypixel.net</span>
-                <div class="server-status">연결됨</div>
+                <div class="server-meta-row"><span class="server-availability online"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">온라인 12/100</span></span><span class="conn-pill connected">연결됨</span></div>
               </div>
             </li>
             <li>
               <span class="drag-handle" aria-hidden="true"></span>
               <div class="server-info">
                 <span class="server-meta">mc.hive.com</span>
-                <div class="server-status">대기 중</div>
+                <div class="server-meta-row"><span class="server-availability online"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">온라인 40/100</span></span></div>
               </div>
             </li>
             <li>
               <span class="drag-handle" aria-hidden="true"></span>
               <div class="server-info">
                 <span class="server-meta">survival.kr</span>
-                <div class="server-status">대기 중</div>
+                <div class="server-meta-row"><span class="server-availability offline"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">오프라인</span></span></div>
               </div>
             </li>
           </ul>
         </div>
         <div class="chat-slot home-demo-slot">
           <div class="slot-header">
-            <span class="slot-status-dot connected" id="homeDemoDot"></span>
+            <span class="conn-pill connected" id="homeDemoDot">연결됨</span>
             <button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button>
           </div>
           <div class="slot-log" id="homeDemoLog"></div>
@@ -1212,6 +1280,7 @@
             <div class="panel-header">
               <h2 data-i18n="serverListTitle">서버 목록</h2>
               <div class="panel-header-actions">
+                <button type="button" class="icon-btn legend-btn" id="statusLegendBtn" data-i18n="legendBtn" data-i18n-aria="legendBtnAria" aria-label="서버 상태와 내 연결 안내">안내</button>
                 <button type="button" class="icon-btn refresh-btn" id="refreshServerListBtn" data-i18n-title="refreshBtnTitle" aria-label="새로고침"><span class="refresh-icon">⟳</span></button>
                 <button type="button" class="add-server-btn" id="addServerBtn" data-i18n="addServerBtn">+ 서버 추가</button>
               </div>
@@ -1240,6 +1309,7 @@
       <div class="panel-header">
         <h2 data-i18n="serverListTitle">서버 목록</h2>
         <div class="panel-header-actions">
+          <button type="button" class="icon-btn legend-btn" id="statusLegendBtn2" data-i18n="legendBtn" data-i18n-aria="legendBtnAria" aria-label="서버 상태와 내 연결 안내">안내</button>
           <button type="button" class="icon-btn refresh-btn" id="refreshServersBtn" data-i18n-title="refreshBtnTitle" aria-label="새로고침"><span class="refresh-icon">⟳</span></button>
           <button type="button" class="add-server-btn" id="addServerBtn2" data-i18n="addServerBtn">+ 서버 추가</button>
         </div>
@@ -1388,6 +1458,27 @@
         pingChecking: "확인 중...",
         pingOnline: "🟢 {online}/{max}명",
         pingOffline: "🔴 오프라인",
+        serverOnline: "온라인 {online}/{max}",
+        serverOffline: "오프라인",
+        serverChecking: "확인 중",
+        serverOnlineAria: "서버 상태: 온라인 {online}/{max}",
+        serverOfflineAria: "서버 상태: 오프라인",
+        serverCheckingAria: "서버 상태: 확인 중",
+        connConnecting: "연결 중",
+        connReconnecting: "재연결 중",
+        connConnected: "연결됨",
+        connDisconnected: "연결 끊김",
+        connError: "오류",
+        connAria: "내 연결: {label}",
+        legendTitle: "상태 안내",
+        legendBtn: "안내",
+        legendBtnAria: "서버 상태와 내 연결 안내",
+        legendServerTitle: "서버 상태",
+        legendServerBody: "신호 표시는 마인크래프트 서버가 응답하는지를 알려 줘요. 인원수는 서버 목록 핑으로 가져오고, 내가 접속하지 않아도 모든 서버에 보여요.",
+        legendServerOnlineSample: "온라인 12/100",
+        legendServerOfflineSample: "오프라인",
+        legendConnTitle: "내 연결",
+        legendConnBody: "알약 표시는 마인포탈로 접속한 뒤에만 나와요. 서버가 온라인이어도 내가 접속하지 않으면 이 표시는 없어요.",
         accountLoginFailed: "로그인 실패",
         loginNeededForServers: "로그인 후 서버 목록을 이용할 수 있어요.",
         toastServerSelected: "서버가 선택되었습니다. 연결 버튼을 눌러주세요.",
@@ -1513,6 +1604,27 @@
         pingChecking: "Checking...",
         pingOnline: "🟢 {online}/{max} players",
         pingOffline: "🔴 Offline",
+        serverOnline: "Online {online}/{max}",
+        serverOffline: "Offline",
+        serverChecking: "Checking",
+        serverOnlineAria: "Server status: online {online}/{max}",
+        serverOfflineAria: "Server status: offline",
+        serverCheckingAria: "Server status: checking",
+        connConnecting: "Connecting",
+        connReconnecting: "Reconnecting",
+        connConnected: "Connected",
+        connDisconnected: "Disconnected",
+        connError: "Error",
+        connAria: "Your connection: {label}",
+        legendTitle: "Status guide",
+        legendBtn: "Guide",
+        legendBtnAria: "Guide to server status and your connection",
+        legendServerTitle: "Server status",
+        legendServerBody: "The signal shows whether the Minecraft server itself answers. The player count comes from the server-list ping and is shown for every server, whether you are connected or not.",
+        legendServerOnlineSample: "Online 12/100",
+        legendServerOfflineSample: "Offline",
+        legendConnTitle: "Your connection",
+        legendConnBody: "The pill appears only after you connect through MinePortal. An online server with no pill means you are not connected to it.",
         accountLoginFailed: "Login failed",
         loginNeededForServers: "Log in to use the server list.",
         toastServerSelected: "Server selected. Click Connect to continue.",
@@ -1846,16 +1958,82 @@
     // dot with fixed coordinates computed from its bounding rect.
     const slotStatusTooltip = document.getElementById("slotStatusTooltip");
 
+    const statusTipLine = document.getElementById("statusTipLine");
+    const statusLegendBody = document.getElementById("statusLegendBody");
+    let statusTipPinned = false;
+    let statusTipAnchor = null;
+
+    function isLegendButton(el) {
+      return el && (el.id === "statusLegendBtn" || el.id === "statusLegendBtn2");
+    }
+
     function showStatusTooltip(anchorEl) {
-      const rect = anchorEl.getBoundingClientRect();
+      if (!anchorEl) return;
+      statusTipAnchor = anchorEl;
+      const full = isLegendButton(anchorEl);
+      statusTipLine.hidden = full;
+      statusLegendBody.hidden = !full;
+      slotStatusTooltip.classList.toggle("legend-open", full);
+      if (!full) statusTipLine.textContent = anchorEl.dataset.tip || anchorEl.getAttribute("aria-label") || "";
       slotStatusTooltip.style.display = "block";
-      slotStatusTooltip.style.left = (rect.left + rect.width / 2) + "px";
-      slotStatusTooltip.style.top = (rect.bottom + 8) + "px";
+      const rect = anchorEl.getBoundingClientRect();
+      const tipRect = slotStatusTooltip.getBoundingClientRect();
+      const width = tipRect.width || 260;
+      const height = tipRect.height || 80;
+      let left = rect.left + rect.width / 2;
+      let top = rect.bottom + 8;
+      const sidebar = document.getElementById("sidebar");
+      const side = sidebar ? sidebar.getBoundingClientRect() : rect;
+      // The full guide is wide. Park it just to the right of the server list
+      // when that list is a sidebar, so the guide and the rows stay readable.
+      if (full && side.width < window.innerWidth * 0.7 && side.right + width + 16 < window.innerWidth) {
+        left = side.right + 12 + width / 2;
+        top = Math.max(8, Math.min(rect.top, window.innerHeight - height - 8));
+      } else {
+        left = Math.max(width / 2 + 8, Math.min(window.innerWidth - width / 2 - 8, left));
+        if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 8);
+      }
+      slotStatusTooltip.style.left = left + "px";
+      slotStatusTooltip.style.top = top + "px";
     }
 
     function hideStatusTooltip() {
+      statusTipPinned = false;
+      statusTipAnchor = null;
       slotStatusTooltip.style.display = "none";
     }
+
+    // 안내 버튼과 각 표시는 눌러도(터치 포함) 같은 설명을 연다. 캡처 단계에서
+    // 막아야 사이드바 줄을 고르는 클릭으로 이어지지 않는다.
+    document.addEventListener("click", (e) => {
+      const anchor = e.target.closest("[data-tip], #statusLegendBtn, #statusLegendBtn2");
+      if (anchor) {
+        e.stopPropagation();
+        if (statusTipPinned && statusTipAnchor === anchor) {
+          hideStatusTooltip();
+          return;
+        }
+        statusTipPinned = true;
+        showStatusTooltip(anchor);
+        return;
+      }
+      if (!e.target.closest("#slotStatusTooltip")) hideStatusTooltip();
+    }, true);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") hideStatusTooltip();
+    });
+    document.addEventListener("mouseover", (e) => {
+      if (statusTipPinned) return;
+      const anchor = e.target.closest("[data-tip], #statusLegendBtn, #statusLegendBtn2");
+      if (!anchor) return;
+      showStatusTooltip(anchor);
+    });
+    document.addEventListener("mouseout", (e) => {
+      if (statusTipPinned) return;
+      const anchor = e.target.closest("[data-tip], #statusLegendBtn, #statusLegendBtn2");
+      if (!anchor || anchor.contains(e.relatedTarget)) return;
+      hideStatusTooltip();
+    });
 
     let account = { status: "logged-out" };
     let servers = [];
@@ -2056,42 +2234,157 @@
       return s.displayName || (s.host + ":" + s.port);
     }
 
-    function pingBadgeHtml(host, port, preset) {
-      if (preset && typeof preset.online === "boolean") {
-        if (preset.online) {
-          return '<span class="ping-badge online">' + escapeHtml(t("pingOnline", {
-            online: preset.playersOnline ?? "?",
-            max: preset.playersMax ?? "?",
-          })) + '</span>';
-        }
-        return '<span class="ping-badge offline">' + escapeHtml(t("pingOffline")) + '</span>';
+    // CONNECTION_KIND_START
+    // 마인크래프트 서버가 켜져 있는지는 여기 넣지 않는다. 이 값은 마인포탈로
+    // 접속을 시작한 뒤에만 남고, 한 번도 접속하지 않았으면 null이다.
+    function connectionKind(server) {
+      if (!server) return null;
+      const status = typeof server.status === "string" ? server.status.trim() : "";
+      const normalized = status.toLowerCase();
+      if (server.connected === true || normalized === "connected") return "connected";
+      if (normalized === "reconnecting" || normalized.startsWith("reconnecting")) return "reconnecting";
+      if (normalized === "connecting" || (server.phase === "active" && server.connected !== true)) {
+        return "connecting";
       }
-      return '<span class="ping-badge" data-host="' + escapeHtml(host) + '" data-port="' + port + '">' + t("pingChecking") + '</span>';
+      if (!normalized || normalized === "idle") return null;
+      if (
+        normalized === "error" ||
+        normalized.startsWith("error:") ||
+        normalized.startsWith("connection failed") ||
+        normalized.includes("failed")
+      ) {
+        return "error";
+      }
+      return "disconnected";
+    }
+    // CONNECTION_KIND_END
+
+    function connectionLabel(kind) {
+      if (kind === "connecting") return t("connConnecting");
+      if (kind === "reconnecting") return t("connReconnecting");
+      if (kind === "connected") return t("connConnected");
+      if (kind === "disconnected") return t("connDisconnected");
+      if (kind === "error") return t("connError");
+      return "";
     }
 
-    // Server List Ping (loginless status query) — fetched per-badge so a slow/unreachable
-    // server can't hold up rendering the rest of the list.
-    function refreshPingBadges(root) {
-      (root || document).querySelectorAll(".ping-badge").forEach(async (badge) => {
+    function availabilityState(server) {
+      if (server && typeof server.online === "boolean") return server.online ? "online" : "offline";
+      return "checking";
+    }
+
+    function availabilityText(server) {
+      const state = availabilityState(server);
+      if (state === "online") {
+        return t("serverOnline", { online: server.playersOnline ?? "?", max: server.playersMax ?? "?" });
+      }
+      if (state === "offline") return t("serverOffline");
+      return t("serverChecking");
+    }
+
+    function availabilityAria(server) {
+      const state = availabilityState(server);
+      if (state === "online") {
+        return t("serverOnlineAria", { online: server.playersOnline ?? "?", max: server.playersMax ?? "?" });
+      }
+      if (state === "offline") return t("serverOfflineAria");
+      return t("serverCheckingAria");
+    }
+
+    function availabilityHtml(server) {
+      const state = availabilityState(server);
+      const needsPing = !server || typeof server.online !== "boolean";
+      const hostAttr = needsPing && server && server.host
+        ? ' data-host="' + escapeHtml(server.host) + '" data-port="' + escapeHtml(String(server.port)) + '"'
+        : "";
+      const aria = availabilityAria(server);
+      return '<button type="button" class="server-availability ' + state + '"' + hostAttr +
+        ' aria-label="' + escapeHtml(aria) + '" data-tip="' + escapeHtml(aria) + '">' +
+        '<span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span>' +
+        '<span class="server-signal-text">' + escapeHtml(availabilityText(server)) + '</span></button>';
+    }
+
+    function connectionHtml(server) {
+      const kind = connectionKind(server);
+      if (!kind) return '<button type="button" class="conn-pill" hidden></button>';
+      const label = connectionLabel(kind);
+      const aria = t("connAria", { label: label });
+      return '<button type="button" class="conn-pill ' + kind + '" aria-label="' +
+        escapeHtml(aria) + '" data-tip="' + escapeHtml(aria) + '">' + escapeHtml(label) + '</button>';
+    }
+
+    function paintAvailability(el, server) {
+      if (!el) return;
+      el.classList.remove("online", "offline", "checking");
+      el.classList.add(availabilityState(server));
+      const text = el.querySelector(".server-signal-text");
+      if (text) text.textContent = availabilityText(server);
+      const aria = availabilityAria(server);
+      el.setAttribute("aria-label", aria);
+      el.dataset.tip = aria;
+    }
+
+    function paintConnection(el, server) {
+      if (!el) return;
+      const kind = connectionKind(server);
+      el.classList.remove("connecting", "reconnecting", "connected", "disconnected", "error");
+      if (!kind) {
+        el.hidden = true;
+        el.textContent = "";
+        el.removeAttribute("aria-label");
+        delete el.dataset.tip;
+        return;
+      }
+      const label = connectionLabel(kind);
+      const aria = t("connAria", { label: label });
+      el.hidden = false;
+      el.classList.add(kind);
+      el.textContent = label;
+      el.setAttribute("aria-label", aria);
+      el.dataset.tip = aria;
+    }
+
+    function pingBadgeHtml(host, port, preset) {
+      return availabilityHtml(preset || { host: host, port: port });
+    }
+
+    // Server List Ping (loginless status query) — fetched per host so a slow server
+    // can't hold up the rest of the list. The result is the server's own availability,
+    // kept separate from whether this account is connected through MinePortal.
+    function refreshPingBadges(root, force) {
+      const seen = new Set();
+      (root || document).querySelectorAll(".server-availability[data-host]").forEach(async (badge) => {
         const host = badge.dataset.host;
         const port = badge.dataset.port;
-        // 체험 목록은 카탈로그 응답의 인원수를 이미 그려 둔다. 로그인 전 /api/ping은 401이라 그걸로 덮으면 오프라인이 된다.
         if (!host) return;
-        badge.classList.remove("online", "offline");
-        badge.textContent = t("pingChecking");
+        const key = host + ":" + port;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const server = servers.find((item) => item.host === host && String(item.port) === String(port));
+        const matches = () => [...document.querySelectorAll(".server-availability[data-host]")].filter(
+          (el) => el.dataset.host === host && el.dataset.port === String(port),
+        );
+        if (server && server.availabilityKnown && !force) {
+          matches().forEach((el) => paintAvailability(el, server));
+          return;
+        }
+        matches().forEach((el) => paintAvailability(el, null));
+        const apply = (online, playersOnline, playersMax) => {
+          const next = server || { online: online, playersOnline: playersOnline, playersMax: playersMax };
+          if (server) {
+            server.online = online;
+            server.playersOnline = playersOnline;
+            server.playersMax = playersMax;
+            server.availabilityKnown = true;
+          }
+          matches().forEach((el) => paintAvailability(el, next));
+        };
         try {
           const res = await fetch("/api/ping?host=" + encodeURIComponent(host) + "&port=" + encodeURIComponent(port));
           const data = await res.json();
-          if (data.online) {
-            badge.textContent = t("pingOnline", { online: data.playersOnline ?? "?", max: data.playersMax ?? "?" });
-            badge.classList.add("online");
-          } else {
-            badge.textContent = t("pingOffline");
-            badge.classList.add("offline");
-          }
+          apply(!!data.online, data.playersOnline, data.playersMax);
         } catch {
-          badge.textContent = t("pingOffline");
-          badge.classList.add("offline");
+          apply(false, null, null);
         }
       });
     }
@@ -2104,36 +2397,11 @@
         btn.classList.remove("spinning");
         void btn.offsetWidth;
         btn.classList.add("spinning");
-        refreshPingBadges(root);
+        refreshPingBadges(root, true);
       });
     }
     bindRefreshBtn(refreshServerListBtn, serverListEl);
     bindRefreshBtn(refreshServersBtn, serverGridView);
-
-    // Maps a raw status string (from ServerConfig.status on the backend: "idle",
-    // "connecting", "connected", or "disconnected: <reason>") to one of the four
-    // dot colors/states shown next to the slot's server picker.
-    function statusDotState(status) {
-      if (status === "connecting") return "connecting";
-      if (status === "connected") return "connected";
-      if (status && status.startsWith("disconnected")) return "disconnected";
-      return "idle";
-    }
-
-    function statusLabel(status) {
-      const state = statusDotState(status);
-      if (state === "connecting") return t("statusLegendConnecting");
-      if (state === "connected") return t("statusLegendConnected");
-      if (state === "disconnected") return t("statusLegendDisconnected");
-      if (!status || status === "idle") return t("statusLegendIdle");
-      return status;
-    }
-
-    function setSlotStatusDot(dotEl, status) {
-      if (!dotEl) return;
-      dotEl.classList.remove("idle", "connecting", "connected", "disconnected");
-      dotEl.classList.add(statusDotState(status));
-    }
 
     function connectLabel(s) {
       const canConnect = s.phase !== "active";
@@ -2151,14 +2419,13 @@
             const label = connectLabel(s);
             return '<div class="server-card" data-id="' + s.id + '">' +
               '<div class="name">' + escapeHtml(serverLabel(s)) + '</div>' +
-              '<div class="status">' + escapeHtml(s.status) + '</div>' +
-              pingBadgeHtml(s.host, s.port, s) +
-              '<button type="button" ' + (canConnect ? "" : "disabled") + '>' + label + '</button>' +
+              '<div class="server-card-states">' + availabilityHtml(s) + connectionHtml(s) + '</div>' +
+              '<button type="button" class="card-connect-btn" ' + (canConnect ? "" : "disabled") + '>' + label + '</button>' +
               '</div>';
           }).join("")
         : '<div class="empty">' + escapeHtml(usesTrialCatalog() ? t("trialEmpty") : t("serverGridEmpty")) + '</div>';
       serverGridView.querySelectorAll(".server-card").forEach((card) => {
-        card.querySelector("button").onclick = () => connectServer(card.dataset.id);
+        card.querySelector(".card-connect-btn").onclick = () => connectServer(card.dataset.id);
       });
       refreshPingBadges(serverGridView);
     }
@@ -2204,9 +2471,9 @@
       '<div class="home-demo-sidebar-col">' +
       '<div class="home-demo-sidebar-title">서버 목록</div>' +
       '<ul class="home-demo-sidebar">' +
-      '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">play.hypixel.net</span><div class="server-status">연결됨</div></div></li>' +
-      '<li><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">mc.hive.com</span><div class="server-status">대기 중</div></div></li>' +
-      '<li><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">survival.kr</span><div class="server-status">대기 중</div></div></li>' +
+      '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">play.hypixel.net</span><div class="server-meta-row"><span class="server-availability online"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">온라인 12/100</span></span><span class="conn-pill connected">연결됨</span></div></div></li>' +
+      '<li><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">mc.hive.com</span><div class="server-meta-row"><span class="server-availability online"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">온라인 40/100</span></span></div></div></li>' +
+      '<li><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">survival.kr</span><div class="server-meta-row"><span class="server-availability offline"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">오프라인</span></span></div></div></li>' +
       '</ul></div>';
 
     function runHomeDemoChat(isActive) {
@@ -2265,10 +2532,12 @@
           if (isLast) {
             setTimeout(() => {
               if (!isActive()) return;
-              dotEl.className = "slot-status-dot connecting";
+              dotEl.className = "conn-pill connecting";
+              dotEl.textContent = "연결 중";
               setTimeout(() => {
                 if (!isActive()) return;
-                dotEl.className = "slot-status-dot connected";
+                dotEl.className = "conn-pill connected";
+                dotEl.textContent = "연결됨";
                 step();
               }, 900);
             }, 1200);
@@ -2419,7 +2688,7 @@
       chat: {
         html: homeDemoSidebarHtml +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected" id="homeDemoDot"></span>' +
+          '<div class="slot-header"><span class="conn-pill connected" id="homeDemoDot">연결됨</span>' +
           '<button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button></div>' +
           '<div class="slot-log" id="homeDemoLog"></div>' +
           '<div class="home-demo-inputbar"><span id="homeDemoTyped"></span><span class="home-demo-caret"></span></div>' +
@@ -2430,11 +2699,11 @@
         html: homeDemoSidebarHtml +
           '<div class="home-demo-multi-slots">' +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected"></span><button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button></div>' +
+          '<div class="slot-header"><span class="conn-pill connected">연결됨</span><button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button></div>' +
           '<div class="slot-log" id="homeDemoMultiLog1"></div>' +
           '</div>' +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected"></span><button type="button" class="slot-server-btn" tabindex="-1">mc.hive.com</button></div>' +
+          '<div class="slot-header"><span class="conn-pill connected">연결됨</span><button type="button" class="slot-server-btn" tabindex="-1">mc.hive.com</button></div>' +
           '<div class="slot-log" id="homeDemoMultiLog2"></div>' +
           '</div>' +
           '</div>',
@@ -2443,7 +2712,7 @@
       sign: {
         html: homeDemoSidebarHtml +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected" id="homeDemoDot"></span>' +
+          '<div class="slot-header"><span class="conn-pill connected" id="homeDemoDot">연결됨</span>' +
           '<button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button></div>' +
           '<div class="slot-log" id="homeDemoLog"></div>' +
           '<div class="home-demo-inputbar"><span id="homeDemoTyped"></span><span class="home-demo-caret"></span></div>' +
@@ -2454,10 +2723,10 @@
         html: '<div class="home-demo-sidebar-col">' +
           '<div class="home-demo-sidebar-title">서버 목록</div>' +
           '<ul class="home-demo-sidebar">' +
-          '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">데모 서버</span><div class="server-status">연결됨</div></div></li>' +
+          '<li class="selected"><span class="drag-handle" aria-hidden="true"></span><div class="server-info"><span class="server-meta">데모 서버</span><div class="server-meta-row"><span class="server-availability online"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">온라인 8/20</span></span><span class="conn-pill connected">연결됨</span></div></div></li>' +
           '</ul></div>' +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected"></span>' +
+          '<div class="slot-header"><span class="conn-pill connected">연결됨</span>' +
           '<button type="button" class="slot-server-btn" tabindex="-1">데모 서버</button></div>' +
           '<div class="slot-log"><div class="line line-system"><b class="sys-tag">시스템</b> 제공하는 데모 서버에 연결되었습니다.</div></div>' +
           '</div>',
@@ -2465,7 +2734,7 @@
       anywhere: {
         html: homeDemoSidebarHtml +
           '<div class="chat-slot home-demo-slot">' +
-          '<div class="slot-header"><span class="slot-status-dot connected" id="homeDemoDot"></span>' +
+          '<div class="slot-header"><span class="conn-pill connected" id="homeDemoDot">연결됨</span>' +
           '<button type="button" class="slot-server-btn" tabindex="-1">play.hypixel.net</button></div>' +
           '<div class="slot-log" id="homeDemoLog"></div>' +
           '</div>' +
@@ -2645,10 +2914,10 @@
       moveHowCursorTo(btn, myGen, () => {
         if (!howGenValid(myGen)) return;
         added.style.visibility = "visible";
-        added.innerHTML = '<span class="dot connecting"></span>play.hypixel.net 연결 중...';
+        added.innerHTML = '<span class="conn-pill connecting">연결 중</span><span>play.hypixel.net</span>';
         setTimeout(() => {
           if (!howGenValid(myGen)) return;
-          added.innerHTML = '<span class="dot"></span>play.hypixel.net 연결됨';
+          added.innerHTML = '<span class="conn-pill connected">연결됨</span><span>play.hypixel.net</span>';
           setTimeout(() => { if (howGenValid(myGen)) onDone(); }, 700);
         }, 900);
       });
@@ -2669,7 +2938,7 @@
     function playChatScene(myGen, onDone) {
       howPreviewStage.innerHTML =
         '<div class="chat-slot how-mock-chat">' +
-        '<div class="slot-header"><span class="slot-status-dot connected"></span><b>play.hypixel.net</b></div>' +
+        '<div class="slot-header"><span class="conn-pill connected">연결됨</span><b>play.hypixel.net</b></div>' +
         '<div class="slot-log" id="howChatLog">' +
         '<div class="line"><span class="time">14:22</span><b>Notch</b>: 안녕하세요~</div>' +
         '</div>' +
@@ -2959,14 +3228,12 @@
           '<span class="drag-handle" aria-hidden="true"></span>' +
           '<div class="server-info">' +
           '<div class="server-title-row">' +
-          '<span class="slot-status-dot server-status-dot ' + statusDotState(s.status) + '"></span>' +
           '<span class="server-meta">' + escapeHtml(serverLabel(s)) + '</span>' +
           '<span class="pane-badge"' + (pane === -1 ? " hidden" : "") +
           ' aria-label="' + escapeHtml(t("paneBadgeAria", { n: Math.max(pane + 1, 1) })) + '">' +
           (pane === -1 ? "" : String(pane + 1)) + '</span>' +
           '</div>' +
-          '<div class="server-ping">' + pingBadgeHtml(s.host, s.port, s) + '</div>' +
-          '<div class="server-status">' + escapeHtml(statusLabel(s.status)) + '</div>' +
+          '<div class="server-meta-row">' + availabilityHtml(s) + connectionHtml(s) + '</div>' +
           '</div>' +
           '<span class="unread-badge"' + (unread > 0 ? "" : " hidden") +
           ' aria-label="' + escapeHtml(t("unreadBadgeAria", { n: unreadLabel })) + '">' +
@@ -3042,11 +3309,9 @@
           paneBadge.textContent = pane === -1 ? "" : String(pane + 1);
           if (pane !== -1) paneBadge.setAttribute("aria-label", t("paneBadgeAria", { n: pane + 1 }));
         }
-        const dot = li.querySelector(".server-status-dot");
         const server = servers.find((item) => item.id === id);
-        if (dot) setSlotStatusDot(dot, server ? server.status : null);
-        const status = li.querySelector(".server-status");
-        if (status && server) status.textContent = statusLabel(server.status);
+        paintAvailability(li.querySelector(".server-availability"), server || null);
+        paintConnection(li.querySelector(".conn-pill"), server || null);
       });
     }
 
@@ -3112,7 +3377,8 @@
         div.className = "chat-slot" + (i === focusedSlot ? " focused" : "");
         div.innerHTML =
           '<div class="slot-header">' +
-          '<span class="slot-status-dot idle"></span>' +
+          '<button type="button" class="server-availability checking" hidden aria-label="' + escapeHtml(t("serverCheckingAria")) + '"><span class="server-signal" aria-hidden="true"><i></i><i></i><i></i></span><span class="server-signal-text">' + escapeHtml(t("serverChecking")) + '</span></button>' +
+          '<button type="button" class="conn-pill" hidden></button>' +
           '<div class="slot-server-picker"><button type="button" class="slot-server-btn">' + t("serverSelectPlaceholder") + '</button><div class="slot-server-menu"></div></div>' +
           '<button type="button" class="slot-connect-btn" disabled>' + t("connectBtn") + '</button>' +
           '</div>' +
@@ -3124,14 +3390,13 @@
         const btnEl = div.querySelector(".slot-server-btn");
         const menuEl = div.querySelector(".slot-server-menu");
         const connectBtnEl = div.querySelector(".slot-connect-btn");
-        const statusDotEl = div.querySelector(".slot-status-dot");
+        const availabilityEl = div.querySelector(".server-availability");
+        const connEl = div.querySelector(".conn-pill");
         const logEl = div.querySelector(".slot-log");
         const jumpEl = div.querySelector(".slot-jump");
         const formEl = div.querySelector("form");
         const inputEl = div.querySelector("input");
 
-        statusDotEl.addEventListener("mouseenter", () => showStatusTooltip(statusDotEl));
-        statusDotEl.addEventListener("mouseleave", hideStatusTooltip);
         div.addEventListener("pointerdown", () => focusPane(i));
         logEl.addEventListener("scroll", () => {
           const serverId = slots[i] && slots[i].serverId;
@@ -3238,7 +3503,7 @@
           inputEl.value = "";
         });
 
-        return { btnEl, menuEl, connectBtnEl, statusDotEl, logEl, jumpEl, slotEl: div, formEl, inputEl };
+        return { btnEl, menuEl, connectBtnEl, availabilityEl, connEl, logEl, jumpEl, slotEl: div, formEl, inputEl };
       });
       refreshSlotMenus();
       slots.forEach((_, i) => loadSlotDetail(i));
@@ -3405,20 +3670,43 @@
       return room.hydrating;
     }
 
+    function syncSlotPresence(i) {
+      const ref = slotRefs[i];
+      if (!ref) return;
+      const serverId = slots[i] && slots[i].serverId;
+      const server = serverId && servers.find((item) => item.id === serverId);
+      if (!server) {
+        if (ref.availabilityEl) ref.availabilityEl.hidden = true;
+        if (ref.connEl) ref.connEl.hidden = true;
+        return;
+      }
+      if (ref.availabilityEl) {
+        ref.availabilityEl.hidden = false;
+        if (typeof server.online === "boolean") {
+          delete ref.availabilityEl.dataset.host;
+          delete ref.availabilityEl.dataset.port;
+        } else {
+          ref.availabilityEl.dataset.host = server.host;
+          ref.availabilityEl.dataset.port = String(server.port);
+        }
+        paintAvailability(ref.availabilityEl, server);
+      }
+      paintConnection(ref.connEl, server);
+      if (ref.availabilityEl && ref.availabilityEl.dataset.host) refreshPingBadges(ref.slotEl);
+    }
+
     function paintRoom(i) {
       const ref = slotRefs[i];
       const serverId = slots[i] && slots[i].serverId;
       if (!ref) return;
       ref.slotEl.classList.toggle("focused", i === focusedSlot);
+      syncSlotPresence(i);
       if (!serverId) {
-        setSlotStatusDot(ref.statusDotEl, null);
         ref.logEl.innerHTML = "";
         ref.jumpEl.hidden = true;
         return;
       }
       const room = roomFor(serverId);
-      const server = servers.find((item) => item.id === serverId);
-      setSlotStatusDot(ref.statusDotEl, server ? server.status : null);
       ref.logEl.innerHTML = "";
       room.lines.forEach((line) => addLineTo(ref.logEl, line.text, line.timestamp, line.system));
       if (room.stickToBottom) {
@@ -3473,8 +3761,8 @@
       const serverId = slots[i] && slots[i].serverId;
       if (!ref) return;
       ref.slotEl.classList.toggle("focused", i === focusedSlot);
+      syncSlotPresence(i);
       if (!serverId) {
-        setSlotStatusDot(ref.statusDotEl, null);
         ref.logEl.innerHTML = "";
         if (ref.jumpEl) ref.jumpEl.hidden = true;
         return;
@@ -3491,7 +3779,7 @@
           if (slot.serverId !== serverId) return;
           const ref = slotRefs[i];
           if (!ref) return;
-          setSlotStatusDot(ref.statusDotEl, payload.status);
+          syncSlotPresence(i);
           updateSlotConnectBtn(i);
         });
         if (payload.logged) ingestLine(serverId, payload.status, payload.timestamp, true);
@@ -3783,7 +4071,7 @@
         }
         const idx = slots.findIndex((slot) => slot.serverId === data.serverId);
         if (idx !== -1 && slotRefs[idx]) {
-          setSlotStatusDot(slotRefs[idx].statusDotEl, data.status);
+          syncSlotPresence(idx);
           updateSlotConnectBtn(idx);
         }
         nativeAppendLine(data.serverId, data.status, true);
