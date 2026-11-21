@@ -136,6 +136,12 @@
   }
   .view { display: none; }
   .view.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  /* 체험/플레이 화면은 뷰포트를 채워서 채팅 로그가 페이지가 아니라 창 안에서 스크롤되게 한다. */
+  body:has(#listView.active) {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
   .hero {
     padding: 3.5rem 2rem 0.2rem; text-align: center; margin-bottom: 1.5rem;
     position: relative;
@@ -280,7 +286,7 @@
   }
   .sidebar {
     width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0.6rem;
-    transition: width 0.2s ease;
+    min-height: 0; transition: width 0.2s ease;
   }
   .sidebar-toggle-btn {
     align-self: flex-start; flex-shrink: 0; width: 1.9rem; height: 1.9rem; padding: 0;
@@ -296,7 +302,13 @@
   }
   .sidebar-toggle-icon .l { width: 34%; height: 100%; background: currentColor; }
   .sidebar-toggle-icon .r { width: 66%; height: 100%; border-left: 1.5px solid currentColor; }
-  .sidebar-content { display: flex; flex-direction: column; gap: 1.25rem; overflow: hidden; min-width: 0; }
+  .sidebar-content {
+    display: flex; flex-direction: column; gap: 1.25rem; overflow: hidden;
+    flex: 1; min-width: 0; min-height: 0;
+  }
+  .sidebar-content > .panel:last-child {
+    flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  }
   .sidebar.collapsed { width: 2.75rem; }
   .sidebar.collapsed .sidebar-content { display: none; }
   input {
@@ -340,7 +352,7 @@
   }
   #serverList {
     list-style: none; padding: 0; margin: 0.75rem 0 0; display: flex; flex-direction: column; gap: 0.5rem;
-    max-height: 22rem; overflow-y: auto; overscroll-behavior: contain;
+    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   }
   #serverList li, .home-demo-sidebar li {
     padding: 0.7rem; border-radius: 14px; font-size: 0.85rem; cursor: grab;
@@ -349,7 +361,20 @@
     box-shadow: var(--glass-highlight);
     display: flex; align-items: center; gap: 0.9rem;
   }
+  #serverList li.on-screen { border-color: rgba(155,93,229,0.55); }
   #serverList li.selected, .home-demo-sidebar li.selected { border-color: var(--accent); background: rgba(155,93,229,0.14); }
+  .server-title-row { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+  .server-title-row .slot-status-dot { margin: 0; width: 0.5rem; height: 0.5rem; }
+  .pane-badge {
+    flex-shrink: 0; font-size: 0.68rem; font-weight: 700; line-height: 1.2;
+    color: #fff; background: var(--accent); border-radius: 6px; padding: 0.12rem 0.38rem;
+  }
+  .unread-badge {
+    flex-shrink: 0; min-width: 1.25rem; height: 1.25rem; padding: 0 0.35rem;
+    border-radius: 999px; background: #e0544a; color: #fff;
+    font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .pane-badge[hidden], .unread-badge[hidden], .slot-jump[hidden] { display: none !important; }
   #serverList li.empty-trial {
     display: block; cursor: default; color: #b7b7c4; background: transparent; border: none;
     box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; line-height: 1.5;
@@ -397,7 +422,10 @@
   .chat-grid[data-layout="1"] { grid-template-columns: 1fr; }
   .chat-grid[data-layout="2"] { grid-template-columns: 1fr 1fr; }
   .chat-grid[data-layout="4"] { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
+  .chat-grid[data-layout="2"] > .chat-slot,
+  .chat-grid[data-layout="4"] > .chat-slot { min-width: 0; min-height: 0; }
   .chat-slot {
+    position: relative;
     border-radius: 16px; padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;
     min-width: 260px; min-height: 260px;
     background: rgba(255,255,255,0.035);
@@ -405,9 +433,15 @@
     border: 1px solid rgba(255,255,255,0.08);
     box-shadow: var(--glass-highlight);
   }
+  .chat-slot.focused { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--glass-highlight); }
   .chat-slot.drag-hint {
     outline: 2px dashed var(--accent); outline-offset: -2px;
     animation: chat-slot-drop-hint 0.8s ease-in-out infinite;
+  }
+  .slot-jump {
+    position: absolute; left: 50%; bottom: 4.15rem; transform: translateX(-50%); z-index: 5;
+    border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.78rem; font-weight: 700;
+    background: var(--accent); color: #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
   }
   @keyframes chat-slot-drop-hint {
     0%, 100% { background: transparent; }
@@ -775,6 +809,7 @@
       min-height: 2.75rem; display: flex; align-items: center;
     }
     .layout-switcher .sidebar-open-btn { display: inline-flex; }
+    .layout-switcher button[data-n] { display: none !important; }
     .layout-switcher { flex-wrap: wrap; align-items: center; }
     .layout { min-height: 0; }
     .layout-resizer { display: none; }
@@ -1327,6 +1362,9 @@
         layout1: "1개",
         layout2: "2개",
         layout4: "4개",
+        newMessagesBtn: "새 메시지",
+        paneBadgeAria: "{n}번 창",
+        unreadBadgeAria: "안 읽은 메시지 {n}",
         serverSelectPlaceholder: "서버 선택",
         connectBtn: "연결",
         connectedBtn: "연결됨",
@@ -1449,6 +1487,9 @@
         layout1: "1 window",
         layout2: "2 windows",
         layout4: "4 windows",
+        newMessagesBtn: "New messages",
+        paneBadgeAria: "Pane {n}",
+        unreadBadgeAria: "{n} unread",
         serverSelectPlaceholder: "Select server",
         connectBtn: "Connect",
         connectedBtn: "Connected",
@@ -1568,9 +1609,6 @@
     const trialAddNoticeBackdrop = document.getElementById("trialAddNoticeBackdrop");
     const trialAddNoticeClose = document.getElementById("trialAddNoticeClose");
     const trialAddNoticeOk = document.getElementById("trialAddNoticeOk");
-    const slotPickerBackdrop = document.getElementById("slotPickerBackdrop");
-    const slotPickerClose = document.getElementById("slotPickerClose");
-    const slotPickerList = document.getElementById("slotPickerList");
     const toastContainer = document.getElementById("toastContainer");
     // Flag icons are embedded as base64 PNGs (official flag artwork) so they render
     // pixel-identical everywhere, instead of being hand-drawn approximations.
@@ -1667,46 +1705,6 @@
     trialAddNoticeOk.addEventListener("click", closeTrialAddNotice);
     trialAddNoticeBackdrop.addEventListener("click", (e) => {
       if (e.target === trialAddNoticeBackdrop) closeTrialAddNotice();
-    });
-
-    // Lets the user pick which open chat window a server lands in, instead of always
-    // guessing "first empty slot". `hint` shows the "server selected, click connect" toast —
-    // skipped when this is opened right after a successful connect (server-grid-view),
-    // since in that case it's already connecting.
-    let slotPickerTargetId = null;
-    let slotPickerHint = true;
-
-    function openSlotPicker(id, hint) {
-      slotPickerTargetId = id;
-      slotPickerHint = hint !== false;
-      slotPickerList.innerHTML = slots.map((slot, i) => {
-        const current = slot.serverId ? servers.find((s) => s.id === slot.serverId) : null;
-        const label = current
-          ? t("slotPickLabelReplace", { n: i + 1, target: escapeHtml(current.host + ':' + current.port) })
-          : t("slotPickLabelEmpty", { n: i + 1 });
-        return '<button type="button" class="slot-pick-btn" data-i="' + i + '">' + label + '</button>';
-      }).join("");
-      slotPickerList.querySelectorAll(".slot-pick-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const i = Number(btn.dataset.i);
-          slots[i].serverId = slotPickerTargetId;
-          closeSlotPicker();
-          renderServers();
-          loadSlotDetail(i);
-          if (slotPickerHint) showToast(t("toastServerSelected"));
-        });
-      });
-      slotPickerBackdrop.classList.add("open");
-    }
-
-    function closeSlotPicker() {
-      slotPickerBackdrop.classList.remove("open");
-      slotPickerTargetId = null;
-    }
-
-    slotPickerClose.addEventListener("click", closeSlotPicker);
-    slotPickerBackdrop.addEventListener("click", (e) => {
-      if (e.target === slotPickerBackdrop) closeSlotPicker();
     });
 
     function openLoginModal(reason) {
@@ -1862,8 +1860,113 @@
     let account = { status: "logged-out" };
     let servers = [];
     let serversLoaded = false; // 서버 목록을 아직 한 번도 못 받아왔으면(HTTP/WS 둘 다) true로 안 바뀜 — 그동안은 스켈레톤을 보여준다
-    let slots = [{ serverId: null }]; // one entry per visible chat-grid slot
+    let slots = [{ serverId: null }]; // one entry per visible chat pane
     let slotRefs = []; // DOM refs parallel to `slots`, rebuilt whenever the layout changes
+    let requestedLayout = 1;
+    let focusedSlot = 0;
+    // Remembers which server each pane was showing, including panes hidden by the
+    // 1-window layout or by the phone drawer. Switching layout never disconnects.
+    let slotMemory = [null, null, null, null];
+    const rooms = {};
+    const CHAT_LOG_LIMIT = 500;
+    const NEAR_BOTTOM_PX = 48;
+
+    // CHAT_ROOM_MODEL_START
+    function layoutCount(requested, narrow) {
+      if (narrow) return 1;
+      return requested === 2 || requested === 4 ? requested : 1;
+    }
+
+    function pushChatLine(room, line, visible, limit) {
+      const next = {
+        lines: room.lines.concat([line]),
+        unread: room.unread,
+        stickToBottom: room.stickToBottom,
+        scrollTop: room.scrollTop,
+      };
+      if (next.lines.length > limit) next.lines = next.lines.slice(next.lines.length - limit);
+      if (visible && room.stickToBottom) {
+        next.unread = 0;
+        return { room: next, follow: true, showJump: false };
+      }
+      next.unread = room.unread + 1;
+      return { room: next, follow: false, showJump: !!visible };
+    }
+
+    function noteRoomScroll(room, scrollTop, scrollHeight, clientHeight, threshold) {
+      const near = scrollHeight - scrollTop - clientHeight <= threshold;
+      return {
+        lines: room.lines,
+        unread: near ? 0 : room.unread,
+        stickToBottom: near,
+        scrollTop: scrollTop,
+      };
+    }
+
+    function selectServerPane(currentSlots, focused, serverId) {
+      const existing = currentSlots.findIndex((slot) => slot.serverId === serverId);
+      if (existing !== -1) {
+        return {
+          slots: currentSlots.map((slot) => ({ serverId: slot.serverId })),
+          focused: existing,
+        };
+      }
+      const index = focused >= 0 && focused < currentSlots.length ? focused : 0;
+      const next = currentSlots.map((slot) => ({ serverId: slot.serverId }));
+      next[index] = { serverId: serverId };
+      return { slots: next, focused: index };
+    }
+
+    function dropServerOnPane(currentSlots, paneIndex, serverId) {
+      const next = currentSlots.map((slot) => ({
+        serverId: slot.serverId === serverId ? null : slot.serverId,
+      }));
+      next[paneIndex] = { serverId: serverId };
+      return { slots: next, focused: paneIndex };
+    }
+
+    function slotsForLayout(memory, count) {
+      const seen = new Set();
+      const next = [];
+      for (let i = 0; i < count; i++) {
+        const id = memory[i] || null;
+        if (id && seen.has(id)) next.push({ serverId: null });
+        else {
+          if (id) seen.add(id);
+          next.push({ serverId: id });
+        }
+      }
+      return next;
+    }
+    // CHAT_ROOM_MODEL_END
+
+    function roomFor(id) {
+      if (!rooms[id]) {
+        rooms[id] = {
+          lines: [],
+          unread: 0,
+          stickToBottom: true,
+          scrollTop: 0,
+          hydrated: false,
+          hydrating: null,
+        };
+      }
+      return rooms[id];
+    }
+
+    function activeLayoutCount() {
+      return layoutCount(requestedLayout, window.matchMedia("(max-width: 768px)").matches);
+    }
+
+    function writeMemoryFromVisible() {
+      slots.forEach((slot, i) => {
+        slotMemory[i] = slot.serverId;
+      });
+      const visible = new Set(slots.map((slot) => slot.serverId).filter(Boolean));
+      for (let i = slots.length; i < slotMemory.length; i++) {
+        if (visible.has(slotMemory[i])) slotMemory[i] = null;
+      }
+    }
     let desktopAvailable = false;
     let currentPlayMode = null;
 
@@ -2015,6 +2118,15 @@
       if (status === "connected") return "connected";
       if (status && status.startsWith("disconnected")) return "disconnected";
       return "idle";
+    }
+
+    function statusLabel(status) {
+      const state = statusDotState(status);
+      if (state === "connecting") return t("statusLegendConnecting");
+      if (state === "connected") return t("statusLegendConnected");
+      if (state === "disconnected") return t("statusLegendDisconnected");
+      if (!status || status === "idle") return t("statusLegendIdle");
+      return status;
     }
 
     function setSlotStatusDot(dotEl, status) {
@@ -2829,19 +2941,39 @@
         renderServerGridView();
         return;
       }
-      servers.forEach((s) => {
+      const ordered = servers.slice().sort((a, b) => {
+        const rank = (item) => (item.connected || item.phase === "active" ? 0 : 1);
+        return rank(a) - rank(b);
+      });
+      ordered.forEach((s) => {
         const li = document.createElement("li");
-        li.className = slots.some((slot) => slot.serverId === s.id) ? "selected" : "";
+        const pane = slots.findIndex((slot) => slot.serverId === s.id);
+        const room = rooms[s.id];
+        const unread = room ? room.unread : 0;
+        const unreadLabel = unread > 99 ? "99+" : String(unread);
+        li.className =
+          (pane !== -1 ? "on-screen" : "") + (pane === focusedSlot ? " selected" : "");
+        li.dataset.id = s.id;
         li.draggable = true;
         li.innerHTML =
           '<span class="drag-handle" aria-hidden="true"></span>' +
           '<div class="server-info">' +
+          '<div class="server-title-row">' +
+          '<span class="slot-status-dot server-status-dot ' + statusDotState(s.status) + '"></span>' +
           '<span class="server-meta">' + escapeHtml(serverLabel(s)) + '</span>' +
-          '<div class="server-ping">' + pingBadgeHtml(s.host, s.port, s) + '</div>' +
-          '<div class="server-status">' + escapeHtml(s.status) + '</div>' +
+          '<span class="pane-badge"' + (pane === -1 ? " hidden" : "") +
+          ' aria-label="' + escapeHtml(t("paneBadgeAria", { n: Math.max(pane + 1, 1) })) + '">' +
+          (pane === -1 ? "" : String(pane + 1)) + '</span>' +
           '</div>' +
+          '<div class="server-ping">' + pingBadgeHtml(s.host, s.port, s) + '</div>' +
+          '<div class="server-status">' + escapeHtml(statusLabel(s.status)) + '</div>' +
+          '</div>' +
+          '<span class="unread-badge"' + (unread > 0 ? "" : " hidden") +
+          ' aria-label="' + escapeHtml(t("unreadBadgeAria", { n: unreadLabel })) + '">' +
+          unreadLabel + '</span>' +
           '<button type="button" class="select-slot-btn">' + t("selectBtn") + '</button>';
 
+        let suppressClick = false;
         li.addEventListener("dragstart", (e) => {
           e.dataTransfer.setData("text/plain", s.id);
           // 커스텀 타입도 같이 실어 보낸다 — dragover 시점엔 브라우저가 보안상 값(getData)은
@@ -2850,10 +2982,19 @@
           e.dataTransfer.setData("application/x-server-id", s.id);
           e.dataTransfer.effectAllowed = "move";
         });
+        li.addEventListener("dragend", () => {
+          suppressClick = true;
+          setTimeout(() => {
+            suppressClick = false;
+          }, 0);
+        });
+        li.addEventListener("click", () => {
+          if (suppressClick) return;
+          chooseServer(s.id);
+        });
         li.querySelector(".select-slot-btn").addEventListener("click", (e) => {
           e.stopPropagation();
-          closeNarrowSidebar();
-          openSlotPicker(s.id);
+          chooseServer(s.id);
         });
         serverListEl.appendChild(li);
       });
@@ -2862,29 +3003,113 @@
       renderServerGridView();
     }
 
-    // Puts a server into the first empty grid slot (or slot 0 if all slots are already taken).
-    function assignServerToSlot(id) {
-      let idx = slots.findIndex((slot) => !slot.serverId);
-      if (idx === -1) idx = 0;
-      slots[idx].serverId = id;
+    function captureVisibleScroll() {
+      slots.forEach((slot, i) => {
+        const ref = slotRefs[i];
+        if (!slot.serverId || !ref) return;
+        const room = roomFor(slot.serverId);
+        const next = noteRoomScroll(
+          room,
+          ref.logEl.scrollTop,
+          ref.logEl.scrollHeight,
+          ref.logEl.clientHeight,
+          NEAR_BOTTOM_PX,
+        );
+        room.stickToBottom = next.stickToBottom;
+        room.scrollTop = next.scrollTop;
+        room.unread = next.unread;
+      });
+    }
+
+    function refreshSidebarChrome() {
+      serverListEl.querySelectorAll("li[data-id]").forEach((li) => {
+        const id = li.dataset.id;
+        const room = rooms[id];
+        const unread = room ? room.unread : 0;
+        const unreadLabel = unread > 99 ? "99+" : String(unread);
+        const badge = li.querySelector(".unread-badge");
+        if (badge) {
+          badge.textContent = unreadLabel;
+          badge.hidden = unread <= 0;
+          badge.setAttribute("aria-label", t("unreadBadgeAria", { n: unreadLabel }));
+        }
+        const pane = slots.findIndex((slot) => slot.serverId === id);
+        li.classList.toggle("on-screen", pane !== -1);
+        li.classList.toggle("selected", pane !== -1 && pane === focusedSlot);
+        const paneBadge = li.querySelector(".pane-badge");
+        if (paneBadge) {
+          paneBadge.hidden = pane === -1;
+          paneBadge.textContent = pane === -1 ? "" : String(pane + 1);
+          if (pane !== -1) paneBadge.setAttribute("aria-label", t("paneBadgeAria", { n: pane + 1 }));
+        }
+        const dot = li.querySelector(".server-status-dot");
+        const server = servers.find((item) => item.id === id);
+        if (dot) setSlotStatusDot(dot, server ? server.status : null);
+        const status = li.querySelector(".server-status");
+        if (status && server) status.textContent = statusLabel(server.status);
+      });
+    }
+
+    function focusPane(i) {
+      if (i < 0 || i >= slots.length || focusedSlot === i) {
+        slotRefs.forEach((ref, index) => {
+          if (ref.slotEl) ref.slotEl.classList.toggle("focused", index === focusedSlot);
+        });
+        return;
+      }
+      focusedSlot = i;
+      slotRefs.forEach((ref, index) => {
+        if (ref.slotEl) ref.slotEl.classList.toggle("focused", index === focusedSlot);
+      });
+      refreshSidebarChrome();
+    }
+
+    function applyPaneResult(result) {
+      captureVisibleScroll();
+      slots = result.slots;
+      focusedSlot = result.focused;
+      writeMemoryFromVisible();
       renderServers();
-      loadSlotDetail(idx);
+      slots.forEach((_, index) => loadSlotDetail(index));
+    }
+
+    function chooseServer(id) {
+      applyPaneResult(selectServerPane(slots, focusedSlot, id));
+      closeNarrowSidebar();
+    }
+
+    // Sidebar selection fills the focused pane. A server already on screen is focused
+    // instead of being copied into a second pane. The previous pane stays connected.
+    function assignServerToSlot(id) {
+      chooseServer(id);
     }
 
     function setLayout(n) {
-      const prev = slots;
-      slots = [];
-      for (let i = 0; i < n; i++) slots.push(prev[i] || { serverId: null });
-      layoutSwitcher.querySelectorAll("button").forEach((b) => b.classList.toggle("active", Number(b.dataset.n) === n));
+      requestedLayout = layoutCount(n, false);
+      applyLayout();
+    }
+
+    function applyLayout() {
+      captureVisibleScroll();
+      const n = activeLayoutCount();
+      slots = slotsForLayout(slotMemory, n);
+      if (focusedSlot >= slots.length) focusedSlot = 0;
+      slots.forEach((slot, i) => {
+        slotMemory[i] = slot.serverId;
+      });
+      layoutSwitcher.querySelectorAll("button[data-n]").forEach((b) => {
+        b.classList.toggle("active", Number(b.dataset.n) === requestedLayout);
+      });
       chatGrid.dataset.layout = String(n);
       buildChatGrid();
+      renderServers();
     }
 
     function buildChatGrid() {
       chatGrid.innerHTML = "";
       slotRefs = slots.map((slot, i) => {
         const div = document.createElement("div");
-        div.className = "chat-slot";
+        div.className = "chat-slot" + (i === focusedSlot ? " focused" : "");
         div.innerHTML =
           '<div class="slot-header">' +
           '<span class="slot-status-dot idle"></span>' +
@@ -2892,6 +3117,7 @@
           '<button type="button" class="slot-connect-btn" disabled>' + t("connectBtn") + '</button>' +
           '</div>' +
           '<div class="slot-log"></div>' +
+          '<button type="button" class="slot-jump" hidden></button>' +
           '<form class="slot-chat-form"><input placeholder="' + escapeHtml(t("chatInputPlaceholder")) + '" style="flex:1" /><button type="submit">' + t("sendBtn") + '</button></form>';
         chatGrid.appendChild(div);
 
@@ -2900,11 +3126,42 @@
         const connectBtnEl = div.querySelector(".slot-connect-btn");
         const statusDotEl = div.querySelector(".slot-status-dot");
         const logEl = div.querySelector(".slot-log");
+        const jumpEl = div.querySelector(".slot-jump");
         const formEl = div.querySelector("form");
         const inputEl = div.querySelector("input");
 
         statusDotEl.addEventListener("mouseenter", () => showStatusTooltip(statusDotEl));
         statusDotEl.addEventListener("mouseleave", hideStatusTooltip);
+        div.addEventListener("pointerdown", () => focusPane(i));
+        logEl.addEventListener("scroll", () => {
+          const serverId = slots[i] && slots[i].serverId;
+          if (!serverId) return;
+          const room = roomFor(serverId);
+          const next = noteRoomScroll(
+            room,
+            logEl.scrollTop,
+            logEl.scrollHeight,
+            logEl.clientHeight,
+            NEAR_BOTTOM_PX,
+          );
+          const changed = room.unread !== next.unread || room.stickToBottom !== next.stickToBottom;
+          room.stickToBottom = next.stickToBottom;
+          room.scrollTop = next.scrollTop;
+          room.unread = next.unread;
+          jumpEl.hidden = room.unread === 0 || room.stickToBottom;
+          if (changed) refreshSidebarChrome();
+        });
+        jumpEl.addEventListener("click", () => {
+          const serverId = slots[i] && slots[i].serverId;
+          if (!serverId) return;
+          const room = roomFor(serverId);
+          logEl.scrollTop = logEl.scrollHeight;
+          room.stickToBottom = true;
+          room.scrollTop = logEl.scrollTop;
+          room.unread = 0;
+          jumpEl.hidden = true;
+          refreshSidebarChrome();
+        });
 
         btnEl.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -2945,9 +3202,7 @@
           // 다시 지워버려서(refreshSlotMenus) 채팅 슬롯이 통째로 비어 보이게 된다.
           if (!id || !servers.some((s) => s.id === id)) return;
           closeAllSlotMenus();
-          slots[i].serverId = id;
-          renderServers();
-          loadSlotDetail(i);
+          applyPaneResult(dropServerOnPane(slots, i, id));
         });
 
         formEl.addEventListener("submit", async (e) => {
@@ -2983,7 +3238,7 @@
           inputEl.value = "";
         });
 
-        return { btnEl, menuEl, connectBtnEl, statusDotEl, logEl, formEl, inputEl };
+        return { btnEl, menuEl, connectBtnEl, statusDotEl, logEl, jumpEl, slotEl: div, formEl, inputEl };
       });
       refreshSlotMenus();
       slots.forEach((_, i) => loadSlotDetail(i));
@@ -3036,7 +3291,7 @@
           alert(t("alertLoginFirst"));
           openLoginModal();
         } else {
-          if (denied && slotRefs[i]) addLineTo(slotRefs[i].logEl, denied, Date.now(), true);
+          if (denied) ingestLine(serverId, denied, Date.now(), true);
           alert(t("alertConnectFailed", { error: denied || body.error }));
         }
         return;
@@ -3083,6 +3338,7 @@
         }
         if (slots[i].serverId && !servers.some((s) => s.id === slots[i].serverId)) {
           slots[i].serverId = null;
+          slotMemory[i] = null;
         }
         const current = slots[i].serverId;
         const currentServer = servers.find((s) => s.id === current);
@@ -3096,61 +3352,158 @@
           : '<div class="empty">' + escapeHtml(usesTrialCatalog() ? t("trialEmpty") : t("slotMenuEmpty")) + '</div>';
         ref.menuEl.querySelectorAll(".item").forEach((item) => {
           item.addEventListener("click", () => {
-            slots[i].serverId = item.dataset.id;
             closeAllSlotMenus();
-            renderServers();
-            loadSlotDetail(i);
+            applyPaneResult(dropServerOnPane(slots, i, item.dataset.id));
           });
         });
       });
+    }
+
+    function sameLine(a, b) {
+      return a.timestamp === b.timestamp && a.text === b.text && !!a.system === !!b.system;
+    }
+
+    async function hydrateRoom(serverId) {
+      const room = roomFor(serverId);
+      if (room.hydrated) return;
+      if (room.hydrating) return room.hydrating;
+      room.hydrating = (async () => {
+        let fetched = [];
+        if (!directNativePlay()) {
+          const res = await fetch("/api/servers/" + serverId);
+          if (res.ok) {
+            const detail = await res.json();
+            const server = servers.find((item) => item.id === serverId);
+            if (server && detail.status) {
+              server.status = detail.status;
+              if (detail.phase) server.phase = detail.phase;
+              if (typeof detail.connected === "boolean") server.connected = detail.connected;
+            }
+            const history = (detail.statusHistory || []).map((h) => ({
+              timestamp: h.timestamp,
+              text: h.status,
+              system: true,
+            }));
+            const chat = (detail.messages || []).map((m) => ({
+              timestamp: m.timestamp,
+              text: m.message,
+              system: false,
+            }));
+            fetched = history.concat(chat).sort((a, b) => a.timestamp - b.timestamp);
+          }
+        }
+        const prior = room.lines.slice();
+        const merged = fetched.slice();
+        prior.forEach((line) => {
+          if (!merged.some((item) => sameLine(item, line))) merged.push(line);
+        });
+        merged.sort((a, b) => a.timestamp - b.timestamp);
+        room.lines = merged.slice(-CHAT_LOG_LIMIT);
+        room.hydrated = true;
+        room.hydrating = null;
+      })();
+      return room.hydrating;
+    }
+
+    function paintRoom(i) {
+      const ref = slotRefs[i];
+      const serverId = slots[i] && slots[i].serverId;
+      if (!ref) return;
+      ref.slotEl.classList.toggle("focused", i === focusedSlot);
+      if (!serverId) {
+        setSlotStatusDot(ref.statusDotEl, null);
+        ref.logEl.innerHTML = "";
+        ref.jumpEl.hidden = true;
+        return;
+      }
+      const room = roomFor(serverId);
+      const server = servers.find((item) => item.id === serverId);
+      setSlotStatusDot(ref.statusDotEl, server ? server.status : null);
+      ref.logEl.innerHTML = "";
+      room.lines.forEach((line) => addLineTo(ref.logEl, line.text, line.timestamp, line.system));
+      if (room.stickToBottom) {
+        ref.logEl.scrollTop = ref.logEl.scrollHeight;
+        room.scrollTop = ref.logEl.scrollTop;
+        room.unread = 0;
+        ref.jumpEl.hidden = true;
+      } else {
+        ref.logEl.scrollTop = room.scrollTop;
+        ref.jumpEl.hidden = room.unread === 0;
+        ref.jumpEl.textContent = t("newMessagesBtn");
+      }
+      const paintedId = serverId;
+      requestAnimationFrame(() => {
+        if (!slotRefs[i] || slotRefs[i] !== ref) return;
+        if (!slots[i] || slots[i].serverId !== paintedId) return;
+        if (!room.stickToBottom) return;
+        ref.logEl.scrollTop = ref.logEl.scrollHeight;
+        room.scrollTop = ref.logEl.scrollTop;
+      });
+    }
+
+    function ingestLine(serverId, text, timestamp, system) {
+      const room = roomFor(serverId);
+      const slotIndex = slots.findIndex((slot) => slot.serverId === serverId);
+      const visible = slotIndex !== -1 && !!slotRefs[slotIndex];
+      const pushed = pushChatLine(
+        room,
+        { text: text, timestamp: timestamp, system: !!system },
+        visible,
+        CHAT_LOG_LIMIT,
+      );
+      room.lines = pushed.room.lines;
+      room.unread = pushed.room.unread;
+      if (visible) {
+        const ref = slotRefs[slotIndex];
+        addLineTo(ref.logEl, text, timestamp, system);
+        if (pushed.follow) {
+          ref.logEl.scrollTop = ref.logEl.scrollHeight;
+          room.scrollTop = ref.logEl.scrollTop;
+          ref.jumpEl.hidden = true;
+        } else {
+          ref.jumpEl.hidden = false;
+          ref.jumpEl.textContent = t("newMessagesBtn");
+        }
+      }
+      refreshSidebarChrome();
     }
 
     async function loadSlotDetail(i) {
       const ref = slotRefs[i];
       const serverId = slots[i] && slots[i].serverId;
       if (!ref) return;
+      ref.slotEl.classList.toggle("focused", i === focusedSlot);
       if (!serverId) {
         setSlotStatusDot(ref.statusDotEl, null);
         ref.logEl.innerHTML = "";
+        if (ref.jumpEl) ref.jumpEl.hidden = true;
         return;
       }
-      if (directNativePlay()) {
-        const s = servers.find((x) => x.id === serverId);
-        setSlotStatusDot(ref.statusDotEl, s ? s.status : null);
-        ref.logEl.innerHTML = "";
-        (nativeMessages[serverId] || []).forEach((m) => addLineTo(ref.logEl, m.message, m.timestamp, m.system));
-        return;
-      }
-      const res = await fetch("/api/servers/" + serverId);
-      if (!res.ok) return;
-      const detail = await res.json();
-      setSlotStatusDot(ref.statusDotEl, detail.status);
-      ref.logEl.innerHTML = "";
-      const history = detail.statusHistory.map((h) => ({ timestamp: h.timestamp, text: h.status, system: true }));
-      const chat = detail.messages.map((m) => ({ timestamp: m.timestamp, text: m.message, system: false }));
-      history.concat(chat)
-        .sort((a, b) => a.timestamp - b.timestamp)
-        .forEach((line) => addLineTo(ref.logEl, line.text, line.timestamp, line.system));
+      await hydrateRoom(serverId);
+      if (!slots[i] || slots[i].serverId !== serverId || slotRefs[i] !== ref) return;
+      paintRoom(i);
+      refreshSidebarChrome();
     }
 
     function updateSlotsForServer(serverId, payload) {
-      slots.forEach((slot, i) => {
-        if (slot.serverId !== serverId) return;
-        const ref = slotRefs[i];
-        if (!ref) return;
-        if (payload.type === "status") {
+      if (payload.type === "status") {
+        slots.forEach((slot, i) => {
+          if (slot.serverId !== serverId) return;
+          const ref = slotRefs[i];
+          if (!ref) return;
           setSlotStatusDot(ref.statusDotEl, payload.status);
           updateSlotConnectBtn(i);
-          if (payload.logged) addLineTo(ref.logEl, payload.status, payload.timestamp, true);
-        } else if (payload.type === "chat") {
-          addLineTo(ref.logEl, payload.message.message, payload.message.timestamp, false);
-        }
-      });
+        });
+        if (payload.logged) ingestLine(serverId, payload.status, payload.timestamp, true);
+        else refreshSidebarChrome();
+      } else if (payload.type === "chat") {
+        ingestLine(serverId, payload.message.message, payload.message.timestamp, false);
+      }
     }
 
     layoutSwitcher.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-n]");
-      if (!btn) return;
+      if (!btn || window.matchMedia("(max-width: 768px)").matches) return;
       setLayout(Number(btn.dataset.n));
     });
 
@@ -3204,6 +3557,7 @@
     if (sidebarBackdrop) sidebarBackdrop.addEventListener("click", closeNarrowSidebar);
     narrowLayoutQuery.addEventListener("change", (event) => {
       if (!event.matches) closeNarrowSidebar();
+      applyLayout();
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeNarrowSidebar();
@@ -3245,11 +3599,7 @@
         }
         return;
       }
-      if (slots.length > 1) {
-        openSlotPicker(id, false);
-      } else {
-        assignServerToSlot(id);
-      }
+      assignServerToSlot(id);
     }
 
     function addLineTo(container, text, time, system) {
@@ -3259,7 +3609,6 @@
       div.innerHTML = '<span class="time">' + timeStr + '</span>' +
         (system ? '<b class="sys-tag">' + t("sysTag") + '</b> ' : '') + escapeHtml(text).replace(/\n/g, "<br>");
       container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
     }
 
     setLayout(1);
@@ -3316,6 +3665,9 @@
       renderDesktopStatus();
       renderAccount();
       renderServers();
+      slotRefs.forEach((ref) => {
+        if (ref.jumpEl) ref.jumpEl.textContent = t("newMessagesBtn");
+      });
     }
 
     renderLangPicker();
@@ -3411,18 +3763,10 @@
     // McConnection 네이티브 플러그인이 기기 안에서 처리한다 — 마크 계정 토큰과 채팅
     // 서명 개인키가 백엔드로 나가지 않는다.
     const McNative = isNativeApp() ? window.Capacitor.Plugins.McConnection : null;
-    // serverId -> 화면에 그릴 라인들. 백엔드 연결과 달리 이 기록은 기기 로컬에만 있고
-    // 새로고침하면 사라진다(연결 자체가 그때그때 새로 맺어지는 세션이라 히스토리를
-    // 서버가 대신 들고 있어줄 필요가 없음).
-    const nativeMessages = {};
-
+    // 네이티브 접속도 같은 방 버퍼에 쌓는다. 화면 밖 서버의 줄과 안 읽은 수는
+    // 여기서 유지되고, 앱을 새로고침하면 연결 자체와 함께 사라진다.
     function nativeAppendLine(serverId, text, system) {
-      const list = (nativeMessages[serverId] ||= []);
-      const entry = { message: text, timestamp: Date.now(), system: !!system };
-      list.push(entry);
-      if (list.length > 500) list.shift();
-      const idx = slots.findIndex((slot) => slot.serverId === serverId);
-      if (idx !== -1 && slotRefs[idx]) addLineTo(slotRefs[idx].logEl, entry.message, entry.timestamp, entry.system);
+      ingestLine(serverId, text, Date.now(), system);
     }
 
     if (McNative) {
