@@ -40,36 +40,15 @@ jobs:
 
           cleanup() {
             docker logs mineportal-ci-app 2>/dev/null || true
-            docker rm --force mineportal-ci-app mineportal-ci-db 2>/dev/null || true
+            docker rm --force mineportal-ci-app 2>/dev/null || true
             docker network rm mineportal-ci 2>/dev/null || true
           }
           trap cleanup EXIT
 
           docker network create mineportal-ci
-          docker run --detach --name mineportal-ci-db --network mineportal-ci \
-            --env POSTGRES_DB=mineportal \
-            --env POSTGRES_USER=mineportal \
-            --env POSTGRES_PASSWORD=mineportal \
-            postgres:18.7-alpine
-
-          for attempt in {1..30}; do
-            if docker exec mineportal-ci-db pg_isready -U mineportal -d mineportal; then
-              break
-            fi
-            if [ "$attempt" = 30 ]; then
-              echo "PostgreSQL did not become ready"
-              exit 1
-            fi
-            sleep 1
-          done
-
           docker build --tag mineportal-ci-app --file server/Dockerfile .
           docker run --detach --name mineportal-ci-app --network mineportal-ci \
             --publish 127.0.0.1:3000:3000 \
-            --env DB_HOST=mineportal-ci-db \
-            --env DB_NAME=mineportal \
-            --env DB_USER=mineportal \
-            --env DB_PASSWORD=mineportal \
             mineportal-ci-app
 
           for attempt in {1..30}; do

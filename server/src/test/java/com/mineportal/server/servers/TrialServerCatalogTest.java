@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.mineportal.server.db.AllowedServerAddress;
-import com.mineportal.server.db.ServerRepository;
 import com.mineportal.server.status.PingResult;
 import com.mineportal.server.status.PingService;
 import java.util.List;
@@ -17,13 +15,10 @@ import org.junit.jupiter.api.Test;
 
 class TrialServerCatalogTest {
 
-  private final ServerRepository repository = mock(ServerRepository.class);
   private final PingService ping = mock(PingService.class);
-  private TrialServerCatalog catalog;
 
   @BeforeEach
   void setup() throws Exception {
-    catalog = new TrialServerCatalog(repository, ping);
     when(ping.observePublic(
             org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt()))
         .thenReturn(new PingService.PingObservation(PingResult.offline("down"), null));
@@ -31,7 +26,7 @@ class TrialServerCatalogTest {
 
   @Test
   void emptyAllowlistStaysEmpty() {
-    when(repository.listTrialAllowedServers()).thenReturn(List.of());
+    TrialServerCatalog catalog = catalog("");
 
     assertTrue(catalog.list(null).isEmpty());
     assertTrue(catalog.list("user-a").isEmpty());
@@ -39,22 +34,9 @@ class TrialServerCatalogTest {
   }
 
   @Test
-  void lookupFailureIsAnEmptyCatalog() {
-    when(repository.listTrialAllowedServers()).thenThrow(new IllegalStateException("db down"));
-
-    assertTrue(catalog.list("user-a").isEmpty());
-  }
-
-  @Test
   void namesComeFromTheMotdAndOnlyFourLowestPortsAreShown() throws Exception {
-    when(repository.listTrialAllowedServers())
-        .thenReturn(
-            List.of(
-                new AllowedServerAddress("Demo-MC.", 25568),
-                new AllowedServerAddress("demo-mc", 25569),
-                new AllowedServerAddress("demo-mc", 25565),
-                new AllowedServerAddress("demo-mc", 25567),
-                new AllowedServerAddress("demo-mc", 25566)));
+    TrialServerCatalog catalog =
+        catalog("Demo-MC.:25568,demo-mc:25569,demo-mc:25565,demo-mc:25567,demo-mc:25566");
     when(ping.observePublic("demo-mc", 25565))
         .thenReturn(observation("광장 — 채팅 체험 (최대 16명)", 2, 16));
     when(ping.observePublic("demo-mc", 25566)).thenReturn(observation("§a생존§r - 채팅", 0, 16));
@@ -75,8 +57,7 @@ class TrialServerCatalogTest {
 
   @Test
   void loggedInListReusesOneInMemoryServerPerAddress() {
-    when(repository.listTrialAllowedServers())
-        .thenReturn(List.of(new AllowedServerAddress("demo-mc", 25565)));
+    TrialServerCatalog catalog = catalog("demo-mc:25565");
 
     TrialServerView first = catalog.list("user-a").get(0);
     TrialServerView second = catalog.list("user-a").get(0);
@@ -97,6 +78,10 @@ class TrialServerCatalogTest {
     assertEquals("demo-mc:25565", TrialServerCatalog.displayName(null, "demo-mc", 25565));
     assertEquals("demo-mc:25565", TrialServerCatalog.displayName("   ", "demo-mc", 25565));
     assertEquals("광장", TrialServerCatalog.displayName("광장 — 채팅 체험", "demo-mc", 25565));
+  }
+
+  private TrialServerCatalog catalog(String configured) {
+    return new TrialServerCatalog(new TrialServerAllowlist(configured), ping);
   }
 
   private static PingService.PingObservation observation(String motd, int online, int max) {

@@ -152,7 +152,7 @@ public class DesktopWsHandler extends TextWebSocketHandler {
       return;
     }
     if (wasCurrentSession) {
-      for (ServerConfig server : registry.listServers(ownerId)) {
+      for (ServerConfig server : registry.listRuntimeServers(ownerId)) {
         long attemptId = desktopConnections.routedAttempt(server.id);
         if (attemptId == 0) {
           continue;

@@ -111,7 +111,7 @@ public class EventBroadcaster {
     List<ServerSummary> servers =
         ownerId == null
             ? List.of()
-            : registry.listServers(ownerId).stream().map(ServerSummary::of).toList();
+            : registry.listRuntimeServers(ownerId).stream().map(ServerSummary::of).toList();
     send(session, Map.of("type", "servers", "servers", servers));
   }
 
@@ -126,7 +126,7 @@ public class EventBroadcaster {
     }
   }
 
-  /** 이 세션 자신의 서버 목록을 다시 전송한다 — 변경 작업(추가/연결) 이후에 사용되어, 이 브라우저 탭이 다음 전체 페이지 로드를 기다리지 않고도 갱신되게 한다. */
+  /** 이 세션에서 접속 중인 서버 상태를 다시 보낸다. 저장된 목록은 클라이언트가 가지고 있다. */
   public void refreshServersFor(String sid) {
     for (WebSocketSession session : sessions) {
       if (sid.equals(sidOf(session))) {

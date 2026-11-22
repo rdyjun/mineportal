@@ -1,7 +1,5 @@
 package com.mineportal.server.servers;
 
-import com.mineportal.server.db.AllowedServerAddress;
-import com.mineportal.server.db.ServerRepository;
 import com.mineportal.server.status.PingResult;
 import com.mineportal.server.status.PingService;
 import java.nio.charset.StandardCharsets;
@@ -15,21 +13,18 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 
-/**
- * 웹/앱 체험 모드가 고를 수 있는 서버. 출처는 trial_allowed_servers이고, 사용자별 servers/user_servers 행은 만들지 않는다. 데스크톱 정식
- * 모드의 저장 목록과 섞이지 않게, 접속 상태만 계정별로 메모리에 둔다.
- */
+/** 웹/앱 체험 모드가 고를 수 있는 서버. 출처는 설정의 체험 허용 주소이고, 사용자별 저장 목록은 만들지 않는다. 접속 상태만 계정별로 메모리에 둔다. */
 @Component
 public class TrialServerCatalog {
 
   static final int MAX_SERVERS = 4;
 
-  private final ServerRepository repository;
+  private final TrialServerAllowlist allowlist;
   private final PingService pingService;
   private final Map<String, Map<String, ServerConfig>> sessions = new ConcurrentHashMap<>();
 
-  public TrialServerCatalog(ServerRepository repository, PingService pingService) {
-    this.repository = repository;
+  public TrialServerCatalog(TrialServerAllowlist allowlist, PingService pingService) {
+    this.allowlist = allowlist;
     this.pingService = pingService;
   }
 
@@ -103,26 +98,13 @@ public class TrialServerCatalog {
   }
 
   private List<AllowedAddress> allowedAddresses() {
-    List<AllowedServerAddress> rows;
-    try {
-      rows = repository.listTrialAllowedServers();
-    } catch (RuntimeException failure) {
-      System.err.println("trial catalog lookup failed: " + failure.getMessage());
-      return List.of();
-    }
-    if (rows == null || rows.isEmpty()) {
+    List<TrialServerAllowlist.Entry> rows = allowlist.entries();
+    if (rows.isEmpty()) {
       return List.of();
     }
     List<AllowedAddress> allowed = new ArrayList<>();
-    for (AllowedServerAddress row : rows) {
-      if (row == null) {
-        continue;
-      }
-      String host = TrialServerAddress.normalizeHost(row.host());
-      if (host == null || row.port() < 1 || row.port() > 65535) {
-        continue;
-      }
-      allowed.add(new AllowedAddress(host, row.port()));
+    for (TrialServerAllowlist.Entry row : rows) {
+      allowed.add(new AllowedAddress(row.host(), row.port()));
     }
     allowed.sort(Comparator.comparingInt(AllowedAddress::port).thenComparing(AllowedAddress::host));
     if (allowed.size() > MAX_SERVERS) {

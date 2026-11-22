@@ -1,19 +1,4 @@
 services:
-  db:
-    image: postgres:18.7-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_NAME:-mineportal}
-      POSTGRES_USER: ${DB_USER:-mineportal}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-mineportal}
-    volumes:
-      - pgdata:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mineportal} -d ${DB_NAME:-mineportal}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   app:
     container_name: mineportal
     build:
@@ -23,12 +8,7 @@ services:
     env_file:
       - server/.env
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
       MINEPORTAL_INTERNAL_HOSTS: demo-mc
-    depends_on:
-      db:
-        condition: service_healthy
     volumes:
       - ./client:/client-static:ro
 
@@ -52,6 +32,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-volumes:
-  pgdata:

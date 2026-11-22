@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.mineportal.server.account.AccountSessionManager;
 import com.mineportal.server.account.AccountState;
-import com.mineportal.server.desktop.DesktopConnectionManager;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,14 +18,12 @@ class TrialServersControllerTest {
 
   private final ServerRegistry registry = mock(ServerRegistry.class);
   private final AccountSessionManager accounts = mock(AccountSessionManager.class);
-  private final DesktopConnectionManager desktop = mock(DesktopConnectionManager.class);
   private MockMvc mvc;
 
   @BeforeEach
   void setup() {
     when(accounts.get("sid-x")).thenReturn(new AccountState());
-    mvc =
-        MockMvcBuilders.standaloneSetup(new ServersController(registry, accounts, desktop)).build();
+    mvc = MockMvcBuilders.standaloneSetup(new ServersController(registry, accounts)).build();
   }
 
   @Test

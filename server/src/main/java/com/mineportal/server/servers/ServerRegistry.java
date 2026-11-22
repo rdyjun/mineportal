@@ -1,112 +1,90 @@
 package com.mineportal.server.servers;
 
-import com.mineportal.server.db.RecentServerEntry;
-import com.mineportal.server.db.ServerRepository;
-import com.mineportal.server.db.ServerRow;
-import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
-/** ServerRepository를 기반으로 하는 ServerConfig의 인메모리 레지스트리. src/servers.ts를 포팅한 것. */
+/**
+ * 접속에 필요한 서버 상태만 메모리에 둔다. 사용자가 저장한 서버 목록은 이 PC의 클라이언트에 있고, 여기에는 기록하지 않는다. 체험 서버는 카탈로그가 계정별로 만든다.
+ */
 @Component
 public class ServerRegistry {
 
-  private final ServerRepository repository;
-  private final TrialServerAllowlist trialAllowlist;
   private final TrialServerCatalog trialCatalog;
-  private final Map<String, ServerConfig> servers = new ConcurrentHashMap<>();
+  private final Map<String, Map<String, ServerConfig>> sessions = new ConcurrentHashMap<>();
 
-  public ServerRegistry(
-      ServerRepository repository,
-      TrialServerAllowlist trialAllowlist,
-      TrialServerCatalog trialCatalog) {
-    this.repository = repository;
-    this.trialAllowlist = trialAllowlist;
+  public ServerRegistry(TrialServerCatalog trialCatalog) {
     this.trialCatalog = trialCatalog;
   }
 
-  @PostConstruct
-  void rehydrate() {
-    for (ServerRow row : repository.listAllServerRows()) {
-      servers.put(row.id(), new ServerConfig(row.id(), row.host(), row.port(), row.version()));
+  /** 이 계정이 지금 접속하려는 주소. 같은 id가 이미 있으면 그 설정을 그대로 쓴다. 목록 저장이 아니라, 끊기 전까지 연결 상태를 붙들기 위한 자리다. */
+  public ServerConfig openSession(String userId, String id, String host, int port, String version) {
+    if (userId == null || id == null || id.isBlank() || id.length() > 80) {
+      throw new IllegalArgumentException("server id is required");
     }
-  }
-
-  /**
-   * userId가 소유하는 서버를 저장 목록에 추가한다. 실제로 연결하지는 않는다.
-   *
-   * @param enforceTrialAllowlist 웹 체험 모드로 추가할 때 true. 데스크톱 앱이 붙어 있어 사용자 PC에서 직접 접속할 서버를 추가할 때는
-   *     false. true인데 allowlist에 없으면 행을 만들지 않는다.
-   */
-  public ServerConfig addServer(
-      String host, int port, String version, String userId, boolean enforceTrialAllowlist) {
-    if (enforceTrialAllowlist && !trialAllowlist.isAllowed(host, port)) {
-      throw new TrialServerNotAllowedException();
+    String normalized = TrialServerAddress.normalizeHost(host);
+    if (normalized == null || port < 1 || port > 65535) {
+      throw new IllegalArgumentException("host and port are required");
     }
-    String id = UUID.randomUUID().toString();
-    repository.insertServerRow(id, host, port, version);
-    if (!repository.linkUserServer(userId, id, host, port)) {
-      repository.deleteServerRow(id);
-      throw new DuplicateServerException();
+    String resolvedVersion = version == null || version.isBlank() ? "auto" : version.trim();
+    if (resolvedVersion.length() > 64) {
+      throw new IllegalArgumentException("version is too long");
     }
-    ServerConfig server = new ServerConfig(id, host, port, version);
-    servers.put(id, server);
-    return server;
-  }
-
-  /** userId가 추가한 서버만 반환한다 — 소유권에 대한 신뢰할 수 있는 근거는 DB의 user_servers 매핑이다. */
-  public List<ServerConfig> listServers(String userId) {
-    return repository.listServerRowsForUser(userId).stream()
-        .map(row -> servers.get(row.id()))
-        .filter(s -> s != null)
-        .collect(Collectors.toList());
-  }
-
-  /**
-   * 저장 목록과 체험 카탈로그 접속을 함께 반환한다. 로그아웃처럼 계정의 살아있는 연결을 끊을 때 쓴다. 데스크톱에 보여주는 목록 (listServers)에는 체험 서버를
-   * 넣지 않는다.
-   */
-  public List<ServerConfig> listRuntimeServers(String userId) {
-    List<ServerConfig> all = new ArrayList<>(listServers(userId));
-    all.addAll(trialCatalog.live(userId));
-    return all;
+    Optional<ServerConfig> trial = trialCatalog.find(userId, id);
+    if (trial.isPresent()) {
+      return trial.get();
+    }
+    Map<String, ServerConfig> mine =
+        sessions.computeIfAbsent(userId, key -> new ConcurrentHashMap<>());
+    ServerConfig existing = mine.get(id);
+    if (existing != null) {
+      return existing;
+    }
+    ServerConfig created = new ServerConfig(id, normalized, port, resolvedVersion);
+    mine.put(id, created);
+    return created;
   }
 
   public Optional<ServerConfig> getServer(String id, String userId) {
-    if (repository.isServerOwnedByUser(id, userId)) {
-      return Optional.ofNullable(servers.get(id));
+    Optional<ServerConfig> trial = trialCatalog.find(userId, id);
+    if (trial.isPresent()) {
+      return trial;
     }
-    return trialCatalog.find(userId, id);
-  }
-
-  public Optional<ServerConfig> getServerUnchecked(String id) {
-    return Optional.ofNullable(servers.get(id));
+    if (userId == null || id == null) {
+      return Optional.empty();
+    }
+    Map<String, ServerConfig> mine = sessions.get(userId);
+    if (mine == null) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(mine.get(id));
   }
 
   public boolean isOwnedByUser(String serverId, String userId) {
-    return repository.isServerOwnedByUser(serverId, userId)
-        || trialCatalog.find(userId, serverId).isPresent();
+    return getServer(serverId, userId).isPresent();
+  }
+
+  /** 로그아웃이나 데스크톱 연결 해제 때 끊어야 하는, 이 계정의 살아있는 서버. */
+  public List<ServerConfig> listRuntimeServers(String userId) {
+    List<ServerConfig> all = new ArrayList<>(trialCatalog.live(userId));
+    Map<String, ServerConfig> mine = userId == null ? null : sessions.get(userId);
+    if (mine != null) {
+      all.addAll(mine.values());
+    }
+    return all;
   }
 
   public void releaseTrialServers(String userId) {
     trialCatalog.forget(userId);
+    if (userId != null) {
+      sessions.remove(userId);
+    }
   }
 
   public List<TrialServerView> listTrialServers(String userId) {
     return trialCatalog.list(userId);
-  }
-
-  public void logConnection(String serverId, String userId, String host, int port) {
-    repository.logConnection(serverId, userId, host, port);
-  }
-
-  public List<RecentServerEntry> recentServersForUser(String userId, int limit) {
-    return repository.recentServersForUser(userId, limit);
   }
 }

@@ -37,7 +37,7 @@ public class DesktopPairController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
           .body(Map.of("error", "Log in before unlinking the desktop app"));
     }
-    for (var server : registry.listServers(profile.id())) {
+    for (var server : registry.listRuntimeServers(profile.id())) {
       if (desktopConnections.isRouted(server.id)) {
         desktopConnections.send(profile.id(), Map.of("type", "disconnect", "serverId", server.id));
         desktopConnections.unmarkRouted(server.id);
